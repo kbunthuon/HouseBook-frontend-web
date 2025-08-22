@@ -1,5 +1,5 @@
 # HouseBook-frontend-web
-COMP30022 IT Project Tuesday 12PM 
+COMP30022 IT Project Tuesday 12PM - Group 15
 Provision IT 
 ## Background:
 All tradespeople that attend a property for maintenance across a range of specialisations require
