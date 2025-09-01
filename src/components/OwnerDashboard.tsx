@@ -104,7 +104,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
