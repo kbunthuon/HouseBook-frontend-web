@@ -117,7 +117,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metric.value}</div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text -muted-foreground">
                   {metric.change}
                 </p>
               </CardContent>
@@ -167,7 +167,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
@@ -191,7 +191,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
               ))}
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* <Card>
