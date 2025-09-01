@@ -194,7 +194,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </Card>
       </div>
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Property Portfolio Health</CardTitle>
         </CardHeader>
@@ -221,7 +221,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
             <Progress value={75} />
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }
