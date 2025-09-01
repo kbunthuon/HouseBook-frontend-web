@@ -278,7 +278,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     status: "Active",
     owner: "John Smith",
     pin: "123456",
-    token: "abc123def456",
+    address: "123 Maple Street, Downtown",
     generalDetails: {
       bedrooms: "3 + study",
       bathrooms: "2",
@@ -409,15 +409,47 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </div>
 
       {/* Property Header */}
-      <div className="space-y-2">
-        <h1>{propertyData.name}</h1>
-        <p className="text-muted-foreground text-lg">{propertyData.description}</p>
-        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-          <span>Owner: {propertyData.owner}</span>
-          <span>•</span>
-          <span>PIN: {propertyData.pin}</span>
-          <span>•</span>
-          <span>Token: {propertyData.token}</span>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2">
+          <h1>{propertyData.name}</h1>
+          <p className="text-muted-foreground text-lg">{propertyData.description}</p>
+          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <span>Owner: {propertyData.owner}</span>
+            <span>•</span>
+            <span>Address: {propertyData.address}</span>
+          </div>
+        </div>
+        
+
+        {/* Access Control Section */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Key className="h-5 w-5 mr-2" />
+                Access Control
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h4>Property PIN</h4>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <code className="bg-muted px-3 py-2 rounded font-mono">{propertyData.pin}</code>
+                    <Button variant="outline" size="sm">
+                      Regenerate
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Share this PIN with authorized personnel for property access
+                  </p>
+                </div>
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  <span className="text-muted-foreground">QR code</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -443,7 +475,33 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Card>
 
       {/* Specifications Grid */}
+      
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Access Control Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Key className="h-5 w-5 mr-2" />
+              Access Control
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h4>Property PIN</h4>
+                <div className="flex items-center space-x-2 mt-2">
+                  <code className="bg-muted px-3 py-2 rounded font-mono">{propertyData.pin}</code>
+                  <Button variant="outline" size="sm">
+                    Regenerate
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Share this PIN with authorized personnel for property access
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <SpecificationSection 
           title="General Details" 
           items={propertyData.generalDetails} 
@@ -488,45 +546,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           title="Lighting & Electrical" 
           items={propertyData.lightingElectrical} 
         />
-      </div>
 
-      {/* Access Control Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Key className="h-5 w-5 mr-2" />
-            Access Control
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h4>Property PIN</h4>
-              <div className="flex items-center space-x-2 mt-2">
-                <code className="bg-muted px-3 py-2 rounded font-mono">{propertyData.pin}</code>
-                <Button variant="outline" size="sm">
-                  Regenerate
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Share this PIN with authorized personnel for property access
-              </p>
-            </div>
-            <div>
-              <h4>Access Token</h4>
-              <div className="flex items-center space-x-2 mt-2">
-                <code className="bg-muted px-3 py-2 rounded font-mono text-sm">{propertyData.token}</code>
-                <Button variant="outline" size="sm">
-                  Regenerate
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                API access token for system integrations
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
