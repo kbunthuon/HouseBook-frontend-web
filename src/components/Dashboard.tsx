@@ -35,40 +35,40 @@ export function Dashboard() {
     }
   ];
 
-  const recentActivity = [
-    {
-      id: 1,
-      action: "Property onboarded",
-      property: "Maple Heights Development",
-      user: "John Smith",
-      time: "2 hours ago",
-      status: "completed"
-    },
-    {
-      id: 2,
-      action: "Access token updated",
-      property: "Riverside Apartments",
-      user: "Sarah Johnson",
-      time: "4 hours ago",
-      status: "completed"
-    },
-    {
-      id: 3,
-      action: "Report generated",
-      property: "Oak Grove Complex",
-      user: "Mike Wilson",
-      time: "6 hours ago",
-      status: "completed"
-    },
-    {
-      id: 4,
-      action: "Property transfer initiated",
-      property: "Pine Valley Homes",
-      user: "Admin",
-      time: "1 day ago",
-      status: "pending"
-    }
-  ];
+  // const recentActivity = [
+  //   {
+  //     id: 1,
+  //     action: "Property onboarded",
+  //     property: "Maple Heights Development",
+  //     user: "John Smith",
+  //     time: "2 hours ago",
+  //     status: "completed"
+  //   },
+  //   {
+  //     id: 2,
+  //     action: "Access token updated",
+  //     property: "Riverside Apartments",
+  //     user: "Sarah Johnson",
+  //     time: "4 hours ago",
+  //     status: "completed"
+  //   },
+  //   {
+  //     id: 3,
+  //     action: "Report generated",
+  //     property: "Oak Grove Complex",
+  //     user: "Mike Wilson",
+  //     time: "6 hours ago",
+  //     status: "completed"
+  //   },
+  //   {
+  //     id: 4,
+  //     action: "Property transfer initiated",
+  //     property: "Pine Valley Homes",
+  //     user: "Admin",
+  //     time: "1 day ago",
+  //     status: "pending"
+  //   }
+  // ];
 
   return (
     <div className="space-y-8">
@@ -131,12 +131,12 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            {/* <div className="space-y-4">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-4">
                   <div className="flex-1 space-y-1">
@@ -151,11 +151,11 @@ export function Dashboard() {
                   <Badge variant={activity.status === "completed" ? "default" : "secondary"}>
                     {activity.status}
                   </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                </div> */}
+              {/* ))}
+            </div> */}
+          {/* </CardContent> */}
+        {/* </Card> } */}
       </div>
     </div>
   );
