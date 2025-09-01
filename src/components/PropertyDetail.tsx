@@ -2,7 +2,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { ArrowLeft, Edit, Key, FileText, Image } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { ScrollArea } from "./ui/scroll-area";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
+import { useState } from "react";
+
+interface EditHistoryItem {
+  id: number;
+  date: string;
+  section: string;
+  field?: string;
+  description: string;
+  editedBy: string;
+}
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -10,6 +26,250 @@ interface PropertyDetailProps {
 }
 
 export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<string>("");
+  const [editingField, setEditingField] = useState<string>("");
+  const [selectedSectionForTimeline, setSelectedSectionForTimeline] = useState<string>("");
+  const [editDescription, setEditDescription] = useState("");
+
+  // Define all editable fields organized by section
+  const sectionFields = {
+    "General Details": [
+      "bedrooms",
+      "bathrooms", 
+      "livingAreas",
+      "garage",
+      "totalFloorArea",
+      "blockSize"
+    ],
+    "Walls & Ceilings": [
+      "paintColour",
+      "ceilingHeight",
+      "cornices"
+    ],
+    "Exterior Specifications": [
+      "roof",
+      "wallsBrick",
+      "renderFeature",
+      "windows",
+      "fasciaGutters",
+      "frontDoor",
+      "driveway",
+      "fencing"
+    ],
+    "Flooring": [
+      "livingAreas",
+      "bedrooms",
+      "wetAreas"
+    ],
+    "Cabinetry & Bench Tops": [
+      "kitchenCabinets",
+      "kitchenBenchtop",
+      "bathroomVanities",
+      "bathroomBenchtops"
+    ],
+    "Doors & Handles": [
+      "internalDoors",
+      "handles"
+    ],
+    "Kitchen Appliances": [
+      "oven",
+      "cooktop",
+      "rangehood",
+      "dishwasher"
+    ],
+    "Bathroom Fixtures": [
+      "showerScreens",
+      "bathtub",
+      "tapware",
+      "toilets"
+    ],
+    "Lighting & Electrical": [
+      "lighting",
+      "powerPoints",
+      "heatingCooling",
+      "hotWater"
+    ]
+  };
+
+  // Mock edit history data - in real app this would come from API
+  const editHistory = {
+    generalDetails: [
+      {
+        id: 1,
+        date: "2024-01-15T10:30:00Z",
+        section: "General Details",
+        field: "bedrooms",
+        description: "Updated bedroom count from 3 to 3 + study",
+        editedBy: "John Smith"
+      },
+      {
+        id: 2,
+        date: "2024-01-10T14:15:00Z",
+        section: "General Details",
+        field: "totalFloorArea", 
+        description: "Initial property setup with basic details",
+        editedBy: "System"
+      }
+    ],
+    wallsCeilings: [
+      {
+        id: 3,
+        date: "2024-01-12T09:45:00Z",
+        section: "Walls & Ceilings",
+        field: "paintColour",
+        description: "Changed paint color from Vivid White to Natural White",
+        editedBy: "John Smith"
+      },
+      {
+        id: 4,
+        date: "2024-01-05T11:20:00Z",
+        section: "Walls & Ceilings",
+        field: "ceilingHeight",
+        description: "Updated ceiling height specification",
+        editedBy: "John Smith"
+      }
+    ],
+    exteriorSpecs: [
+      {
+        id: 5,
+        date: "2024-01-08T16:20:00Z",
+        section: "Exterior Specifications",
+        field: "roof",
+        description: "Updated roof color from Woodland Grey to Basalt",
+        editedBy: "John Smith"
+      }
+    ],
+    flooring: [
+      {
+        id: 6,
+        date: "2024-01-14T13:45:00Z",
+        section: "Flooring",
+        field: "bedrooms",
+        description: "Changed carpet color from Charcoal to Storm Grey",
+        editedBy: "John Smith"
+      }
+    ],
+    cabinetryBenchtops: [
+      {
+        id: 7,
+        date: "2024-01-11T15:30:00Z",
+        section: "Cabinetry & Bench Tops",
+        field: "kitchenCabinets",
+        description: "Updated kitchen cabinet finish",
+        editedBy: "John Smith"
+      }
+    ],
+    doorsHandles: [
+      {
+        id: 8,
+        date: "2024-01-09T10:15:00Z",
+        section: "Doors & Handles",
+        field: "handles",
+        description: "Changed handle finish to matte black",
+        editedBy: "John Smith"
+      }
+    ],
+    kitchenAppliances: [
+      {
+        id: 9,
+        date: "2024-01-13T14:20:00Z",
+        section: "Kitchen Appliances",
+        field: "cooktop",
+        description: "Upgraded cooktop from 600mm to 900mm induction",
+        editedBy: "John Smith"
+      }
+    ],
+    bathroomFixtures: [
+      {
+        id: 10,
+        date: "2024-01-07T12:30:00Z",
+        section: "Bathroom Fixtures",
+        field: "tapware",
+        description: "Updated tapware finish to matte black",
+        editedBy: "John Smith"
+      }
+    ],
+    lightingElectrical: [
+      {
+        id: 11,
+        date: "2024-01-16T09:15:00Z",
+        section: "Lighting & Electrical",
+        field: "lighting",
+        description: "Added pendant lighting specification",
+        editedBy: "John Smith"
+      }
+    ]
+  };
+
+  const handleEdit = (sectionTitle: string, specificField?: string) => {
+    setEditingSection(sectionTitle);
+    if (specificField) {
+      setEditingField(specificField);
+    } else {
+      // If no specific field provided, default to first field of the section
+      const fields = sectionFields[sectionTitle as keyof typeof sectionFields];
+      setEditingField(fields?.[0] || "");
+    }
+    setEditDescription("");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    // In real app, this would make an API call to save the edit
+    const currentTime = new Date().toISOString();
+    console.log({
+      section: editingSection,
+      field: editingField,
+      description: editDescription,
+      timestamp: currentTime
+    });
+    
+    setIsEditDialogOpen(false);
+    setEditDescription("");
+    setEditingSection("");
+    setEditingField("");
+  };
+
+  const handleFieldChange = (fieldValue: string) => {
+    setEditingField(fieldValue);
+  };
+
+  // Get fields for the current editing section only
+  const getCurrentSectionFields = () => {
+    if (!editingSection) return [];
+    const fields = sectionFields[editingSection as keyof typeof sectionFields] || [];
+    return fields.map(field => ({
+      value: field,
+      label: field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+    }));
+  };
+
+  const handleShowTimeline = (sectionTitle: string) => {
+    setSelectedSectionForTimeline(sectionTitle);
+    setIsTimelineDialogOpen(true);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getSectionKey = (title: string): keyof typeof editHistory => {
+    const keyMap: Record<string, keyof typeof editHistory> = {
+      "General Details": "generalDetails",
+      "Walls & Ceilings": "wallsCeilings", 
+      "Exterior Specifications": "exteriorSpecs",
+      "Flooring": "flooring",
+      "Cabinetry & Bench Tops": "cabinetryBenchtops",
+      "Doors & Handles": "doorsHandles",
+      "Kitchen Appliances": "kitchenAppliances",
+      "Bathroom Fixtures": "bathroomFixtures",
+      "Lighting & Electrical": "lightingElectrical"
+    };
+    return keyMap[title] || "generalDetails";
+  };
+
   // Mock property data - in real app this would come from API
   const propertyData = {
     id: propertyId,
@@ -79,18 +339,43 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   const SpecificationSection = ({ title, items, children }: { title: string; items?: Record<string, string>; children?: React.ReactNode }) => (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle>{title}</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleShowTimeline(title)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <History className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEdit(title)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {items && (
           <div className="space-y-2">
             {Object.entries(items).map(([key, value]) => (
-              <div key={key} className="flex justify-between items-start">
+              <div 
+                key={key} 
+                className="flex justify-between items-start group cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded"
+                onClick={() => handleEdit(title, key)}
+              >
                 <span className="font-medium capitalize text-muted-foreground">
                   {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
                 </span>
-                <span className="text-right max-w-2xl">{value}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-right max-w-2xl">{value}</span>
+                  <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
             ))}
           </div>
@@ -102,26 +387,26 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Properties
-          </Button>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Properties
+            </Button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="default">{propertyData.status}</Badge>
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+            <Button variant="outline" size="sm">
+              <FileText className="h-4 w-4 mr-2" />
+              Generate Report
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="default">{propertyData.status}</Badge>
-          <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-        </div>
-      </div>
 
       {/* Property Header */}
       <div className="space-y-2">
@@ -242,6 +527,120 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="w-full sm:w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit Property Field</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="datetime">Date & Time</Label>
+              <Input
+                id="datetime"
+                value={new Date().toLocaleString()}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="field">Editing Field</Label>
+              <Select 
+                value={editingField} 
+                onValueChange={handleFieldChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field to edit" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
+                    {editingSection}
+                  </div>
+                  {getCurrentSectionFields().map((field) => (
+                    <SelectItem 
+                      key={field.value} 
+                      value={field.value}
+                      className="pl-4"
+                    >
+                      {field.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description of Update</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the changes you're making..."
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editDescription.trim() || !editingField}>
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Timeline Dialog */}
+      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+        <DialogContent className="w-full sm:w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Clock className="h-5 w-5 mr-2" />
+              Edit History - {selectedSectionForTimeline}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px] py-4">
+            <div className="space-y-4">
+              {(editHistory[getSectionKey(selectedSectionForTimeline)] || []).map((edit, index) => (
+                <div key={edit.id} className="flex space-x-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-3 h-3 bg-primary rounded-full" />
+                    {index < (editHistory[getSectionKey(selectedSectionForTimeline)] || []).length - 1 && (
+                      <div className="w-0.5 h-16 bg-border mt-2" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{edit.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Field: {edit.field?.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {edit.editedBy}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(edit.date)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {(!editHistory[getSectionKey(selectedSectionForTimeline)] || editHistory[getSectionKey(selectedSectionForTimeline)].length === 0) && (
+                <div className="text-center text-muted-foreground py-8">
+                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No edit history available for this section</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
