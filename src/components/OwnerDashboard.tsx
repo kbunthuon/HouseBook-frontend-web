@@ -104,7 +104,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
@@ -117,7 +117,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{metric.value}</div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text -muted-foreground">
                   {metric.change}
                 </p>
               </CardContent>
@@ -167,7 +167,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
@@ -191,10 +191,10 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
               ))}
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Property Portfolio Health</CardTitle>
         </CardHeader>
@@ -221,7 +221,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
             <Progress value={75} />
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }
