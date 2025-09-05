@@ -1,7 +1,10 @@
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 
 interface OwnerDashboardProps {
@@ -9,6 +12,12 @@ interface OwnerDashboardProps {
 }
 
 export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
+  // State for date range selection
+  const [dateRange, setDateRange] = useState({
+    dateFrom: "",
+    dateTo: ""
+  });
+
   // Mock data - in real app this would be filtered by owner
   const getOwnerProperties = () => {
     if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
@@ -125,6 +134,38 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
           );
         })}
       </div>
+
+      {/* Date Range Selection Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Calendar className="mr-2 h-5 w-5" />
+            Filter by Date Range
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label htmlFor="dateFrom">Date From</Label>
+              <Input
+                id="dateFrom"
+                type="date"
+                value={dateRange.dateFrom}
+                onChange={(e) => setDateRange({...dateRange, dateFrom: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="dateTo">Date To</Label>
+              <Input
+                id="dateTo"
+                type="date"
+                value={dateRange.dateTo}
+                onChange={(e) => setDateRange({...dateRange, dateTo: e.target.value})}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

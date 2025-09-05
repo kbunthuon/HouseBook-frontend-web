@@ -62,11 +62,11 @@ export function Reports() {
   ];
 
   const reportTypes = [
-    { value: "complete", label: "Complete Property Report" },
+    // { value: "complete", label: "Complete Property Report" },
     { value: "overview", label: "Property Overview" },
-    { value: "utilities", label: "Utilities Report" },
-    { value: "fittings", label: "Fittings & Features" },
-    { value: "financial", label: "Financial Summary" },
+    // { value: "utilities", label: "Utilities Report" },
+    // { value: "fittings", label: "Fittings & Features" },
+    // { value: "financial", label: "Financial Summary" },
     { value: "maintenance", label: "Maintenance History" }
   ];
 

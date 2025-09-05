@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -87,10 +87,10 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   const myRecentReports = getMyRecentReports();
 
   const reportTypes = [
-    { value: "complete", label: "Complete Property Report" },
+    // { value: "complete", label: "Complete Property Report" },
     { value: "overview", label: "Property Overview" },
-    { value: "utilities", label: "Utilities Report" },
-    { value: "fittings", label: "Fittings & Features" },
+    // { value: "utilities", label: "Utilities Report" },
+    // { value: "fittings", label: "Fittings & Features" },
     { value: "maintenance", label: "Maintenance History" }
   ];
 
@@ -222,6 +222,27 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                   />
                   <Label htmlFor="includeFittings">Fittings & Features</Label>
                 </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="dateFrom">Date From</Label>
+                <Input
+                  id="dateFrom"
+                  type="date"
+                  value={reportConfig.dateFrom}
+                  onChange={(e) => setReportConfig({...reportConfig, dateFrom: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="dateTo">Date To</Label>
+                <Input
+                  id="dateTo"
+                  type="date"
+                  value={reportConfig.dateTo}
+                  onChange={(e) => setReportConfig({...reportConfig, dateTo: e.target.value})}
+                />
               </div>
             </div>
 
