@@ -477,31 +477,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       {/* Specifications Grid */}
       
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Access Control Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Key className="h-5 w-5 mr-2" />
-              Access Control
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h4>Property PIN</h4>
-                <div className="flex items-center space-x-2 mt-2">
-                  <code className="bg-muted px-3 py-2 rounded font-mono">{propertyData.pin}</code>
-                  <Button variant="outline" size="sm">
-                    Regenerate
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Share this PIN with authorized personnel for property access
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
         <SpecificationSection 
           title="General Details" 
           items={propertyData.generalDetails} 
