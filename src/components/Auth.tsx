@@ -19,7 +19,6 @@ export function Auth({ onLogin }: AuthProps) {
     password: "",
     first_name: "",
     last_name: "",
-    company: "",
     phone: "",
     userType: "owner" as "admin" | "owner",
   });
