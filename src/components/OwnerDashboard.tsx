@@ -29,7 +29,8 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
       ];
     } else {
       return [
-        { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" }
+        { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" },
+        { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
       ];
     }
   };
@@ -123,6 +124,7 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
     }
   };
 
+  // TODO: Connect with database -- mock data for show
   const pendingEdits = [
     {
       id: 1,
@@ -189,18 +191,26 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
           <CardContent>
             <div className="space-y-4">
               {myProperties.map((property) => (
-                <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
+                // <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={property.id} className="flex flex-col p-4 border rounded-xl shadow-sm hover:shadow-md transition">
+                  
+                  {/* property image */}
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <span className="text-muted-foreground">Property Image </span>
+                  </div>
+
+                  <div className="flex-1">
                     <div className="font-medium">{property.name}</div>
                     <div className="text-sm text-muted-foreground">
                       Updated {property.lastUpdated}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  {/* removed pending status */}
+                  {/* <div className="flex items-center space-x-2">
                     <Badge variant={property.status === "Active" ? "default" : "secondary"}>
                       {property.status}
                     </Badge>
-                  </div>
+                  </div> */}
                 </div>
               ))}
               {myProperties.length === 0 && (
@@ -219,7 +229,6 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </Card>
 
         <Card>
-
             <CardHeader>
               <CardTitle>Pending Edit Requests</CardTitle>
             </CardHeader>
@@ -319,7 +328,6 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
                 </TableBody>
               </Table>
             </CardContent>
-
         </Card>
       </div>
 
