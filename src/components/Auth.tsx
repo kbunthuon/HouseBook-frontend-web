@@ -1,13 +1,14 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
+import supabase from "../config/supabaseClient.ts"
 
 interface AuthProps {
-  onLogin: (email: string, userType: 'admin' | 'owner') => void;
+  onLogin: (email: string, userType: "admin" | "owner") => void;
 }
 
 export function Auth({ onLogin }: AuthProps) {
@@ -16,23 +17,114 @@ export function Auth({ onLogin }: AuthProps) {
   const [signupData, setSignupData] = useState({
     email: "",
     password: "",
-    name: "",
+    first_name: "",
+    last_name: "",
     company: "",
-    userType: "owner" as 'admin' | 'owner'
+    phone: "",
+    userType: "owner" as "admin" | "owner",
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock authentication - in real app would validate credentials
-    const userType = loginEmail.includes('admin') ? 'admin' : 'owner';
-    onLogin(loginEmail, userType);
-  };
 
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Mock signup - in real app would create account
+    // Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: signupData.email,
+      password: signupData.password,
+    });
+
+    if (authError) {
+      console.error("Signup failed:", authError.message);
+      return;
+    }
+
+    const userId = authData.user?.id;
+    if (!userId) return;
+
+    // Insert into main User table
+    const { error: insertError } = await supabase.from("User").insert([
+      {
+        user_id: userId,
+        email: signupData.email,
+        first_name: signupData.first_name,
+        last_name: signupData.last_name,
+        phone: signupData.phone,
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Profile insert failed:", insertError.message);
+      return;
+    }
+
+    // Insert into role-specific table
+    if (signupData.userType === "owner") {
+      const { error: ownerError } = await supabase
+        .from("Owner")
+        .insert([{ user_id: userId }]);
+      if (ownerError) console.error("Owner insert failed:", ownerError.message);
+    } else if (signupData.userType === "admin") {
+      const { error: adminError } = await supabase
+        .from("Admin")
+        .insert([{ user_id: userId }]);
+      if (adminError) console.error("Admin insert failed:", adminError.message);
+    }
+
+    console.log("Signup successful!");
+
+    // Log in immediately after signup (?)
     onLogin(signupData.email, signupData.userType);
   };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Authenticate
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+
+    if (error) {
+      console.error("Login failed:", error.message);
+      return;
+    }
+
+    const userId = data.user?.id;
+    if (!userId) return;
+
+    // Fetch profile from User table
+    const { data: profile, error: profileError } = await supabase
+      .from("User")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError) {
+      console.error("Profile fetch failed:", profileError.message);
+      return;
+    }
+
+    // Determine role
+    const { data: ownerData } = await supabase
+      .from("Owner")
+      .select("user_id")
+      .eq("user_id", userId)
+      .single();
+
+    const userType: "owner" | "admin" = ownerData ? "owner" : "admin";
+
+    onLogin(profile.email, userType);
+    console.log("Login successful!", profile, userType);
+  };
+
+  // Optional: helper to handle signup form changes
+  const handleSignupChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setSignupData({ ...signupData, [e.target.name]: e.target.value });
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
@@ -89,12 +181,22 @@ export function Auth({ onLogin }: AuthProps) {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-first-name">First Name</Label>
                     <Input
-                      id="signup-name"
-                      value={signupData.name}
-                      onChange={(e) => setSignupData({...signupData, name: e.target.value})}
-                      placeholder="John Doe"
+                      id="signup-first-name"
+                      value={signupData.first_name}
+                      onChange={(e) => setSignupData({...signupData, first_name: e.target.value})}
+                      placeholder="John"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signup-last-name">Last Name</Label>
+                    <Input
+                      id="signup-last-name"
+                      value={signupData.last_name}
+                      onChange={(e) => setSignupData({...signupData, last_name: e.target.value})}
+                      placeholder="Doe"
                       required
                     />
                   </div>
@@ -110,12 +212,12 @@ export function Auth({ onLogin }: AuthProps) {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="signup-company">Company</Label>
+                    <Label htmlFor="signup-phone">Phone</Label>
                     <Input
-                      id="signup-company"
-                      value={signupData.company}
-                      onChange={(e) => setSignupData({...signupData, company: e.target.value})}
-                      placeholder="Development Company Ltd"
+                      id="signup-phone"
+                      value={signupData.phone}
+                      onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
+                      placeholder="000"
                       required
                     />
                   </div>
