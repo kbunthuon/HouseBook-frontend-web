@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
 import { useState } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 
 interface EditHistoryItem {
   id: number;
@@ -385,6 +386,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     </Card>
   );
 
+  const value = "https://house-book-frontend-web.vercel.app";
+
   return (
     <div className="space-y-6">
         {/* Header */}
@@ -445,7 +448,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                   </p>
                 </div>
                 <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <span className="text-muted-foreground">QR code</span>
+                  <QRCodeCanvas
+                    value={value}
+                    size={200}        // size in px
+                    level="H"         // error correction: L, M, Q, H
+                    includeMargin={true}
+                  />
                 </div>
               </div>
             </CardContent>
