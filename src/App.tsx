@@ -18,13 +18,15 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<'admin' | 'owner'>('owner');
   const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
-  const handleLogin = (email: string, type: 'admin' | 'owner') => {
+  const handleLogin = (email: string, type: 'admin' | 'owner', user_id: string) => {
     setIsAuthenticated(true);
     setUserType(type);
     setUserEmail(email);
+    setUserId(user_id)
     // Set appropriate default page based on user type
     setCurrentPage(type === 'admin' ? 'dashboard' : 'owner-dashboard');
   };
@@ -91,10 +93,10 @@ export default function App() {
   const renderOwnerPage = () => {
     switch (currentPage) {
       case 'owner-dashboard':
-        return <OwnerDashboard ownerEmail={userEmail} />;
+        return <OwnerDashboard userId={userId} />;
       case 'my-properties':
         return <MyProperties 
-          ownerEmail={userEmail} 
+          ownerEmail={userId} 
           onViewProperty={handleViewProperty}
           onAddProperty={handleAddProperty}
         />;
@@ -106,7 +108,7 @@ export default function App() {
           />
         ) : (
           <MyProperties 
-            ownerEmail={userEmail} 
+            ownerEmail={userId} 
             onViewProperty={handleViewProperty}
             onAddProperty={handleAddProperty}
           />
@@ -116,7 +118,7 @@ export default function App() {
       case 'my-reports':
         return <MyReports ownerEmail={userEmail} />;
       default:
-        return <OwnerDashboard ownerEmail={userEmail} />;
+        return <OwnerDashboard userId={userEmail} />;
     }
   };
 

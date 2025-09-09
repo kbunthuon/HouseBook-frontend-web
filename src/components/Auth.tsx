@@ -8,7 +8,7 @@ import { Building } from "lucide-react";
 import supabase from "../config/supabaseClient.ts"
 
 interface AuthProps {
-  onLogin: (email: string, userType: "admin" | "owner") => void;
+  onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
 }
 
 export function Auth({ onLogin }: AuthProps) {
@@ -72,7 +72,7 @@ export function Auth({ onLogin }: AuthProps) {
     console.log("Signup successful!");
 
     // Log in immediately after signup (?)
-    onLogin(signupData.email, signupData.userType);
+    onLogin(signupData.email, signupData.userType, signupData.user_id);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -107,14 +107,15 @@ export function Auth({ onLogin }: AuthProps) {
     // Determine role
     const { data: ownerData } = await supabase
       .from("Owner")
-      .select("user_id")
+      .select("user_id, owner_id")
       .eq("user_id", userId)
-      .single();
+      .single(); 
 
     const userType: "owner" | "admin" = ownerData ? "owner" : "admin";
+    // const ownerId = ownerData?.owner_id
 
-    onLogin(profile.email, userType);
-    console.log("Login successful!", profile, userType);
+    onLogin(profile.email, userType, userId);
+    console.log("Login successful!", profile, userType, ownerData);
   };
 
   // Optional: helper to handle signup form changes

@@ -9,33 +9,88 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import supabase from "../config/supabaseClient.ts"
+import { useState, useEffect} from "react";
 
 
 interface OwnerDashboardProps {
-  ownerEmail: string;
+  userId: string;
 }
 
-export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
-  // Mock data - in real app this would be filtered by owner
-  const getOwnerProperties = () => {
-    if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
-      return [
-        { id: "1", name: "Rose Wood Retreat", status: "Active", lastUpdated: "2 days ago" },
-        { id: "2", name: "Sunset Villa", status: "Active", lastUpdated: "1 week ago" }
-      ];
-    } else if (ownerEmail.includes('sarah')) {
-      return [
-        { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
-      ];
-    } else {
-      return [
-        { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" },
-        { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
-      ];
-    }
-  };
+export function OwnerDashboard({ userId }: OwnerDashboardProps) {
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [myProperties, setOwnerProperties] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const myProperties = getOwnerProperties();
+  useEffect (() => {
+    const getOwnerProps = async () => {
+
+      // if (!userId) return; 
+
+      try {
+        // get owner id
+        const { data: ownerData, error: ownerError } = await supabase
+          .from("Owner")
+          .select("owner_id")
+          .eq("user_id", userId)
+          .single();
+
+        if (ownerError) throw ownerError;
+
+        if (ownerData?.owner_id) {
+          setOwnerId(ownerData.owner_id);
+
+          const { data: ownerProperties, error: propError } = await supabase
+            .from("OwnerProperty")
+            .select(`
+              property: Property (
+              property_id, 
+              address, 
+              created_at
+              )
+            `)
+            .eq("owner_id", ownerData.owner_id);
+
+          if (propError) throw propError;
+
+          const properties = ownerProperties?.map(row => row.property) ?? []
+          setOwnerProperties(properties);
+          console.log(myProperties)
+        } else {
+          setOwnerProperties([]);
+        }
+      } catch (error) {
+        console.error(error);
+        setOwnerProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getOwnerProps();
+
+  },[userId])
+
+  // // Mock data - in real app this would be filtered by owner
+  // const getOwnerProperties = () => {
+  //   if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
+  //     return [
+  //       { id: "1", name: "Rose Wood Retreat", status: "Active", lastUpdated: "2 days ago" },
+  //       { id: "2", name: "Sunset Villa", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else if (ownerEmail.includes('sarah')) {
+  //     return [
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else {
+  //     return [
+  //       { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" },
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   }
+  // };
+
+  
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
 
@@ -157,76 +212,10 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={metric.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {metric.title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${metric.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
-                <p className="text-xs text -muted-foreground">
-                  {metric.change}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>My Properties</CardTitle>
-            <Button size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Property
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {myProperties.map((property) => (
-                // <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div key={property.id} className="flex flex-col p-4 border rounded-xl shadow-sm hover:shadow-md transition">
-                  
-                  {/* property image */}
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground">Property Image </span>
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="font-medium">{property.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      Updated {property.lastUpdated}
-                    </div>
-                  </div>
-                  {/* removed pending status */}
-                  {/* <div className="flex items-center space-x-2">
-                    <Badge variant={property.status === "Active" ? "default" : "secondary"}>
-                      {property.status}
-                    </Badge>
-                  </div> */}
-                </div>
-              ))}
-              {myProperties.length === 0 && (
-                <div className="text-center py-6">
-                  <Building className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
-                  <p className="text-muted-foreground">Add your first property to get started</p>
-                  <Button className="mt-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Property
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-1">
+        
 
         <Card>
             <CardHeader>
@@ -329,8 +318,76 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
               </Table>
             </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>My Properties</CardTitle>
+            <Button size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Property
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-6 overflow-x-auto py-4">
+              {myProperties.map((property) => (
+                // <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl shadow-md hover:shadow-lg transition">
+                  
+                  {/* property image */}
+                  <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <span className="text-muted-foreground">Property Image </span>
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="font-medium">{property.address}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Created {property.created_at}
+                    </div>
+                  </div>
+                  {/* removed pending status */}
+                  {/* <div className="flex items-center space-x-2">
+                    <Badge variant={property.status === "Active" ? "default" : "secondary"}>
+                      {property.status}
+                    </Badge>
+                  </div> */}
+                </div>
+              ))}
+              {myProperties.length === 0 && (
+                <div className="text-center py-6">
+                  <Building className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
+                  <p className="text-muted-foreground">Add your first property to get started</p>
+                  <Button className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Property
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <Card key={metric.title}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {metric.title}
+                    </CardTitle>
+                    <Icon className={`h-4 w-4 ${metric.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{metric.value}</div>
+                    <p className="text-xs text -muted-foreground">
+                      {metric.change}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+      </div>
       {/* <Card>
         <CardHeader>
           <CardTitle>Property Portfolio Health</CardTitle>
