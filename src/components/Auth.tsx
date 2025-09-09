@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
-import supabase from "../config/supabaseClient.ts"
+import { signupUser, loginUser } from "../services/AuthService";
 
 interface AuthProps {
   onLogin: (email: string, userType: "admin" | "owner") => void;
@@ -25,127 +25,25 @@ export function Auth({ onLogin }: AuthProps) {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: signupData.email,
-      password: signupData.password,
-    });
-
-    if (authError) {
-      console.error("Signup failed:", authError.message);
-      return;
+    try {
+      const result = await signupUser(signupData);
+      onLogin(result.email, result.userType);
+      console.log("Signup successful!", result);
+    } catch (err: any) {
+      console.error("Signup failed:", err.message);
     }
-
-    const userId = authData.user?.id;
-    if (!userId) return;
-
-    // Insert into main User table
-    const { error: insertError } = await supabase.from("User").insert([
-      {
-        user_id: userId,
-        email: signupData.email,
-        first_name: signupData.first_name,
-        last_name: signupData.last_name,
-        phone: signupData.phone,
-      },
-    ]);
-
-    if (insertError) {
-      console.error("Profile insert failed:", insertError.message);
-      return;
-    }
-
-    // Insert into role-specific table
-    if (signupData.userType === "owner") {
-      const { error: ownerError } = await supabase
-        .from("Owner")
-        .insert([{ user_id: userId }]);
-      if (ownerError) console.error("Owner insert failed:", ownerError.message);
-    } else if (signupData.userType === "admin") {
-      const { error: adminError } = await supabase
-        .from("Admin")
-        .insert([{ user_id: userId }]);
-      if (adminError) console.error("Admin insert failed:", adminError.message);
-    }
-
-    console.log("Signup successful!");
-
-    // Log in immediately after signup (?)
-    onLogin(signupData.email, signupData.userType);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Authenticate
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-
-    if (error) {
-      console.error("Login failed:", error.message);
-      return;
+    try {
+      const result = await loginUser(loginEmail, loginPassword);
+      onLogin(result.email, result.userType);
+      console.log("Login successful!", result);
+    } catch (err: any) {
+      console.error("Login failed:", err.message);
     }
-
-    const userId = data.user?.id;
-    if (!userId) return;
-
-    // Fetch profile from User table
-    const { data: profile, error: profileError } = await supabase
-      .from("User")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    if (profileError) {
-      console.error("Profile fetch failed:", profileError.message);
-      return;
-    }
-
-    // Determine role
-    // const { data: ownerData } = await supabase
-    //   .from("Owner")
-    //   .select("user_id")
-    //   .eq("user_id", userId)
-    //   .single();
-
-    // const userType: "owner" | "admin" = ownerData ? "owner" : "admin";
-
-    // Check Owner table
-    const { data: ownerData, error: ownerError } = await supabase
-      .from("Owner")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle(); // <-- use maybeSingle instead of single
-
-    // Check Admin table
-    const { data: adminData, error: adminError } = await supabase
-      .from("Admin")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    let userType: "owner" | "admin" = "owner";
-
-    if (adminData) {
-      userType = "admin";
-    } else if (ownerData) {
-      userType = "owner";
-    }
-
-    onLogin(profile.email, userType);
-    console.log("Login successful!", profile, userType);
   };
-
-  // // Helper to handle signup form changes
-  // const handleSignupChange = (
-  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  // ) => {
-  //   setSignupData({ ...signupData, [e.target.name]: e.target.value });
-  // };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
@@ -169,6 +67,7 @@ export function Auth({ onLogin }: AuthProps) {
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
               
+              {/* Login */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
@@ -193,12 +92,11 @@ export function Auth({ onLogin }: AuthProps) {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full">
-                    Login
-                  </Button>
+                  <Button type="submit" className="w-full">Login</Button>
                 </form>
               </TabsContent>
               
+              {/* Signup */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div>
@@ -227,14 +125,14 @@ export function Auth({ onLogin }: AuthProps) {
                       id="signup-email"
                       type="email"
                       value={signupData.email}
-                        onChange={(e) => {
-                          const email = e.target.value;
-                          setSignupData((prev) => ({
-                            ...prev,
-                            email,
-                            userType: email.includes("@housebook.com") ? "admin" : "owner",
-                          }));
-                        }}
+                      onChange={(e) => {
+                        const email = e.target.value;
+                        setSignupData((prev) => ({
+                          ...prev,
+                          email,
+                          userType: email.includes("@housebook.com") ? "admin" : "owner",
+                        }));
+                      }}
                       placeholder="john@company.com"
                       required
                     />
@@ -260,9 +158,7 @@ export function Auth({ onLogin }: AuthProps) {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full">
-                    Create Account
-                  </Button>
+                  <Button type="submit" className="w-full">Create Account</Button>
                 </form>
               </TabsContent>
             </Tabs>
