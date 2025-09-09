@@ -105,24 +105,46 @@ export function Auth({ onLogin }: AuthProps) {
     }
 
     // Determine role
-    const { data: ownerData } = await supabase
+    // const { data: ownerData } = await supabase
+    //   .from("Owner")
+    //   .select("user_id")
+    //   .eq("user_id", userId)
+    //   .single();
+
+    // const userType: "owner" | "admin" = ownerData ? "owner" : "admin";
+
+    // Check Owner table
+    const { data: ownerData, error: ownerError } = await supabase
       .from("Owner")
       .select("user_id")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle(); // <-- use maybeSingle instead of single
 
-    const userType: "owner" | "admin" = ownerData ? "owner" : "admin";
+    // Check Admin table
+    const { data: adminData, error: adminError } = await supabase
+      .from("Admin")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let userType: "owner" | "admin" = "owner";
+
+    if (adminData) {
+      userType = "admin";
+    } else if (ownerData) {
+      userType = "owner";
+    }
 
     onLogin(profile.email, userType);
     console.log("Login successful!", profile, userType);
   };
 
-  // Optional: helper to handle signup form changes
-  const handleSignupChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setSignupData({ ...signupData, [e.target.name]: e.target.value });
-  };
+  // // Helper to handle signup form changes
+  // const handleSignupChange = (
+  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  // ) => {
+  //   setSignupData({ ...signupData, [e.target.name]: e.target.value });
+  // };
 
 
   return (
@@ -205,7 +227,14 @@ export function Auth({ onLogin }: AuthProps) {
                       id="signup-email"
                       type="email"
                       value={signupData.email}
-                      onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                        onChange={(e) => {
+                          const email = e.target.value;
+                          setSignupData((prev) => ({
+                            ...prev,
+                            email,
+                            userType: email.includes("@housebook.com") ? "admin" : "owner",
+                          }));
+                        }}
                       placeholder="john@company.com"
                       required
                     />
