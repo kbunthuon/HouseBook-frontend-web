@@ -500,7 +500,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Card>
 
       {/* Specifications Grid */}
-      
+
+      {/* 
       <div className="grid gap-6 md:grid-cols-2">
         
         <SpecificationSection 
@@ -545,6 +546,69 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
         <SpecificationSection 
           title="Lighting & Electrical" 
+          items={propertyData.lightingElectrical} 
+        />
+
+      </div>
+      */}
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        
+        <SpecificationSection 
+          title="General Details" 
+          items={propertyData.generalDetails} 
+        />
+
+        <SpecificationSection 
+          title="Exterior Specifications" 
+          items={propertyData.exteriorSpecs} 
+        />
+
+        <SpecificationSection 
+          title="Bedroom" 
+          items={{"Flooring": propertyData.flooring.bedrooms, 
+                ...propertyData.wallsCeilings,
+                ...propertyData.doorsHandles
+              }} 
+        />
+
+        <SpecificationSection 
+          title="Living Area" 
+          items={{"Flooring": propertyData.flooring.livingAreas, 
+                ...propertyData.wallsCeilings,
+                ...propertyData.doorsHandles
+              }} 
+        />
+
+        <SpecificationSection 
+          title="Kitchen" 
+          items={{"Flooring": propertyData.flooring.livingAreas, 
+          ...propertyData.wallsCeilings,
+          ...propertyData.doorsHandles, 
+          "Benchtop": propertyData.cabinetryBenchtops.kitchenBenchtop, 
+          "Cabinets": propertyData.cabinetryBenchtops.kitchenCabinets,
+          ...propertyData.kitchenAppliances}} 
+        />
+
+        <SpecificationSection 
+          title="Bathroom" 
+          items={{"Flooring": propertyData.flooring.wetAreas, 
+          ...propertyData.wallsCeilings,
+          ...propertyData.doorsHandles,
+          "Benchtop": propertyData.cabinetryBenchtops.bathroomBenchtops, 
+          "Vanity": propertyData.cabinetryBenchtops.bathroomVanities,
+          ...propertyData.bathroomFixtures}} 
+        />
+
+        <SpecificationSection 
+          title="Hallway" 
+          items={{"Flooring": propertyData.flooring.livingAreas,
+          ...propertyData.wallsCeilings,
+          ...propertyData.doorsHandles}} 
+        />
+
+        <SpecificationSection 
+          title="Lighting" 
           items={propertyData.lightingElectrical} 
         />
 
