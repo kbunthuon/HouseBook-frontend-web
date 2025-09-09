@@ -9,8 +9,9 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
+import { generatePin } from "./utils/generatePin";
 
 interface EditHistoryItem {
   id: number;
@@ -388,6 +389,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   const value = "https://house-book-frontend-web.vercel.app";
 
+  const length = 6;
+
+  // make a fresh pin when length changes; user can also regenerate
+  const [seed, setSeed] = useState(0);
+  const pin = useMemo(() => generatePin(length), [length, seed]);
+
+  const regenerate = () => setSeed(s => s + 1);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(pin);
+    alert("PIN copied!");
+  };
+
   return (
     <div className="space-y-6">
         {/* Header */}
@@ -438,9 +452,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                 <div>
                   <h4>Property PIN</h4>
                   <div className="flex items-center space-x-2 mt-2">
-                    <code className="bg-muted px-3 py-2 rounded font-mono">{propertyData.pin}</code>
-                    <Button variant="outline" size="sm">
+                    <code className="bg-muted px-3 py-2 rounded font-mono">{pin}</code>
+                    <Button variant="outline" size="sm" onClick={regenerate}>
                       Regenerate
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={copy}>
+                      Copy
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
