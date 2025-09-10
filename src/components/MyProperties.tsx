@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -6,14 +6,32 @@ import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
 
+import supabase from '../config/supabaseClient';
+
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
+
+type Property = {
+  address: string;
+  description: string;
+  pin: string;
+  name: string;
+  type?: string;
+  status?: string;
+  lastUpdated?: string;
+  completionStatus?: number;
+};
+
 export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [myProperties, setMyProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const ownerID = "494ead96-887e-4c98-8d93-849cd5ff5399";
+
 
   // Mock data filtered by owner - in real app this would come from API
   const getMyProperties = () => {
@@ -69,7 +87,42 @@ export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPr
     }
   };
 
-  const myProperties = getMyProperties();
+  // Getting properties directly from Supabase query
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('OwnerProperty')
+          .select('Property:Property(address, description, pin, name)')
+          .eq('owner_id', ownerID);
+
+        if (error) throw error;
+
+        // Flatten nested Property objects
+        const properties: Property[] = [];
+        data?.forEach(ownerProperty => {
+          const property = ownerProperty.Property;
+          
+          // Handle both array and single object cases
+          if (Array.isArray(property)) {
+            properties.push(...property.filter(p => p !== null));
+          } else if (property && property !== null) {
+            properties.push(property);
+          }
+        });
+
+        setMyProperties(properties);
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        setMyProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, [ownerID]);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
