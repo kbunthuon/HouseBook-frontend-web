@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -9,39 +10,47 @@ import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, CheckCircle, Building } from "lucide-react";
 
+import { Trash2 } from "lucide-react";
+
+import { fetchSpaceEnum } from "../services/FetchSpaceEnum";
+import { fetchAssetTypes } from "../services/fetchAssetTypes";
+import { onboardProperty, FormData, Space} from "../services/OnboardPropertyService";
+
 export function PropertyOnboarding() {
+  const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
+  const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
+  const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     // Basic Information
     propertyName: "",
+    propertyDescription: "",
     address: "",
-    propertyType: "",
-    developer: "",
-    totalUnits: "",
     // Plans & Documents
     floorPlans: [] as File[],
-    buildingPlans: [] as File[],
-    // Utilities
-    electricalProvider: "",
-    gasProvider: "",
-    waterProvider: "",
-    internetProvider: "",
-    // Fittings & Features
-    kitchenType: "",
-    bathroomType: "",
-    flooringType: "",
-    heatingType: "",
-    // Access Control
-    accessPIN: "",
-    accessToken: ""
+    buildingPlans: [] as File[]
   });
+
+  useEffect(() => {
+    const getEnums = async () => {
+      const types = await fetchSpaceEnum();
+      setSpaceTypes(types);
+    };
+    getEnums();
+  }, []);
+
+  useEffect(() => {
+    const getAssetTypes = async () => {
+      const types = await fetchAssetTypes();
+      setAssetTypes(types);
+    };
+    getAssetTypes();
+  }, []);
 
   const steps = [
     { id: 1, title: "Basic Information", description: "Property details and location" },
-    { id: 2, title: "Plans & Documents", description: "Upload floor plans and documents" },
-    { id: 3, title: "Utilities", description: "Utility providers and connections" },
-    { id: 4, title: "Fittings & Features", description: "Interior specifications" },
-    { id: 5, title: "Access Control", description: "Set PIN and access tokens" }
+    { id: 2, title: "Adding Spaces and Assets", description: "Insert the rooms and assets in each room" },
+    { id: 3, title: "Submission", description: "Check if all the data is correct and submit" }
   ];
 
   const progress = (currentStep / steps.length) * 100;
@@ -49,6 +58,10 @@ export function PropertyOnboarding() {
   const handleNext = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
+    } else if (currentStep == steps.length) {
+      // No longer Next button, this will be complete onboarding
+      // Let backend handle saving information in database
+      onboardProperty(formData, spaces);
     }
   };
 
@@ -67,13 +80,103 @@ export function PropertyOnboarding() {
     }
   };
 
-  const generateAccessCode = () => {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    setFormData({
-      ...formData,
-      accessPIN: pin,
-      accessToken: token
+  // Add a new Space
+  const addSpace = () => {
+    setSpaces((prev: Space[]) => [...prev, { type: "", name: "", assets: [] }]);
+  };
+
+  // Update Space Name
+  const updateSpaceName = (index: number, name: string) => {
+    setSpaces((prev: Space[]) => {
+      const newSpaces = [...prev]
+      newSpaces[index] = { ...newSpaces[index], name };
+      return newSpaces;
+    })
+  };
+
+  // Update Space Type
+  const updateSpaceType = (index: number, type: string) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[index] = { ...newSpaces[index], type };
+      return newSpaces;
+    });
+  };
+
+  // Add Asset to a Space
+  const addAsset = (spaceIndex: number) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[spaceIndex].assets = [
+        ...newSpaces[spaceIndex].assets,
+        { name: "", description: "" , typeId: "", features: []},
+      ];
+      return newSpaces;
+    });
+  };
+
+  // // Update Asset fields
+  const updateAsset = (
+    spaceIndex: number,
+    assetIndex: number,
+    field: "name" | "description" | "typeId",
+    value: string
+  ) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      const updatedAsset = {
+        ...newSpaces[spaceIndex].assets[assetIndex],
+        [field]: value,
+      };
+      newSpaces[spaceIndex].assets[assetIndex] = updatedAsset;
+      return newSpaces;
+    });
+  };
+
+  // Delete Asset
+  const deleteAsset = (spaceIndex: number, assetIndex: number) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[spaceIndex].assets.splice(assetIndex, 1);
+      return newSpaces;
+    });
+  };
+
+  // Delete Space
+  const deleteSpace = (spaceIndex: number) => {
+    setSpaces((prev) => prev.filter((_, i) => i !== spaceIndex));
+  };
+
+  // Add a feature to an asset
+  const addFeature = (spaceIndex: number, assetIndex: number) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[spaceIndex].assets[assetIndex].features.push({ name: "", value: "" });
+      return newSpaces;
+    });
+  };
+
+  // Update a feature's field
+  const updateFeature = (
+    spaceIndex: number,
+    assetIndex: number,
+    featureIndex: number,
+    field: "name" | "value",
+    value: string
+  ) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[spaceIndex].assets[assetIndex].features[featureIndex][field] = value;
+      return newSpaces;
+    });
+  };
+
+  // Delete a feature
+  const deleteFeature = (spaceIndex: number, assetIndex: number, featureIndex: number) => {
+    setSpaces((prev) => {
+      const newSpaces = [...prev];
+      newSpaces[spaceIndex].assets[assetIndex].features.splice(featureIndex, 1);
+      return newSpaces;
     });
   };
 
@@ -88,23 +191,16 @@ export function PropertyOnboarding() {
                 <Input
                   id="propertyName"
                   value={formData.propertyName}
-                  onChange={(e) => setFormData({...formData, propertyName: e.target.value})}
-                  placeholder="Maple Heights Development"
+                  onChange={(e: React.FormEvent) => setFormData({...formData, propertyName: e.target.value})}
                 />
               </div>
               <div>
-                <Label htmlFor="propertyType">Property Type</Label>
-                <Select onValueChange={(value) => setFormData({...formData, propertyType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="apartment">Apartment Complex</SelectItem>
-                    <SelectItem value="residential">Residential Development</SelectItem>
-                    <SelectItem value="commercial">Commercial Building</SelectItem>
-                    <SelectItem value="mixed">Mixed Use</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="propertyDescription">Description</Label>
+                <Input
+                  id="propertyDescription"
+                  value={formData.propertyDescription}
+                  onChange={(e: React.FormEvent) => setFormData({...formData, propertyDescription: e.target.value})}
+                />
               </div>
             </div>
             <div>
@@ -112,37 +208,9 @@ export function PropertyOnboarding() {
               <Textarea
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="Full property address"
+                onChange={(e: React.FormEvent) => setFormData({...formData, address: e.target.value})}
               />
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="developer">Developer/Owner</Label>
-                <Input
-                  id="developer"
-                  value={formData.developer}
-                  onChange={(e) => setFormData({...formData, developer: e.target.value})}
-                  placeholder="Development Company Ltd"
-                />
-              </div>
-              <div>
-                <Label htmlFor="totalUnits">Total Units</Label>
-                <Input
-                  id="totalUnits"
-                  type="number"
-                  value={formData.totalUnits}
-                  onChange={(e) => setFormData({...formData, totalUnits: e.target.value})}
-                  placeholder="50"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
             <div>
               <Label>Floor Plans</Label>
               <div className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center">
@@ -152,11 +220,11 @@ export function PropertyOnboarding() {
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('floorPlans', e.target.files)}
+                    onChange={(e: React.FormEvent) => handleFileUpload('floorPlans', e.target.files)}
                     className="hidden"
                     id="floorPlans"
                   />
-                  <Label htmlFor="floorPlans" className="cursor-pointer text-primary hover:underline">
+                  <Label htmlFor="floorPlans" className="block text-center cursor-pointer text-primary hover:underline">
                     Click to upload floor plans
                   </Label>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -170,7 +238,6 @@ export function PropertyOnboarding() {
                 )}
               </div>
             </div>
-
             <div>
               <Label>Building Plans & Documents</Label>
               <div className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center">
@@ -180,11 +247,11 @@ export function PropertyOnboarding() {
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('buildingPlans', e.target.files)}
+                    onChange={(e: React.FormEvent) => handleFileUpload('buildingPlans', e.target.files)}
                     className="hidden"
                     id="buildingPlans"
                   />
-                  <Label htmlFor="buildingPlans" className="cursor-pointer text-primary hover:underline">
+                  <Label htmlFor="buildingPlans" className="block text-center cursor-pointer text-primary hover:underline">
                     Click to upload building plans
                   </Label>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -201,158 +268,205 @@ export function PropertyOnboarding() {
           </div>
         );
 
+      case 2:
+        return (
+          <div className="space-y-4">
+            {spaces.map((space, spaceIndex) => (
+              <div key={spaceIndex} className="relative border p-4 rounded-lg space-y-4">
+                {/* Delete Space Button */}
+                <button
+                  onClick={() => deleteSpace(spaceIndex)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={18} />
+                </button>
+
+                {/* Space name + type */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor={`space-type-${spaceIndex}`}>Space Type</Label>
+                    <select
+                      id={`space-type-${spaceIndex}`}
+                      value={space.type}
+                      onChange={(e) => updateSpaceType(spaceIndex, e.target.value)}
+                      className="w-full border rounded p-2"
+                    >
+                      <option value="">Select a space</option>
+                      {spaceTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor={`space-name-${spaceIndex}`}>Space Name</Label>
+                    <Input
+                      id={`space-name-${spaceIndex}`}
+                      value={space.name}
+                      onChange={(e) => updateSpaceName(spaceIndex, e.target.value)}
+                      placeholder="Downstairs Bedroom"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                {/* Assets */}
+                {space.assets.map((asset, assetIndex) => (
+                  <div key={assetIndex} className="border p-2 rounded-lg space-y-2">
+                    <div className="grid gap-4 md:grid-cols-3 items-center">
+                      {/* Asset Type */}
+                      <div>
+                        <Label htmlFor={`asset-type-${spaceIndex}-${assetIndex}`}>Asset Type</Label>
+                        <select
+                          id={`asset-type-${spaceIndex}-${assetIndex}`}
+                          value={asset.typeId}
+                          onChange={(e) => {
+                            const selectedName =
+                              e.target.options[e.target.selectedIndex].text;
+                            updateAsset(spaceIndex, assetIndex, "name", selectedName);
+                            updateAsset(spaceIndex, assetIndex, "typeId", e.target.value);
+                          }}
+                          className="w-full border rounded p-2"
+                        >
+                          <option value="">Select Asset Type</option>
+                          {assetTypes.map((type) => (
+                            <option key={type.id} value={type.id}>
+                              {type.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Asset Description */}
+                      <div>
+                        <Label htmlFor={`asset-desc-${spaceIndex}-${assetIndex}`}>
+                          Asset Description
+                        </Label>
+                        <Input
+                          id={`asset-desc-${spaceIndex}-${assetIndex}`}
+                          value={asset.description}
+                          onChange={(e) =>
+                            updateAsset(spaceIndex, assetIndex, "description", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      {/* Delete Asset */}
+                      <div className="flex justify-end items-end">
+                        <button
+                          onClick={() => deleteAsset(spaceIndex, assetIndex)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Features for this asset */}
+                    {asset.features.map((feature, featureIndex) => (
+                      <div
+                        key={featureIndex}
+                        className="grid gap-4 md:grid-cols-3 items-center mt-2"
+                      >
+                        <Input
+                          placeholder="Feature Name"
+                          value={feature.name}
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)
+                          }
+                        />
+                        <Input
+                          placeholder="Feature Value"
+                          value={feature.value}
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)
+                          }
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => deleteFeature(spaceIndex, assetIndex, featureIndex)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add Feature Button */}
+                    <Button
+                      variant="secondary"
+                      onClick={() => addFeature(spaceIndex, assetIndex)}
+                      className="mt-2"
+                    >
+                      Add Feature
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Add Asset Button */}
+                <Button variant="secondary" onClick={() => addAsset(spaceIndex)}>
+                  Add Asset
+                </Button>
+              </div>
+            ))}
+
+            {/* Add Space Button */}
+            <Button onClick={addSpace}>Add Space</Button>
+            </div>
+            )
+
       case 3:
         return (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="electricalProvider">Electrical Provider</Label>
-                <Input
-                  id="electricalProvider"
-                  value={formData.electricalProvider}
-                  onChange={(e) => setFormData({...formData, electricalProvider: e.target.value})}
-                  placeholder="National Grid"
-                />
-              </div>
-              <div>
-                <Label htmlFor="gasProvider">Gas Provider</Label>
-                <Input
-                  id="gasProvider"
-                  value={formData.gasProvider}
-                  onChange={(e) => setFormData({...formData, gasProvider: e.target.value})}
-                  placeholder="British Gas"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="waterProvider">Water Provider</Label>
-                <Input
-                  id="waterProvider"
-                  value={formData.waterProvider}
-                  onChange={(e) => setFormData({...formData, waterProvider: e.target.value})}
-                  placeholder="Thames Water"
-                />
-              </div>
-              <div>
-                <Label htmlFor="internetProvider">Internet Provider</Label>
-                <Input
-                  id="internetProvider"
-                  value={formData.internetProvider}
-                  onChange={(e) => setFormData({...formData, internetProvider: e.target.value})}
-                  placeholder="BT Openreach"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="kitchenType">Kitchen Type</Label>
-                <Select onValueChange={(value) => setFormData({...formData, kitchenType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select kitchen type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="modern">Modern</SelectItem>
-                    <SelectItem value="traditional">Traditional</SelectItem>
-                    <SelectItem value="luxury">Luxury</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="bathroomType">Bathroom Type</Label>
-                <Select onValueChange={(value) => setFormData({...formData, bathroomType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bathroom type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ensuite">En-suite</SelectItem>
-                    <SelectItem value="family">Family Bathroom</SelectItem>
-                    <SelectItem value="luxury">Luxury Suite</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="flooringType">Flooring Type</Label>
-                <Select onValueChange={(value) => setFormData({...formData, flooringType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select flooring" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hardwood">Hardwood</SelectItem>
-                    <SelectItem value="laminate">Laminate</SelectItem>
-                    <SelectItem value="carpet">Carpet</SelectItem>
-                    <SelectItem value="tile">Tile</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="heatingType">Heating Type</Label>
-                <Select onValueChange={(value) => setFormData({...formData, heatingType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select heating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="central">Central Heating</SelectItem>
-                    <SelectItem value="electric">Electric</SelectItem>
-                    <SelectItem value="gas">Gas</SelectItem>
-                    <SelectItem value="heat-pump">Heat Pump</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
           <div className="space-y-6">
-            <div className="text-center">
-              <Button onClick={generateAccessCode} variant="outline">
-                Generate Access Codes
-              </Button>
-              <p className="text-sm text-muted-foreground mt-2">
-                Click to generate secure PIN and access token
-              </p>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="accessPIN">Property PIN</Label>
-                <Input
-                  id="accessPIN"
-                  value={formData.accessPIN}
-                  onChange={(e) => setFormData({...formData, accessPIN: e.target.value})}
-                  placeholder="6-digit PIN"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Share this PIN with authorized personnel
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="accessToken">Access Token</Label>
-                <Input
-                  id="accessToken"
-                  value={formData.accessToken}
-                  onChange={(e) => setFormData({...formData, accessToken: e.target.value})}
-                  placeholder="Secure access token"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  API access token for integrations
-                </p>
-              </div>
-            </div>
+            <h2 className="text-xl font-semibold">Review Your Submission</h2>
+
+            {spaces.length === 0 ? (
+              <p className="text-muted-foreground">No spaces added yet.</p>
+            ) : (
+              spaces.map((space, spaceIndex) => (
+                <div
+                  key={spaceIndex}
+                  className="border rounded-lg p-4 space-y-3"
+                >
+                  {/* Space */}
+                  <h3 className="font-medium ml-0">
+                    {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                  </h3>
+
+                  {/* Assets */}
+                  {space.assets.length > 0 ? (
+                    <ul className="list-disc pl-6 space-y-1">
+                      {space.assets.map((asset, assetIndex) => (
+                        <li key={assetIndex}>
+                          <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
+                          {asset.description && (
+                            <span className="text-muted-foreground"> — {asset.description}</span>
+                          )}
+
+                          {/* Asset Features */}
+                          {asset.features && asset.features.length > 0 && (
+                            <ul className="list-disc pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
+                              {asset.features.map((feature, featureIndex) => (
+                                <li key={featureIndex}>
+                                  {feature.name || "Unnamed Feature"}: {feature.value || "No Value"}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground ml-6">No assets added.</p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         );
+
 
       default:
         return null;
@@ -428,7 +542,6 @@ export function PropertyOnboarding() {
             </Button>
             <Button
               onClick={handleNext}
-              disabled={currentStep === steps.length}
             >
               {currentStep === steps.length ? "Complete Onboarding" : "Next"}
             </Button>

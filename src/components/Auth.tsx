@@ -76,7 +76,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="email"
                       type="email"
                       value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
+                      onChange={(e: React.FormEvent) => setLoginEmail(e.target.value)}
                       placeholder="admin@housebook.com"
                       required
                     />
@@ -87,7 +87,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="password"
                       type="password"
                       value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
+                      onChange={(e: React.FormEvent) => setLoginPassword(e.target.value)}
                       placeholder="••••••••"
                       required
                     />
@@ -104,7 +104,7 @@ export function Auth({ onLogin }: AuthProps) {
                     <Input
                       id="signup-first-name"
                       value={signupData.first_name}
-                      onChange={(e) => setSignupData({...signupData, first_name: e.target.value})}
+                      onChange={(e: React.FormEvent) => setSignupData({...signupData, first_name: e.target.value})}
                       placeholder="John"
                       required
                     />
@@ -114,7 +114,7 @@ export function Auth({ onLogin }: AuthProps) {
                     <Input
                       id="signup-last-name"
                       value={signupData.last_name}
-                      onChange={(e) => setSignupData({...signupData, last_name: e.target.value})}
+                      onChange={(e: React.FormEvent) => setSignupData({...signupData, last_name: e.target.value})}
                       placeholder="Doe"
                       required
                     />
