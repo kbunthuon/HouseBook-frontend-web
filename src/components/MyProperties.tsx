@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -6,70 +6,70 @@ import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
 
+import supabase from '../config/supabaseClient';
+
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
-export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPropertiesProps) {
+
+type Property = {
+  address: string;
+  description: string;
+  pin: string;
+  name: string;
+  type?: string;
+  status?: string;
+  lastUpdated?: string;
+  completionStatus?: number;
+};
+
+export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [myProperties, setMyProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data filtered by owner - in real app this would come from API
-  const getMyProperties = () => {
-    if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
-      return [
-        {
-          id: "1",
-          name: "Rose Wood Retreat",
-          address: "123 Maple Street, Downtown",
-          type: "Single Family Home",
-          status: "Active",
-          pin: "123456",
-          lastUpdated: "2 days ago",
-          completionStatus: 95
-        },
-        {
-          id: "5", 
-          name: "Sunset Villa",
-          address: "567 Sunset Boulevard, Hillside",
-          type: "Luxury Villa",
-          status: "Active",
-          pin: "567890",
-          lastUpdated: "1 week ago",
-          completionStatus: 88
-        }
-      ];
-    } else if (ownerEmail.includes('sarah')) {
-      return [
-        {
-          id: "2",
-          name: "Riverside Apartments",
-          address: "456 River Road, Riverside",
-          type: "Apartment Complex",
-          status: "Active",
-          pin: "789012",
-          lastUpdated: "1 week ago",
-          completionStatus: 92
-        }
-      ];
-    } else {
-      return [
-        {
-          id: "3",
-          name: "Oak Grove Complex",
-          address: "789 Oak Avenue, Westside",
-          type: "Mixed Use",
-          status: "Pending",
-          pin: "345678",
-          lastUpdated: "3 days ago",
-          completionStatus: 67
-        }
-      ];
-    }
-  };
+  // Getting properties directly from Supabase query
 
-  const myProperties = getMyProperties();
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+
+        console.log("Fetching properties for email:", userID);
+
+        const { data, error } = await supabase
+          .from('owner_property_view')
+          .select('Property(address, description, pin, name)')
+          .eq('user_id', userID);
+
+        if (error) throw error;
+
+        // Flatten nested Property objects
+        const properties: Property[] = [];
+        data?.forEach(ownerProperty => {
+          const property = ownerProperty.Property;
+          
+          // Handle both array and single object cases
+          if (Array.isArray(property)) {
+            properties.push(...property.filter(p => p !== null));
+          } else if (property && property !== null) {
+            properties.push(property);
+          }
+        });
+
+        setMyProperties(properties);
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        setMyProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
