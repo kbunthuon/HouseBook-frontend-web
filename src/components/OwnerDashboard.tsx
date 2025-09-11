@@ -115,8 +115,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
 
   },[userId])
 
-  {myProperties.map(p => console.log("myProperty:", p.property_id))}
-
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
 
