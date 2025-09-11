@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
-import supabase from "../config/supabaseClient.ts"
 import { useState, useEffect} from "react";
+import { getOwnerId, getProperty } from "../services/FetchData.ts";
 
 
 interface OwnerDashboardProps {
@@ -18,47 +18,19 @@ interface OwnerDashboardProps {
 }
 
 export function OwnerDashboard({ userId }: OwnerDashboardProps) {
-  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [myProperties, setOwnerProperties] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect (() => {
     const getOwnerProps = async () => {
-
-      // if (!userId) return; 
-
       try {
-        // get owner id
-        const { data: ownerData, error: ownerError } = await supabase
-          .from("Owner")
-          .select("owner_id")
-          .eq("user_id", userId)
-          .single();
+        // Get owner id
+        const ownerId = await getOwnerId(userId);
+        if (!ownerId) throw Error("Owner ID not found");
+        
+        const properties = (await getProperty(ownerId))?.map(row => row.property) ?? [];
+        setOwnerProperties(properties);
 
-        if (ownerError) throw ownerError;
-
-        if (ownerData?.owner_id) {
-          setOwnerId(ownerData.owner_id);
-
-          const { data: ownerProperties, error: propError } = await supabase
-            .from("OwnerProperty")
-            .select(`
-              property: Property (
-              property_id, 
-              address, 
-              created_at
-              )
-            `)
-            .eq("owner_id", ownerData.owner_id);
-
-          if (propError) throw propError;
-
-          const properties = ownerProperties?.map(row => row.property) ?? []
-          setOwnerProperties(properties);
-          console.log(myProperties)
-        } else {
-          setOwnerProperties([]);
-        }
       } catch (error) {
         console.error(error);
         setOwnerProperties([]);
