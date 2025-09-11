@@ -1,4 +1,5 @@
 import supabase from "../config/supabaseClient";
+import { getOwnerId } from "./FetchData";
 
 // Setting what a FormData looks like
 export interface FormData {
@@ -48,20 +49,20 @@ export async function onboardProperty(formData: FormData, spaces: Space[]) {
 
 }
 
-const getOwnerId = async (userId: string) => {
-  const { data, error } = await supabase
-    .from("Owner")
-    .select("owner_id")
-    .eq("user_id", userId)
-    .single();
+// const getOwnerId = async (userId: string) => {
+//   const { data, error } = await supabase
+//     .from("Owner")
+//     .select("owner_id")
+//     .eq("user_id", userId)
+//     .single();
 
-  if (error) {
-    console.error("Error fetching owner id:", error.message);
-    return null;
-  }
+//   if (error) {
+//     console.error("Error fetching owner id:", error.message);
+//     return null;
+//   }
 
-  return data?.owner_id || null;
-};
+//   return data?.owner_id || null;
+// };
 
 const saveProperty = async (formData: FormData, ownerId: string) => {
   try {

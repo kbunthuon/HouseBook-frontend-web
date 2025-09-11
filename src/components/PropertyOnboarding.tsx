@@ -341,7 +341,7 @@ export function PropertyOnboarding() {
                       {/* Asset Description */}
                       <div>
                         <Label htmlFor={`asset-desc-${spaceIndex}-${assetIndex}`}>
-                          Asset Description
+                          If other, please specify
                         </Label>
                         <Input
                           id={`asset-desc-${spaceIndex}-${assetIndex}`}
