@@ -22,7 +22,7 @@ export function PropertyOnboarding() {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
-    // Basic Information
+    // General Information
     propertyName: "",
     propertyDescription: "",
     address: "",
@@ -48,7 +48,7 @@ export function PropertyOnboarding() {
   }, []);
 
   const steps = [
-    { id: 1, title: "Basic Information", description: "Property details and location" },
+    { id: 1, title: "General Information", description: "Property details, location and images" },
     { id: 2, title: "Adding Spaces and Assets", description: "Insert the rooms and assets in each room" },
     { id: 3, title: "Submission", description: "Check if all the data is correct and submit" }
   ];
@@ -422,51 +422,119 @@ export function PropertyOnboarding() {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Review Your Submission</h2>
 
+            {/* General Info */}
+            <div className="border rounded-lg p-4 space-y-2">
+              <h3 className="font-medium text-lg">General Information</h3>
+              <p>
+                <span className="font-medium">Property Name:</span>{" "}
+                {formData.propertyName || "Not provided"}
+              </p>
+              <p>
+                <span className="font-medium">Description:</span>{" "}
+                {formData.propertyDescription || "Not provided"}
+              </p>
+              <p>
+                <span className="font-medium">Address:</span>{" "}
+                {formData.address || "Not provided"}
+              </p>
+            </div>
+
+            {/* Plans & Documents */}
+            <div className="border rounded-lg p-4 space-y-2">
+              <h3 className="font-medium text-lg">Plans & Documents</h3>
+
+              {/* Floor Plans */}
+              <div>
+                <span className="font-medium">Floor Plans:</span>
+                {formData.floorPlans.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    {formData.floorPlans.map((file, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Floor Plan ${idx + 1}`}
+                          className="w-full h-40 object-cover rounded border"
+                        />
+                        <p className="text-xs text-muted-foreground">{file.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No floor plans uploaded</p>
+                )}
+              </div>
+
+              {/* Building Plans */}
+              <div>
+                <span className="font-medium">Building Plans:</span>
+                {formData.buildingPlans.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    {formData.buildingPlans.map((file, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Building Plan ${idx + 1}`}
+                          className="w-full h-40 object-cover rounded border"
+                        />
+                        <p className="text-xs text-muted-foreground">{file.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No building plans uploaded</p>
+                )}
+              </div>
+            </div>
+
+
+            {/* Spaces */}
             {spaces.length === 0 ? (
               <p className="text-muted-foreground">No spaces added yet.</p>
             ) : (
-              spaces.map((space, spaceIndex) => (
-                <div
-                  key={spaceIndex}
-                  className="border rounded-lg p-4 space-y-3"
-                >
-                  {/* Space */}
-                  <h3 className="font-medium ml-0">
-                    {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
-                  </h3>
+              <ul className="space-y-4">
+                {spaces.map((space, spaceIndex) => (
+                  <li key={spaceIndex} className="list-disc pl-4">
+                    {/* Space */}
+                    <span className="font-medium">
+                      {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                    </span>
 
-                  {/* Assets */}
-                  {space.assets.length > 0 ? (
-                    <ul className="list-disc pl-6 space-y-1">
-                      {space.assets.map((asset, assetIndex) => (
-                        <li key={assetIndex}>
-                          <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
-                          {asset.description && (
-                            <span className="text-muted-foreground"> — {asset.description}</span>
-                          )}
+                    {/* Assets */}
+                    {space.assets.length > 0 ? (
+                      <ul className="list-disc pl-6 space-y-2 mt-2">
+                        {space.assets.map((asset, assetIndex) => (
+                          <li key={assetIndex}>
+                            <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
+                            {asset.description && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                — {asset.description}
+                              </span>
+                            )}
 
-                          {/* Asset Features */}
-                          {asset.features && asset.features.length > 0 && (
-                            <ul className="list-disc pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
-                              {asset.features.map((feature, featureIndex) => (
-                                <li key={featureIndex}>
-                                  {feature.name || "Unnamed Feature"}: {feature.value || "No Value"}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground ml-6">No assets added.</p>
-                  )}
-                </div>
-              ))
+                            {/* Asset Features */}
+                            {asset.features && asset.features.length > 0 && (
+                              <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
+                                {asset.features.map((feature, featureIndex) => (
+                                  <li key={featureIndex}>
+                                    {feature.name || "Unnamed Feature"}:{" "}
+                                    {feature.value || "No Value"}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ml-6 text-sm text-muted-foreground">No assets added.</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         );
-
 
       default:
         return null;
