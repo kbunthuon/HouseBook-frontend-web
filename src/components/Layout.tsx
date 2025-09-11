@@ -1,6 +1,7 @@
 import { Sidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
 import { Home, Building, Users, FileText, Settings, LogOut } from "lucide-react";
+import { NavLink, Outlet } from "react-router-dom";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,12 +12,14 @@ interface LayoutProps {
 
 export function Layout({ children, currentPage, onPageChange, onLogout }: LayoutProps) {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'properties', label: 'Properties', icon: Building },
-    { id: 'onboarding', label: 'Onboarding', icon: Users },
-    { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'admin', label: 'Admin', icon: Settings },
+    { to: "/admin", label: "Dashboard", icon: Home, end: true },
+    { to: "/admin/properties", label: "Properties", icon: Building },
+    { to: "/admin/properties/new", label: "Onboarding", icon: Users },
+    { to: "/admin/reports", label: "Reports", icon: FileText },
+    { to: "/admin/admin-tools", label: "Admin", icon: Settings }
   ];
+
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -27,20 +30,20 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
         </div>
         
         <nav className="p-4 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.id}
-                variant={currentPage === item.id ? "secondary" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => onPageChange(item.id)}
+          {menuItems.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `block w-full rounded-md px-3 py-2 text-left flex items-center
+                  ${isActive ? "bg-secondary text-secondary-foreground" : "hover:bg-accent"}`
+                }
               >
                 <Icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </Button>
-            );
-          })}
+                {label}
+              </NavLink>
+            ))}
         </nav>
         
         <div className="absolute bottom-4 left-4">

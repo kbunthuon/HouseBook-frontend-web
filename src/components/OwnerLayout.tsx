@@ -1,5 +1,6 @@
 import { Button } from "./ui/button";
 import { Home, Building, FileText, Plus, LogOut } from "lucide-react";
+import { NavLink, Outlet } from "react-router-dom";
 
 interface OwnerLayoutProps {
   children: React.ReactNode;
@@ -10,11 +11,11 @@ interface OwnerLayoutProps {
 }
 
 export function OwnerLayout({ children, currentPage, onPageChange, onLogout, ownerName }: OwnerLayoutProps) {
-  const menuItems = [
-    { id: 'owner-dashboard', label: 'My Dashboard', icon: Home },
-    { id: 'my-properties', label: 'My Properties', icon: Building },
-    { id: 'add-property', label: 'Add Property', icon: Plus },
-    { id: 'my-reports', label: 'Reports', icon: FileText },
+  const menu = [
+    { to: "/owner", label: "My Dashboard", icon: Home, end: true },
+    { to: "/owner/properties", label: "My Properties", icon: Building },
+    { to: "/owner/properties/new", label: "Add Property", icon: Plus },
+    { to: "/owner/reports", label: "Reports", icon: FileText },
   ];
 
   return (
@@ -30,20 +31,20 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
         </div>
         
         <nav className="p-4 space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.id}
-                variant={currentPage === item.id ? "secondary" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => onPageChange(item.id)}
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </Button>
-            );
-          })}
+        {menu.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `block w-full rounded-md px-3 py-2 text-left flex items-center
+                 ${isActive ? "bg-secondary text-secondary-foreground" : "hover:bg-accent"}`
+              }
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {label}
+            </NavLink>
+          ))}
         </nav>
         
         <div className="absolute bottom-4 left-4">
