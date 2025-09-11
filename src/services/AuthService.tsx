@@ -46,7 +46,7 @@ export async function signupUser(signupData: {
     if (adminError) throw new Error(adminError.message);
   }
 
-  return { email: signupData.email, userType: signupData.userType };
+  return { email: signupData.email, userType: signupData.userType , userId};
 }
 
 export async function loginUser(email: string, password: string) {
@@ -72,7 +72,7 @@ export async function loginUser(email: string, password: string) {
   // 3. Determine role
   const { data: ownerData } = await supabase
     .from("Owner")
-    .select("user_id")
+    .select("user_id", "owner_id")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -84,5 +84,5 @@ export async function loginUser(email: string, password: string) {
 
   const userType: "owner" | "admin" = adminData ? "admin" : "owner";
 
-  return { email: profile.email, userType };
+  return { email: profile.email, userType , userId};
 }

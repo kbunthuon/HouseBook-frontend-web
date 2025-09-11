@@ -46,13 +46,13 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
           })}
         </nav>
         
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="absolute bottom-4 left-4">
           <Button
             variant="ghost"
-            className="w-full justify-start text-destructive hover:text-destructive"
+            className="justify-start text-destructive hover:text-destructive"
             onClick={onLogout}
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-3 h-4 w-4" />
             Logout
           </Button>
         </div>

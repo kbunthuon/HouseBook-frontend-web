@@ -8,7 +8,7 @@ import { Building } from "lucide-react";
 import { signupUser, loginUser } from "../services/AuthService";
 
 interface AuthProps {
-  onLogin: (email: string, userType: "admin" | "owner") => void;
+  onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
 }
 
 export function Auth({ onLogin }: AuthProps) {
@@ -20,14 +20,14 @@ export function Auth({ onLogin }: AuthProps) {
     first_name: "",
     last_name: "",
     phone: "",
-    userType: "owner" as "admin" | "owner",
+    userType: "owner" as "admin" | "owner"
   });
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const result = await signupUser(signupData);
-      onLogin(result.email, result.userType);
+      onLogin(result.email, result.userType, result.userId);
       console.log("Signup successful!", result);
     } catch (err: any) {
       console.error("Signup failed:", err.message);
@@ -38,7 +38,7 @@ export function Auth({ onLogin }: AuthProps) {
     e.preventDefault();
     try {
       const result = await loginUser(loginEmail, loginPassword);
-      onLogin(result.email, result.userType);
+      onLogin(result.email, result.userType, result.userId);
       console.log("Login successful!", result);
     } catch (err: any) {
       console.error("Login failed:", err.message);

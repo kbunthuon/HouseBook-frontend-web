@@ -1,33 +1,96 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
+import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import supabase from "../config/supabaseClient.ts"
+import { useState, useEffect} from "react";
+
 
 interface OwnerDashboardProps {
-  ownerEmail: string;
+  userId: string;
 }
 
-export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
-  // Mock data - in real app this would be filtered by owner
-  const getOwnerProperties = () => {
-    if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
-      return [
-        { id: "1", name: "Rose Wood Retreat", status: "Active", lastUpdated: "2 days ago" },
-        { id: "2", name: "Sunset Villa", status: "Active", lastUpdated: "1 week ago" }
-      ];
-    } else if (ownerEmail.includes('sarah')) {
-      return [
-        { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
-      ];
-    } else {
-      return [
-        { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" }
-      ];
-    }
-  };
+export function OwnerDashboard({ userId }: OwnerDashboardProps) {
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [myProperties, setOwnerProperties] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const myProperties = getOwnerProperties();
+  useEffect (() => {
+    const getOwnerProps = async () => {
+
+      // if (!userId) return; 
+
+      try {
+        // get owner id
+        const { data: ownerData, error: ownerError } = await supabase
+          .from("Owner")
+          .select("owner_id")
+          .eq("user_id", userId)
+          .single();
+
+        if (ownerError) throw ownerError;
+
+        if (ownerData?.owner_id) {
+          setOwnerId(ownerData.owner_id);
+
+          const { data: ownerProperties, error: propError } = await supabase
+            .from("OwnerProperty")
+            .select(`
+              property: Property (
+              property_id, 
+              address, 
+              created_at
+              )
+            `)
+            .eq("owner_id", ownerData.owner_id);
+
+          if (propError) throw propError;
+
+          const properties = ownerProperties?.map(row => row.property) ?? []
+          setOwnerProperties(properties);
+          console.log(myProperties)
+        } else {
+          setOwnerProperties([]);
+        }
+      } catch (error) {
+        console.error(error);
+        setOwnerProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getOwnerProps();
+
+  },[userId])
+
+  // // Mock data - in real app this would be filtered by owner
+  // const getOwnerProperties = () => {
+  //   if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
+  //     return [
+  //       { id: "1", name: "Rose Wood Retreat", status: "Active", lastUpdated: "2 days ago" },
+  //       { id: "2", name: "Sunset Villa", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else if (ownerEmail.includes('sarah')) {
+  //     return [
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else {
+  //     return [
+  //       { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" },
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   }
+  // };
+
+  
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
 
@@ -95,6 +158,51 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
     }
   };
 
+  const approveEdit = (editId: number) => {
+    console.log(`Approved transfer ${editId}`);
+  };
+
+  const rejectEdit = (editId: number) => {
+    console.log(`Rejected transfer ${editId}`);
+  };
+
+  const getEditStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "secondary";
+      case "approved":
+        return "default";
+      case "rejected":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
+
+  // TODO: Connect with database -- mock data for show
+  const pendingEdits = [
+    {
+      id: 1,
+      property: "Pine Valley Homes",
+      user: "Lisa Brown",
+      fieldEdited: "Utilities",
+      newValue: "Changed electrical provider",
+      requestDate: "2024-01-15",
+      reason: "Provider no longer available",
+      status: "pending"
+    },
+    {
+      id: 2,
+      property: "Sunset Gardens",
+      user: "Mike Wilson",
+      fieldEdited: "Owner Contact",
+      newValue: "Updated email address",
+      requestDate: "2024-01-12",
+      reason: "Old email inactive",
+      status: "approved"
+    }
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -104,29 +212,112 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={metric.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {metric.title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${metric.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
-                <p className="text-xs text -muted-foreground">
-                  {metric.change}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-1">
+        
+
+        <Card>
+            <CardHeader>
+              <CardTitle>Pending Edit Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Requested By</TableHead>
+                    <TableHead>Field Edited</TableHead>
+                    <TableHead>Request Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingEdits.map((edit) => (
+                    <TableRow key={edit.id}>
+                      <TableCell className="font-medium">{edit.property}</TableCell>
+                      <TableCell>{edit.user}</TableCell>
+                      <TableCell>{edit.fieldEdited}</TableCell>
+                      <TableCell>{edit.requestDate}</TableCell>
+                      <TableCell>
+                        <Badge variant={getEditStatusColor(edit.status)}>
+                          {edit.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Request Details</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label>Property</Label>
+                                  <Input value={edit.property} readOnly />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div>
+                                    <Label>Requested By</Label>
+                                    <Input value={edit.user} readOnly />
+                                  </div>
+                                  <div>
+                                    <Label>Field Edited</Label>
+                                    <Input value={edit.fieldEdited} readOnly />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>New Field</Label>
+                                  <Textarea value={edit.newValue} readOnly />
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => rejectEdit(edit.id)}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </Button>
+                                  <Button onClick={() => approveEdit(edit.id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          {edit.status === "pending" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => approveEdit(edit.id)}
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => rejectEdit(edit.id)}
+                              >
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>My Properties</CardTitle>
@@ -136,20 +327,28 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="flex space-x-6 overflow-x-auto py-4">
               {myProperties.map((property) => (
-                <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <div className="font-medium">{property.name}</div>
+                // <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl shadow-md hover:shadow-lg transition">
+                  
+                  {/* property image */}
+                  <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <span className="text-muted-foreground">Property Image </span>
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="font-medium">{property.address}</div>
                     <div className="text-sm text-muted-foreground">
-                      Updated {property.lastUpdated}
+                      Created {property.created_at}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  {/* removed pending status */}
+                  {/* <div className="flex items-center space-x-2">
                     <Badge variant={property.status === "Active" ? "default" : "secondary"}>
                       {property.status}
                     </Badge>
-                  </div>
+                  </div> */}
                 </div>
               ))}
               {myProperties.length === 0 && (
@@ -166,34 +365,29 @@ export function OwnerDashboard({ ownerEmail }: OwnerDashboardProps) {
             </div>
           </CardContent>
         </Card>
-
-        {/* <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Upcoming Tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {upcomingTasks.map((task) => (
-                <div key={task.id} className="flex items-start space-x-3 p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{task.task}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {task.property} • Due {task.dueDate}
-                    </div>
-                  </div>
-                  <Badge variant={getPriorityColor(task.priority)} className="text-xs">
-                    {task.priority}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card> */}
       </div>
 
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <Card key={metric.title}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      {metric.title}
+                    </CardTitle>
+                    <Icon className={`h-4 w-4 ${metric.color}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{metric.value}</div>
+                    <p className="text-xs text -muted-foreground">
+                      {metric.change}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+      </div>
       {/* <Card>
         <CardHeader>
           <CardTitle>Property Portfolio Health</CardTitle>
