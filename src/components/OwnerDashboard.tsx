@@ -11,35 +11,24 @@ import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-reac
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import supabase from "../config/supabaseClient.ts"
 import { useState, useEffect} from "react";
-import { request } from "http";
-import { MyProperties } from "./MyProperties.tsx";
 
 
 interface OwnerDashboardProps {
   userId: string;
-  ownerName: string;
-}
-
-interface ChangeLog {
-  id: string;
-  asset_id: string;
-  specifications: Record<string, any>;
-  change_description: string;
-  changed_by_user_id: string;
-  created_at: string;
 }
 
 export function OwnerDashboard({ userId }: OwnerDashboardProps) {
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [myProperties, setOwnerProperties] = useState<any[]>([])
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
   const [loading, setLoading] = useState(true)
 
   useEffect (() => {
     const getOwnerProps = async () => {
 
+      // if (!userId) return; 
+
       try {
-        /* get owner id from user id */
+        // get owner id
         const { data: ownerData, error: ownerError } = await supabase
           .from("Owner")
           .select("owner_id")
@@ -51,7 +40,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         if (ownerData?.owner_id) {
           setOwnerId(ownerData.owner_id);
 
-        /* get owner data from owner id */
           const { data: ownerProperties, error: propError } = await supabase
             .from("OwnerProperty")
             .select(`
@@ -67,45 +55,13 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
 
           const properties = ownerProperties?.map(row => row.property) ?? []
           setOwnerProperties(properties);
-          
-          if (properties.length > 0) {
-              const propertyIds = properties.map((p: any) => p.property_id);
-              const { data: changes, error: changesError } = await supabase
-                .from("changelog_property_view")
-                .select(`
-                  changelog_id,
-                  changelog_specifications,
-                  changelog_description,
-                  changelog_created_at,
-                  changelog_status,
-                  user: User ( first_name, last_name ),
-                  property_id
-                `)
-                .in("property_id", propertyIds)
-                .order("changelog_created_at", { ascending: false });
-
-              if (changesError) {
-                console.error("Error fetching change log:", changesError);
-                setLoading(false);
-                return;
-              }
-
-              setRequests(changes ?? []);
-
-            } else {
-              setRequests([]);
-            }
-
-          
+          console.log(myProperties)
         } else {
           setOwnerProperties([]);
         }
-
       } catch (error) {
         console.error(error);
         setOwnerProperties([]);
-        setRequests([]);
-
       } finally {
         setLoading(false);
       }
@@ -115,8 +71,26 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
 
   },[userId])
 
-  {myProperties.map(p => console.log("myProperty:", p.property_id))}
+  // // Mock data - in real app this would be filtered by owner
+  // const getOwnerProperties = () => {
+  //   if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
+  //     return [
+  //       { id: "1", name: "Rose Wood Retreat", status: "Active", lastUpdated: "2 days ago" },
+  //       { id: "2", name: "Sunset Villa", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else if (ownerEmail.includes('sarah')) {
+  //     return [
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   } else {
+  //     return [
+  //       { id: "3", name: "Oak Grove Complex", status: "Pending", lastUpdated: "3 days ago" },
+  //       { id: "2", name: "Riverside Apartments", status: "Active", lastUpdated: "1 week ago" }
+  //     ];
+  //   }
+  // };
 
+  
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
 
@@ -205,27 +179,29 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   };
 
-function formatDate(timestamp: string | number | Date) {
-  const dateObject = new Date(timestamp);
-  return dateObject.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-function formatDateTime(timestamp: string | number | Date) {
-  const dateObject = new Date(timestamp);
-  return dateObject.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
+  // TODO: Connect with database -- mock data for show
+  const pendingEdits = [
+    {
+      id: 1,
+      property: "Pine Valley Homes",
+      user: "Lisa Brown",
+      fieldEdited: "Utilities",
+      newValue: "Changed electrical provider",
+      requestDate: "2024-01-15",
+      reason: "Provider no longer available",
+      status: "pending"
+    },
+    {
+      id: 2,
+      property: "Sunset Gardens",
+      user: "Mike Wilson",
+      fieldEdited: "Owner Contact",
+      newValue: "Updated email address",
+      requestDate: "2024-01-12",
+      reason: "Old email inactive",
+      status: "approved"
+    }
+  ];
 
   return (
     <div className="space-y-8">
@@ -239,6 +215,8 @@ function formatDateTime(timestamp: string | number | Date) {
       
 
       <div className="grid gap-6 md:grid-cols-1">
+        
+
         <Card>
             <CardHeader>
               <CardTitle>Pending Edit Requests</CardTitle>
@@ -256,18 +234,15 @@ function formatDateTime(timestamp: string | number | Date) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((request) => (
-                    <TableRow key={request.changelog_id}>
-                      <TableCell className="font-medium">
-                        {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
-                      </TableCell>
-                      <TableCell>{request.user?.first_name ?? "Unknown User"}</TableCell>
-                      <TableCell>{request.changelog_description}</TableCell>
-                      <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  {pendingEdits.map((edit) => (
+                    <TableRow key={edit.id}>
+                      <TableCell className="font-medium">{edit.property}</TableCell>
+                      <TableCell>{edit.user}</TableCell>
+                      <TableCell>{edit.fieldEdited}</TableCell>
+                      <TableCell>{edit.requestDate}</TableCell>
                       <TableCell>
-                        <Badge variant={getEditStatusColor(request.changelog_status)}>
-                          {request.changelog_status}
+                        <Badge variant={getEditStatusColor(edit.status)}>
+                          {edit.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -285,44 +260,31 @@ function formatDateTime(timestamp: string | number | Date) {
                               <div className="space-y-4">
                                 <div>
                                   <Label>Property</Label>
-                                  <Input value={myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  <Input value={edit.property} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={request.changelog_changed_by_user_id} readOnly />
+                                    <Input value={edit.user} readOnly />
                                   </div>
                                   <div>
-                                    <Label>Request Time</Label>
-                                    <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                    <Label>Field Edited</Label>
+                                    <Input value={edit.fieldEdited} readOnly />
                                   </div>
                                 </div>
                                 <div>
-                                    <Label>Field Edited</Label>
-                                    <Input value={request.changelog_description} readOnly />
-                                  </div>
-                                <div>
-                                  <Label>Field Specification</Label>
-                                  <td className="px-4 py-2">
-                                    <ul className="text-xs space-y-1">
-                                      {Object.entries(request.changelog_specifications).map(([key, value]) => (
-                                        <li key={key}>
-                                          <strong>{key}:</strong> {String(value)}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </td>
+                                  <Label>New Field</Label>
+                                  <Textarea value={edit.newValue} readOnly />
                                 </div>
                                 <div className="flex justify-end space-x-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => rejectEdit(request.id)}
+                                    onClick={() => rejectEdit(edit.id)}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button onClick={() => approveEdit(edit.id)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>
@@ -330,19 +292,19 @@ function formatDateTime(timestamp: string | number | Date) {
                               </div>
                             </DialogContent>
                           </Dialog>
-                          {request.changelog_status === "ACCEPTED" && (
+                          {edit.status === "pending" && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => approveEdit(request.id)}
+                                onClick={() => approveEdit(edit.id)}
                               >
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => rejectEdit(request.id)}
+                                onClick={() => rejectEdit(edit.id)}
                               >
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
@@ -365,21 +327,28 @@ function formatDateTime(timestamp: string | number | Date) {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-6 overflow-x-auto py-6">
+            <div className="flex space-x-6 overflow-x-auto py-4">
               {myProperties.map((property) => (
-                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition">
+                // <div key={property.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl shadow-md hover:shadow-lg transition">
                   
                   {/* property image */}
                   <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
                     <span className="text-muted-foreground">Property Image </span>
                   </div>
 
-                  <div className="flex-1 mt-4">
+                  <div className="flex-1">
                     <div className="font-medium">{property.address}</div>
-                    <div className="text-medium text-muted-foreground">
-                      Created {formatDate(property.created_at)}
+                    <div className="text-sm text-muted-foreground">
+                      Created {property.created_at}
                     </div>
                   </div>
+                  {/* removed pending status */}
+                  {/* <div className="flex items-center space-x-2">
+                    <Badge variant={property.status === "Active" ? "default" : "secondary"}>
+                      {property.status}
+                    </Badge>
+                  </div> */}
                 </div>
               ))}
               {myProperties.length === 0 && (
@@ -398,7 +367,7 @@ function formatDateTime(timestamp: string | number | Date) {
         </Card>
       </div>
 
-    <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {metrics.map((metric) => {
               const Icon = metric.icon;
               return (
