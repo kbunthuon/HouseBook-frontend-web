@@ -78,6 +78,7 @@ export function Auth({ onLogin }: AuthProps) {
                       value={loginEmail}
                       onChange={(e: React.FormEvent) => setLoginEmail(e.target.value)}
                       placeholder="admin@housebook.com"
+                      autoComplete="on"
                       required
                     />
                   </div>
@@ -105,6 +106,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="signup-first-name"
                       value={signupData.first_name}
                       onChange={(e: React.FormEvent) => setSignupData({...signupData, first_name: e.target.value})}
+                      autoComplete="on"
                       placeholder="John"
                       required
                     />
@@ -115,6 +117,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="signup-last-name"
                       value={signupData.last_name}
                       onChange={(e: React.FormEvent) => setSignupData({...signupData, last_name: e.target.value})}
+                      autoComplete="on"
                       placeholder="Doe"
                       required
                     />
@@ -134,6 +137,7 @@ export function Auth({ onLogin }: AuthProps) {
                         }));
                       }}
                       placeholder="john@company.com"
+                      autoComplete="on"
                       required
                     />
                   </div>
@@ -143,7 +147,8 @@ export function Auth({ onLogin }: AuthProps) {
                       id="signup-phone"
                       value={signupData.phone}
                       onChange={(e) => setSignupData({...signupData, phone: e.target.value})}
-                      placeholder="000"
+                      placeholder="04-123-456-78"
+                      autoComplete="on"
                       required
                     />
                   </div>
