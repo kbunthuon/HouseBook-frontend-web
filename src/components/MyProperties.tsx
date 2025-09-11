@@ -69,7 +69,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
     };
 
     fetchProperties();
-  }, [ownerID]);
+  }, []);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
