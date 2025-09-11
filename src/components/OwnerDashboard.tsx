@@ -28,7 +28,7 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         const ownerId = await getOwnerId(userId);
         if (!ownerId) throw Error("Owner ID not found");
         
-        const properties = (await getProperty(ownerId))?.map(row => row.property) ?? [];
+        const properties = await getProperty(userId);
         setOwnerProperties(properties);
 
       } catch (error) {
