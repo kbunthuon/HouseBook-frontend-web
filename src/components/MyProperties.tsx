@@ -26,76 +26,23 @@ type Property = {
   completionStatus?: number;
 };
 
-export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPropertiesProps) {
+export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const ownerID = "494ead96-887e-4c98-8d93-849cd5ff5399";
-
-
-  // Mock data filtered by owner - in real app this would come from API
-  const getMyProperties = () => {
-    if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
-      return [
-        {
-          id: "1",
-          name: "Rose Wood Retreat",
-          address: "123 Maple Street, Downtown",
-          type: "Single Family Home",
-          status: "Active",
-          pin: "123456",
-          lastUpdated: "2 days ago",
-          completionStatus: 95
-        },
-        {
-          id: "5", 
-          name: "Sunset Villa",
-          address: "567 Sunset Boulevard, Hillside",
-          type: "Luxury Villa",
-          status: "Active",
-          pin: "567890",
-          lastUpdated: "1 week ago",
-          completionStatus: 88
-        }
-      ];
-    } else if (ownerEmail.includes('sarah')) {
-      return [
-        {
-          id: "2",
-          name: "Riverside Apartments",
-          address: "456 River Road, Riverside",
-          type: "Apartment Complex",
-          status: "Active",
-          pin: "789012",
-          lastUpdated: "1 week ago",
-          completionStatus: 92
-        }
-      ];
-    } else {
-      return [
-        {
-          id: "3",
-          name: "Oak Grove Complex",
-          address: "789 Oak Avenue, Westside",
-          type: "Mixed Use",
-          status: "Pending",
-          pin: "345678",
-          lastUpdated: "3 days ago",
-          completionStatus: 67
-        }
-      ];
-    }
-  };
 
   // Getting properties directly from Supabase query
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
+
+        console.log("Fetching properties for email:", userID);
+
         const { data, error } = await supabase
-          .from('OwnerProperty')
-          .select('Property:Property(address, description, pin, name)')
-          .eq('owner_id', ownerID);
+          .from('owner_property_view')
+          .select('Property(address, description, pin, name)')
+          .eq('user_id', userID);
 
         if (error) throw error;
 
