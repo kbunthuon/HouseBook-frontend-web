@@ -42,6 +42,7 @@ export default function App() {
   const handleViewProperty = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setCurrentPage('property-detail');
+    
   };
 
   const handleBackToProperties = () => {

@@ -152,7 +152,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.id)}
+                            onClick={() => onViewProperty(property.property_id)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />
