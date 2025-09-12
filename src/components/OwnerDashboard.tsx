@@ -43,7 +43,8 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         const properties = await getProperty(userId);
         setOwnerProperties(properties);
 
-        if (properties.length > 0) {
+
+        if (properties && properties.length > 0) {
               const propertyIds = properties.map((p: any) => p.property_id);
               const { data: changes, error: changesError } = await supabase
                 .from("changelog_property_view")
