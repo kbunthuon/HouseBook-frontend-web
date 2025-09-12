@@ -42,7 +42,6 @@ export default function App() {
   const handleViewProperty = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setCurrentPage('property-detail');
-    
   };
 
   const handleBackToProperties = () => {
@@ -94,7 +93,9 @@ export default function App() {
   const renderOwnerPage = () => {
     switch (currentPage) {
       case 'owner-dashboard':
-        return <OwnerDashboard userId={userId} />;
+        return <OwnerDashboard 
+        userId={userId} 
+        ownerName={getUserName()}/>;
       case 'my-properties':
         return <MyProperties 
           ownerEmail={userId} 
@@ -119,7 +120,7 @@ export default function App() {
       case 'my-reports':
         return <MyReports ownerEmail={userEmail} />;
       default:
-        return <OwnerDashboard userId={userEmail} />;
+        return <OwnerDashboard userId={userEmail} ownerName={getUserName()} />;
     }
   };
 
