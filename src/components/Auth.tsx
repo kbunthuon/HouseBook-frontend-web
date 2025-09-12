@@ -54,7 +54,7 @@ export function Auth({ onLogin }: AuthProps) {
             <Building className="h-12 w-12 text-primary" />
           </div>
           <h1 className="text-3xl font-bold">HouseBook</h1>
-          <p className="text-muted-foreground">Admin Portal</p>
+          {/* <p className="text-muted-foreground">Admin Portal</p> */}
         </div>
 
         <Card>
