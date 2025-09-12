@@ -72,7 +72,7 @@ export async function loginUser(email: string, password: string) {
   // 3. Determine role
   const { data: ownerData } = await supabase
     .from("Owner")
-    .select("user_id", "owner_id")
+    .select("user_id, owner_id")
     .eq("user_id", userId)
     .maybeSingle();
 
