@@ -44,6 +44,23 @@ export default function App() {
     setUserId("");
   };
 
+  {/*
+  const handleViewProperty = (propertyId: string) => {
+    setSelectedPropertyId(propertyId);
+    setCurrentPage('property-detail');
+    
+  };
+
+  const handleBackToProperties = () => {
+    setSelectedPropertyId(null);
+    setCurrentPage(userType === 'admin' ? 'properties' : 'my-properties');
+  };
+
+  const handleAddProperty = () => {
+    setCurrentPage(userType === 'admin' ? 'onboarding' : 'add-property');
+  }; */}
+
+  // Get user's display name from email
   const getUserName = () => {
     if (!userEmail) return "User";
     const namePart = userEmail.split("@")[0];
