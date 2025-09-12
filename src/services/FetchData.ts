@@ -61,3 +61,5 @@ export const getProperty = async (userID: string) => {
 
     //return data || null;
 }
+
+
