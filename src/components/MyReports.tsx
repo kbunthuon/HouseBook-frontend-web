@@ -87,10 +87,10 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   const myRecentReports = getMyRecentReports();
 
   const reportTypes = [
-    { value: "complete", label: "Complete Property Report" },
+    // { value: "complete", label: "Complete Property Report" },
     { value: "overview", label: "Property Overview" },
-    { value: "utilities", label: "Utilities Report" },
-    { value: "fittings", label: "Fittings & Features" },
+    // { value: "utilities", label: "Utilities Report" },
+    // { value: "fittings", label: "Fittings & Features" },
     { value: "maintenance", label: "Maintenance History" }
   ];
 
@@ -245,7 +245,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart3 className="mr-2 h-5 w-5" />
@@ -287,7 +287,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <Card>
