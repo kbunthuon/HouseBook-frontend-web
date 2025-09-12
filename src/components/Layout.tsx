@@ -1,6 +1,7 @@
 import { Sidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
 import { Home, Building, Users, FileText, Settings, LogOut } from "lucide-react";
+import { React } from "react";
 
 interface LayoutProps {
   children: React.ReactNode;
