@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty } from "../services/FetchData.ts";
+import { getOwnerId, getProperty, getChangeLogs } from "../services/FetchData.ts";
 import supabase from "../config/supabaseClient.ts"
 
 
@@ -33,58 +33,38 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
 
-  useEffect (() => {
-    const getOwnerProps = async () => {
-      try {
-        // Get owner id
-        const ownerId = await getOwnerId(userId);
-        if (!ownerId) throw Error("Owner ID not found");
-        
-        const properties = await getProperty(userId);
-        setOwnerProperties(properties);
+useEffect(() => {
+  const getOwnerProps = async () => {
+    try {
+      // Get owner id
+      const ownerId = await getOwnerId(userId);
+      if (!ownerId) throw Error("Owner ID not found");
 
+      const properties = await getProperty(userId);
+      setOwnerProperties(properties);
 
-        if (properties && properties.length > 0) {
-              const propertyIds = properties.map((p: any) => p.property_id);
-              const { data: changes, error: changesError } = await supabase
-                .from("changelog_property_view")
-                .select(`
-                  changelog_id,
-                  changelog_specifications,
-                  changelog_description,
-                  changelog_created_at,
-                  changelog_status,
-                  user: User ( first_name, last_name ),
-                  property_id
-                `)
-                .in("property_id", propertyIds)
-                .order("changelog_created_at", { ascending: false });
+      if (properties && properties.length > 0) {
+        const propertyIds = properties.map((p: any) => p.property_id);
+        const changes = await getChangeLogs(propertyIds);
 
-              if (changesError) {
-                console.error("Error fetching change log:", changesError);
-                setLoading(false);
-                return;
-              }
-
-              setRequests(changes ?? []);
-            
-                          } else {
-              setRequests([]);
-            }
-
-      } catch (error) {
-        console.error(error);
-        setOwnerProperties([]);
-
-        
-      } finally {
-        setLoading(false);
+        if (changes) {
+          setRequests(changes);
+        } else {
+          setRequests([]);
+        }
+      } else {
+        setRequests([]);
       }
-    };
+    } catch (error) {
+      console.error(error);
+      setOwnerProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    getOwnerProps();
-
-  },[userId])
+  getOwnerProps();
+}, [userId]);
 
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;

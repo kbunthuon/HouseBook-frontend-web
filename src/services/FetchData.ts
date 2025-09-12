@@ -61,3 +61,26 @@ export const getProperty = async (userID: string) => {
 
     //return data || null;
 }
+
+export const getChangeLogs = async (propertyIds: string[]) => {
+  const { data: changes, error } = await supabase
+    .from("changelog_property_view")
+    .select(`
+      changelog_id,
+      changelog_specifications,
+      changelog_description,
+      changelog_created_at,
+      changelog_status,
+      user: User ( first_name, last_name ),
+      property_id
+    `)
+    .in("property_id", propertyIds)
+    .order("changelog_created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching change log:", error);
+    return null;
+  }
+
+  return changes;
+};
