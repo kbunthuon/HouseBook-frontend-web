@@ -1,75 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-
+import { getProperty } from "../services/FetchData";
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
-export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPropertiesProps) {
+export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [myProperties, setMyProperties] = useState<[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data filtered by owner - in real app this would come from API
-  const getMyProperties = () => {
-    if (ownerEmail.includes('john') || ownerEmail.includes('smith')) {
-      return [
-        {
-          id: "1",
-          name: "Rose Wood Retreat",
-          address: "123 Maple Street, Downtown",
-          type: "Single Family Home",
-          status: "Active",
-          pin: "123456",
-          lastUpdated: "2 days ago",
-          completionStatus: 95
-        },
-        {
-          id: "5", 
-          name: "Sunset Villa",
-          address: "567 Sunset Boulevard, Hillside",
-          type: "Luxury Villa",
-          status: "Active",
-          pin: "567890",
-          lastUpdated: "1 week ago",
-          completionStatus: 88
-        }
-      ];
-    } else if (ownerEmail.includes('sarah')) {
-      return [
-        {
-          id: "2",
-          name: "Riverside Apartments",
-          address: "456 River Road, Riverside",
-          type: "Apartment Complex",
-          status: "Active",
-          pin: "789012",
-          lastUpdated: "1 week ago",
-          completionStatus: 92
-        }
-      ];
-    } else {
-      return [
-        {
-          id: "3",
-          name: "Oak Grove Complex",
-          address: "789 Oak Avenue, Westside",
-          type: "Mixed Use",
-          status: "Pending",
-          pin: "345678",
-          lastUpdated: "3 days ago",
-          completionStatus: 67
-        }
-      ];
+  useEffect(() => {
+    const loadProperties = async () => {
+      setLoading(true);
+      const properties = await getProperty(userID); 
+      setMyProperties(properties || []);
+      setLoading(false);
+    };
+
+    if (userID) {
+      loadProperties();
     }
-  };
-
-  const myProperties = getMyProperties();
+  }, [userID]);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,7 +125,7 @@ export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPr
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.id}>
+                  <TableRow key={property.property_id}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -193,7 +152,7 @@ export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPr
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.id)}
+                            onClick={() => onViewProperty(property.property_id)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />
