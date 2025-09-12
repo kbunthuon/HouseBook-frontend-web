@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, React } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -48,6 +48,7 @@ export default function App() {
   const handleViewProperty = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setCurrentPage('property-detail');
+    
   };
 
   const handleBackToProperties = () => {
@@ -84,7 +85,6 @@ export default function App() {
           }
         />
 
-<<<<<<< HEAD
         {/* Login route */}
         <Route
           path="/login"
@@ -96,42 +96,6 @@ export default function App() {
             )
           }
         />
-=======
-  // Owner view rendering
-  const renderOwnerPage = () => {
-    switch (currentPage) {
-      case 'owner-dashboard':
-        return <OwnerDashboard 
-        userId={userId} 
-        ownerName={getUserName()}/>;
-      case 'my-properties':
-        return <MyProperties 
-          ownerEmail={userId} 
-          onViewProperty={handleViewProperty}
-          onAddProperty={handleAddProperty}
-        />;
-      case 'property-detail':
-        return selectedPropertyId ? (
-          <PropertyDetail 
-            propertyId={selectedPropertyId} 
-            onBack={handleBackToProperties}
-          />
-        ) : (
-          <MyProperties 
-            ownerEmail={userId} 
-            onViewProperty={handleViewProperty}
-            onAddProperty={handleAddProperty}
-          />
-        );
-      case 'add-property':
-        return <PropertyOnboarding />;
-      case 'my-reports':
-        return <MyReports ownerEmail={userEmail} />;
-      default:
-        return <OwnerDashboard userId={userEmail} ownerName={getUserName()} />;
-    }
-  };
->>>>>>> 2dbc13aa1bb93bdb14d5d5004a56ee308e6487ad
 
         {/* ADMIN AREA */}
         <Route
