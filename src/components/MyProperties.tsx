@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
+import { getProperty } from "../services/FetchData";
 
 interface MyPropertiesProps {
   ownerEmail: string;
@@ -193,7 +194,7 @@ export function MyProperties({ ownerEmail, onViewProperty, onAddProperty }: MyPr
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.id)}
+                            onClick={() => onViewProperty(property.property_id)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />
