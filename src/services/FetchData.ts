@@ -126,8 +126,8 @@ export const getPropertyDetails = async (propertyId: string) => {
     pin: first.property_pin,
     type: first.property_type,
     status: first.property_status,
-    lastUpdated: first.property_lastUpdated,
-    completionStatus: first.property_completionStatus,
+    lastUpdated: first.property_lastupdated,
+    completionStatus: first.property_completionstatus,
     totalFloorArea: first.property_total_floor_area,
     spaces: [],
     images: []
@@ -137,22 +137,22 @@ export const getPropertyDetails = async (propertyId: string) => {
   const spaceMap: Record<string, Space> = {};
 
   for (const row of data) {
-    if (!row.space_id) continue;
+    if (!row.spaces_id) continue;
 
-    if (!spaceMap[row.space_id]) {
-      spaceMap[row.space_id] = {
-        space_id: row.space_id,
-        name: row.space_name,
-        type: row.space_type,
+    if (!spaceMap[row.spaces_id]) {
+      spaceMap[row.spaces_id] = {
+        space_id: row.spaces_id,
+        name: row.spaces_name,
+        type: row.spaces_type,
         assets: [],
       };
     }
 
-    if (row.asset_id) {
-      spaceMap[row.space_id].assets.push({
-        asset_id: row.asset_id,
-        type: row.asset_type,
-        description: row.asset_description,
+    if (row.assets_id) {
+      spaceMap[row.spaces_id].assets.push({
+        asset_id: row.assets_id,
+        type: row.assettypes_name,
+        description: row.assets_description,
       });
     }
   }

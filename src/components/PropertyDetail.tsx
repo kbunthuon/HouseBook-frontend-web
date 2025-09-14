@@ -360,6 +360,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           setError("Property not found");
         }
 
+        console.log("Spaces data:", result?.spaces);
+
         const ownerResult = await getPropertyOwners(propertyId);
         if (ownerResult) {
           setOwners(ownerResult);
@@ -588,7 +590,23 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
       </div>
       */}
-      {/*}
+      <div className="grid gap-6 md:grid-cols-2">
+        {property?.spaces?.map((space) => (
+          <SpecificationSection
+            key={space.space_id}
+            title={space.name} // e.g. "Bedroom", "Kitchen", "Living Area"
+            items={
+              space.assets.reduce<Record<string, string>>((acc, asset) => {
+                acc[asset.type] =
+                  asset.description || "No description available";
+                return acc;
+              }, {})
+            }
+          />
+        ))}
+      </div>
+
+      {/*
       <div className="grid gap-6 md:grid-cols-2">
         
         <SpecificationSection 
