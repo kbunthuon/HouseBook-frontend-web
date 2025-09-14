@@ -9,9 +9,10 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { React, useMemo, useState } from "react";
+import { React, useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
+import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../services/FetchData";
 
 interface EditHistoryItem {
   id: number;
@@ -273,6 +274,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   };
 
   // Mock property data - in real app this would come from API
+  /*
   const propertyData = {
     id: propertyId,
     name: "Rose Wood Retreat",
@@ -338,6 +340,41 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       hotWater: "Electric heat pump hot water system"
     }
   };
+  */
+
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [owners, setOwners] = useState<Owner[] | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching details for property ID:", propertyId);
+        const result = await getPropertyDetails(propertyId);
+        if (result) {
+          setProperty(result);
+        } else {
+          setError("Property not found");
+        }
+
+        const ownerResult = await getPropertyOwners(propertyId);
+        if (ownerResult) {
+          setOwners(ownerResult);
+        } else {
+          setError("Owner not found");
+        }
+      } catch (err: any) {
+        setError(err.message ?? "Unexpected error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [propertyId]); // re-run if the propertyId changes
 
   const SpecificationSection = ({ title, items, children }: { title: string; items?: Record<string, string>; children?: React.ReactNode }) => (
     <Card>
@@ -413,7 +450,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
           </div>
           <div className="flex items-center space-x-2">
-            <Badge variant="default">{propertyData.status}</Badge>
+            <Badge variant="default">{property?.status ?? "0%"}</Badge>
             <Button variant="outline" size="sm">
               <Edit className="h-4 w-4 mr-2" />
               Edit
@@ -428,12 +465,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       {/* Property Header */}
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2">
-          <h1>{propertyData.name}</h1>
-          <p className="text-muted-foreground text-lg">{propertyData.description}</p>
+          <h1>{property?.name?? "No name"}</h1>
+          <p className="text-muted-foreground text-lg">{property?.description?? "..."}</p>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>Owner: {propertyData.owner}</span>
+            <span>Owner: {owners?.[0] ? `${owners[0].first_name} ${owners[0].last_name}` : "N/A"}</span>
             <span>•</span>
-            <span>Address: {propertyData.address}</span>
+            <span>Address: {property?.address?? "Missing address"}</span>
           </div>
         </div>
         
@@ -551,7 +588,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
       </div>
       */}
-      
+      {/*}
       <div className="grid gap-6 md:grid-cols-2">
         
         <SpecificationSection 
@@ -613,7 +650,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         />
 
       </div>
-
+      */}
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-full sm:w-[400px]">

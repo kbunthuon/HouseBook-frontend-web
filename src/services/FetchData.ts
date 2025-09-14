@@ -28,6 +28,21 @@ export type Property = {
   status?: string; 
   lastUpdated?: string; 
   completionStatus?: number; 
+  totalFloorArea?: number;
+  spaces?: Space[];
+  images?: string[];
+};
+export type Space = {
+  space_id: string;
+  name: string;
+  type: string;
+  assets: Asset[];
+};
+
+export type Asset = {
+  asset_id: string;
+  type: string;
+  description: string;
 };
 // Takes in userId
 // Returns property objects that the user owns
@@ -84,3 +99,90 @@ export const getChangeLogs = async (propertyIds: string[]) => {
 
   return changes;
 };
+
+
+export const getPropertyDetails = async (propertyId: string) => {
+  const { data, error } = await supabase
+    .from("property_assets_full_view")
+    .select("*")
+    .eq("property_id", propertyId);
+
+  if (error) {
+    console.error("Error fetching property id:", error.message);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Base property info from first row
+  const first = data[0];
+  const property: Property = {
+    property_id: first.property_property_id,
+    name: first.property_name,
+    address: first.property_address,
+    description: first.property_description,
+    pin: first.property_pin,
+    type: first.property_type,
+    status: first.property_status,
+    lastUpdated: first.property_lastUpdated,
+    completionStatus: first.property_completionStatus,
+    totalFloorArea: first.property_total_floor_area,
+    spaces: [],
+    images: []
+  };
+
+  // Group by spaces
+  const spaceMap: Record<string, Space> = {};
+
+  for (const row of data) {
+    if (!row.space_id) continue;
+
+    if (!spaceMap[row.space_id]) {
+      spaceMap[row.space_id] = {
+        space_id: row.space_id,
+        name: row.space_name,
+        type: row.space_type,
+        assets: [],
+      };
+    }
+
+    if (row.asset_id) {
+      spaceMap[row.space_id].assets.push({
+        asset_id: row.asset_id,
+        type: row.asset_type,
+        description: row.asset_description,
+      });
+    }
+  }
+
+  property.spaces = Object.values(spaceMap);
+
+  return property;
+}
+
+export type Owner = {
+  owner_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+};
+
+export const getPropertyOwners = async (propertyId: string) => {
+  const { data, error } = await supabase
+    .from("owner_property_view")
+    .select("owner_id, first_name, last_name, email")
+    .eq("property_id", propertyId);
+  if (error) {
+    console.error("Error fetching property owners:", error.message);
+    return null;
+  }
+  const owners: Owner[] = data.map((row) => ({
+    owner_id: row.owner_id,
+    first_name: row.first_name, 
+    last_name: row.last_name,
+    email: row.email,
+  }));
+  return owners || null;
+}
