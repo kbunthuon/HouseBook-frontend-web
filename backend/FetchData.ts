@@ -7,7 +7,7 @@ export const getOwnerId = async (userId: string) => {
     .from("Owner")
     .select("owner_id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching owner id:", error.message);
@@ -186,3 +186,22 @@ export const getPropertyOwners = async (propertyId: string) => {
   }));
   return owners || null;
 }
+
+export const getUserIdByEmail = async (email: string) => {
+  // Query the "users" table for the row with the matching email
+  const { data, error } = await supabase
+    .from("User")
+    .select("user_id")
+    .eq("email", email.trim())
+    .maybeSingle();
+
+  console.log("data");
+  console.log(data);
+
+  if (error) {
+    console.error("Error fetching user ID:", error);
+    return null;
+  }
+
+  return data?.user_id || null;
+};

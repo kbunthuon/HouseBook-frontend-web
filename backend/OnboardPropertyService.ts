@@ -1,12 +1,21 @@
 import supabase from "../config/supabaseClient";
-import { getOwnerId } from "./FetchData";
+import { getOwnerId, getUserIdByEmail } from "./FetchData";
 
-// Setting what a FormData looks like
+// Setting what OwnerData looks like
+export interface OwnerData {
+  firstName: string,
+  lastName: string,
+  address: string,
+  email: string,
+  phone: string
+}
+
+// Setting what FormData looks like
 export interface FormData {
     // Basic Information
-    propertyName: String,
-    propertyDescription: String,
-    address: String,
+    propertyName: string,
+    propertyDescription: string,
+    address: string,
     // Plans & Documents
     floorPlans: File[],
     buildingPlans: File[]
@@ -31,7 +40,7 @@ export interface Space {
   assets: Asset[];
 }
 
-export async function onboardProperty(formData: FormData, spaces: Space[]) {
+export async function ownerOnboardProperty(formData: FormData, spaces: Space[]) {
   // Get the user id
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw new Error("User ID not returned from signup");
@@ -51,20 +60,51 @@ export async function onboardProperty(formData: FormData, spaces: Space[]) {
 
 }
 
-// const getOwnerId = async (userId: string) => {
-//   const { data, error } = await supabase
-//     .from("Owner")
-//     .select("owner_id")
-//     .eq("user_id", userId)
-//     .single();
+export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: Space[]) {
+  // Check if this user account exists
+  // const exists = await checkOwnerExists(ownerData);
+  // if (!exists) {
+  //   alert("Error fetching credentials. Credentials may not exist.");
+  //   return;
+  // }
 
-//   if (error) {
-//     console.error("Error fetching owner id:", error.message);
-//     return null;
-//   }
+  // Get the user id using the owner's email
+  const userId = await getUserIdByEmail(ownerData.email);
+  if (!userId) throw new Error("User ID not returned from signup");
+  console.log("userId:");
+  console.log(userId);
+  
+  // Get the owner id
+  const ownerId = await getOwnerId(userId);
 
-//   return data?.owner_id || null;
-// };
+  // Insert to Property table and OwnerProperty Table
+  const propertyId = await saveProperty(formData, ownerId);
+
+  // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
+  // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
+  await saveDetails(spaces, propertyId, userId);
+
+  return propertyId || null;
+
+}
+
+const checkOwnerExists = async (owner: OwnerData) => {
+  const { data, error } = await supabase
+    .from("User")
+    .select("user_id")
+    .eq("firstName", owner.firstName)
+    .eq("lastName", owner.lastName)
+    .eq("phone", owner.phone)
+    .eq("email", owner.email)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error checking owner:", error);
+    return false;
+  }
+
+  return !!data; // true if owner exists, false otherwise
+};
 
 const saveProperty = async (formData: FormData, ownerId: string) => {
   try {
