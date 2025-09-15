@@ -47,6 +47,8 @@ export async function onboardProperty(formData: FormData, spaces: Space[]) {
   // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
   await saveDetails(spaces, propertyId, userId);
 
+  return propertyId || null;
+
 }
 
 // const getOwnerId = async (userId: string) => {

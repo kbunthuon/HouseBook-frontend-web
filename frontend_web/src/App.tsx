@@ -1,4 +1,4 @@
-import { useState, React } from "react";
+import { useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -103,7 +103,11 @@ export default function App() {
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
-                <Layout onLogout={handleLogout}>
+                <Layout
+                  onLogout={handleLogout}
+                  currentPage="dashboard"
+                  onPageChange={() => {}}
+                >
                   <Outlet />
                 </Layout>
               </RequireRole>
@@ -124,7 +128,12 @@ export default function App() {
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
-                <OwnerLayout onLogout={handleLogout} ownerName={getUserName()}>
+                <OwnerLayout
+                  onLogout={handleLogout}
+                  ownerName={getUserName()}
+                  currentPage="dashboard"
+                  onPageChange={() => {}}
+                >
                   <Outlet />
                 </OwnerLayout>
               </RequireRole>

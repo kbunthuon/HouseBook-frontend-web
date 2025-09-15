@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, CheckCircle, Building } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { onboardProperty, FormData, Space} from "../../../backend/OnboardPropertyService";
+import { ROUTES } from "./Routes";
 
 export function PropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
@@ -30,6 +31,8 @@ export function PropertyOnboarding() {
     floorPlans: [] as File[],
     buildingPlans: [] as File[]
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getEnums = async () => {
@@ -55,13 +58,16 @@ export function PropertyOnboarding() {
 
   const progress = (currentStep / steps.length) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
       // No longer Next button, this will be complete onboarding
       // Let backend handle saving information in database
-      onboardProperty(formData, spaces);
+      const propertyId = await onboardProperty(formData, spaces);
+      console.log(propertyId);
+      
+      navigate(ROUTES.propertiesList);
     }
   };
 
