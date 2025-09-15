@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
-import { signupUser, loginUser } from "../../../services/AuthService";
+import { signupUser, loginUser } from "../../../backend/AuthService";
 
 interface AuthProps {
   onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
