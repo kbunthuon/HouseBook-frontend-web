@@ -1,17 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
+import { Badge } from "./ui/badge.tsx";
+import { Progress } from "./ui/progress.tsx";
+import { Input } from "./ui/input.tsx";
+import { Textarea } from "./ui/textarea.tsx";
+import { Label } from "./ui/label.tsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
+import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getChangeLogs } from "../services/FetchData.ts";
-import supabase from "../config/supabaseClient.ts"
+import { getOwnerId, getProperty } from "../../../backend/FetchData.ts";
+import supabase from "../../../config/supabaseClient.ts"
 
 
 interface OwnerDashboardProps {
@@ -33,38 +33,58 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
 
-useEffect(() => {
-  const getOwnerProps = async () => {
-    try {
-      // Get owner id
-      const ownerId = await getOwnerId(userId);
-      if (!ownerId) throw Error("Owner ID not found");
+  useEffect (() => {
+    const getOwnerProps = async () => {
+      try {
+        // Get owner id
+        const ownerId = await getOwnerId(userId);
+        if (!ownerId) throw Error("Owner ID not found");
+        
+        const properties = await getProperty(userId);
+        setOwnerProperties(properties);
 
-      const properties = await getProperty(userId);
-      setOwnerProperties(properties);
 
-      if (properties && properties.length > 0) {
-        const propertyIds = properties.map((p: any) => p.property_id);
-        const changes = await getChangeLogs(propertyIds);
+        if (properties && properties.length > 0) {
+              const propertyIds = properties.map((p: any) => p.property_id);
+              const { data: changes, error: changesError } = await supabase
+                .from("changelog_property_view")
+                .select(`
+                  changelog_id,
+                  changelog_specifications,
+                  changelog_description,
+                  changelog_created_at,
+                  changelog_status,
+                  user: User ( first_name, last_name ),
+                  property_id
+                `)
+                .in("property_id", propertyIds)
+                .order("changelog_created_at", { ascending: false });
 
-        if (changes) {
-          setRequests(changes);
-        } else {
-          setRequests([]);
-        }
-      } else {
-        setRequests([]);
+              if (changesError) {
+                console.error("Error fetching change log:", changesError);
+                setLoading(false);
+                return;
+              }
+
+              setRequests(changes ?? []);
+            
+                          } else {
+              setRequests([]);
+            }
+
+      } catch (error) {
+        console.error(error);
+        setOwnerProperties([]);
+
+        
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(error);
-      setOwnerProperties([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  getOwnerProps();
-}, [userId]);
+    getOwnerProps();
+
+  },[userId])
 
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;

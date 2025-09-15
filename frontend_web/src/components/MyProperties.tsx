@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-import { getProperty } from "../services/FetchData";
+import { getProperty } from "../../../backend/FetchData";
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
