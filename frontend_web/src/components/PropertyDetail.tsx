@@ -12,7 +12,7 @@ import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-re
 import { React, useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../services/FetchData";
+import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 
 interface EditHistoryItem {
   id: number;
