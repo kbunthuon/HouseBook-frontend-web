@@ -12,9 +12,9 @@ import { Upload, CheckCircle, Building } from "lucide-react";
 
 import { Trash2 } from "lucide-react";
 
-import { fetchSpaceEnum } from "../services/FetchSpaceEnum";
-import { fetchAssetTypes } from "../services/FetchAssetTypes";
-import { onboardProperty, FormData, Space} from "../services/OnboardPropertyService";
+import { fetchSpaceEnum } from "../../../services/FetchSpaceEnum";
+import { fetchAssetTypes } from "../../../services/FetchAssetTypes";
+import { onboardProperty, FormData, Space} from "../../../services/OnboardPropertyService";
 
 export function PropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
