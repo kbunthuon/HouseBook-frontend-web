@@ -101,7 +101,7 @@ export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
     },
     {
       title: "Active Properties",
-      value: activeProperties.toString(),
+      value: myProperties.length.toString(),
       change: "All operational",
       icon: TrendingUp,
       color: "text-green-600"
@@ -155,26 +155,56 @@ export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
     }
   };
 
-const approveEdit = (editId: number) => {
-    console.log(`Approved transfer ${editId}`);
+const approveEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "ACCEPTED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Approved edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+      )
+      );
+
+    }
+
   };
 
-  const rejectEdit = (editId: number) => {
-    console.log(`Rejected transfer ${editId}`);
-  };
+const rejectEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "DECLINED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Declined edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+      )
+      );
+    }
+  }
 
   const getEditStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "secondary";
-      case "approved":
+      case "PENDING":
         return "default";
-      case "rejected":
+      case "ACCEPTED":
+        return "secondary";
+      case "DECLINED":
         return "destructive";
       default:
         return "secondary";
     }
-  };
+};
 
 function formatDate(timestamp: string | number | Date) {
   const dateObject = new Date(timestamp);
@@ -254,13 +284,13 @@ function formatDateTime(timestamp: string | number | Date) {
                               <DialogHeader>
                                 <DialogTitle>Edit Request Details</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4">
+                              <div className="space-y-6">
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
                           (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
-                                <div className="grid gap-4 md:grid-cols-2">
+                                <div className="grid gap-4 md:grid-cols-1">
                                   <div>
                                     <Label>Requested By</Label>
                                     <Input value={request.user?.first_name ?? "Unknown User"} readOnly />
@@ -289,12 +319,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="flex justify-end space-x-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => rejectEdit(request.id)}
+                                    onClick={() => rejectEdit(request.changelog_id)}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button onClick={() => approveEdit(request.changelog_id)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>
