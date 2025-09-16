@@ -20,12 +20,13 @@ interface OwnerDashboardProps {
 
 
 interface ChangeLog {
-  id: string;
-  asset_id: string;
-  specifications: Record<string, any>;
-  change_description: string;
-  changed_by_user_id: string;
-  created_at: string;
+  user: any;
+  changelog_id: string;
+  changelog_specifications: Record<string, any>;
+  changelog_description: string;
+  changelog_created_at: string;
+  changelog_status: string;
+  property_id: string
 }
 
 export function OwnerDashboard({ userId }: OwnerDashboardProps) {
@@ -41,7 +42,7 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         if (!ownerId) throw Error("Owner ID not found");
         
         const properties = await getProperty(userId);
-        setOwnerProperties(properties);
+        setOwnerProperties(properties ?? []);
 
 
         if (properties && properties.length > 0) {
@@ -260,7 +261,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={request.changelog_changed_by_user_id} readOnly />
+                                    <Input value={request.user?.first_name ?? "Unknown User"} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
