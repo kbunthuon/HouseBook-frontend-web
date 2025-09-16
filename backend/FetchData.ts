@@ -30,7 +30,7 @@ export type Property = {
   completionStatus?: number; 
   totalFloorArea?: number;
   spaces?: Space[];
-  images?: string[];
+  images: string[];
 };
 export type Space = {
   space_id: string;
@@ -137,6 +137,7 @@ export const getPropertyDetails = async (propertyId: string) => {
   const spaceMap: Record<string, Space> = {};
 
   for (const row of data) {
+    console.log(row);
     if (!row.spaces_id) continue;
 
     if (!spaceMap[row.spaces_id]) {
@@ -157,9 +158,32 @@ export const getPropertyDetails = async (propertyId: string) => {
     }
   }
 
+  property.images = await getPropertyImages(propertyId);
+
   property.spaces = Object.values(spaceMap);
 
   return property;
+}
+
+export const getPropertyImages = async (propertyId: string) => {
+  const { data: imagesData } = await supabase
+  .from("PropertyImages")
+  .select("image_link")
+  .eq("property_id", propertyId);
+
+  console.log("Image row:", imagesData);
+  console.log(propertyId);
+  const imageSet = new Set<string>();
+
+  imagesData?.forEach((row) => {
+    const { data: publicUrl } = supabase.storage
+      .from("PropertyImage")
+      .getPublicUrl(row.image_link);
+
+    if (publicUrl?.publicUrl) imageSet.add(publicUrl.publicUrl);
+  });
+
+  return Array.from(imageSet);
 }
 
 export type Owner = {
