@@ -1,4 +1,4 @@
-import { useState, React } from "react";
+import { useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -12,7 +12,8 @@ import {
 import { Auth } from "./components/Auth";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
-import { PropertyOnboarding } from "./components/PropertyOnboarding";
+import { OwnerPropertyOnboarding } from "./components/OwnerPropertyOnboarding";
+import { AdminPropertyOnboarding } from "./components/AdminPropertyOnboarding";
 import { PropertyManagement } from "./components/PropertyManagement";
 import { PropertyDetail } from "./components/PropertyDetail";
 import { AdminFunctions } from "./components/AdminFunctions";
@@ -103,7 +104,11 @@ export default function App() {
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
-                <Layout onLogout={handleLogout}>
+                <Layout
+                  onLogout={handleLogout}
+                  currentPage="dashboard"
+                  onPageChange={() => {}}
+                >
                   <Outlet />
                 </Layout>
               </RequireRole>
@@ -112,7 +117,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="properties" element={<AdminPropertiesPage />} />
-          <Route path="properties/new" element={<PropertyOnboarding />} />
+          <Route path="properties/new" element={<AdminPropertyOnboarding />} />
           <Route path="properties/:propertyId" element={<AdminPropertyDetailPage />} />
           <Route path="reports" element={<Reports />} />
           <Route path="admin-tools" element={<AdminFunctions />} />
@@ -124,7 +129,12 @@ export default function App() {
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
-                <OwnerLayout onLogout={handleLogout} ownerName={getUserName()}>
+                <OwnerLayout
+                  onLogout={handleLogout}
+                  ownerName={getUserName()}
+                  currentPage="dashboard"
+                  onPageChange={() => {}}
+                >
                   <Outlet />
                 </OwnerLayout>
               </RequireRole>
@@ -133,7 +143,7 @@ export default function App() {
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
           <Route path="properties" element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
-          <Route path="properties/new" element={<PropertyOnboarding />} />
+          <Route path="properties/new" element={<OwnerPropertyOnboarding />} />
           <Route path="properties/:propertyId" element={<OwnerPropertyDetailPage />} />
           <Route path="reports" element={<MyReports ownerEmail={userEmail} />} />
         </Route>
