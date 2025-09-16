@@ -77,7 +77,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="email"
                       type="email"
                       value={loginEmail}
-                      onChange={(e: React.FormEvent) => setLoginEmail(e.target.value)}
+                      onChange={(e: React.FormEvent<HTMLInputElement>) => setLoginEmail((e.target as HTMLInputElement).value)}
                       placeholder="admin@housebook.com"
                       autoComplete="on"
                       required
@@ -89,7 +89,7 @@ export function Auth({ onLogin }: AuthProps) {
                       id="password"
                       type="password"
                       value={loginPassword}
-                      onChange={(e: React.FormEvent) => setLoginPassword(e.target.value)}
+                      onChange={(e: React.FormEvent<HTMLInputElement>) => setLoginPassword((e.target as HTMLInputElement).value)}
                       placeholder="••••••••"
                       required
                     />
@@ -108,7 +108,7 @@ export function Auth({ onLogin }: AuthProps) {
                     <Input
                       id="signup-first-name"
                       value={signupData.first_name}
-                      onChange={(e: React.FormEvent) => setSignupData({...signupData, first_name: e.target.value})}
+                      onChange={(e: React.FormEvent<HTMLInputElement>) => setSignupData({...signupData, first_name: (e.target as HTMLInputElement).value})}
                       autoComplete="on"
                       placeholder="John"
                       required
@@ -119,7 +119,7 @@ export function Auth({ onLogin }: AuthProps) {
                     <Input
                       id="signup-last-name"
                       value={signupData.last_name}
-                      onChange={(e: React.FormEvent) => setSignupData({...signupData, last_name: e.target.value})}
+                      onChange={(e: React.FormEvent<HTMLInputElement>) => setSignupData({...signupData, last_name: (e.target as HTMLInputElement).value})}
                       autoComplete="on"
                       placeholder="Doe"
                       required

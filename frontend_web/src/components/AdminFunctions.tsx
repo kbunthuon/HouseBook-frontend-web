@@ -1,4 +1,4 @@
-import { React, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -156,7 +156,7 @@ export function AdminFunctions() {
                 <form onSubmit={handleTransferSubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="propertyId">Property</Label>
-                    <Select onValueChange={(value) => setTransferData({...transferData, propertyId: value})}>
+                    <Select onValueChange={(value: string) => setTransferData({...transferData, propertyId: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select property" />
                       </SelectTrigger>
