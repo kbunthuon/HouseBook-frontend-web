@@ -1,0 +1,188 @@
+import supabase from "../config/supabaseClient";
+
+// Takes in userId
+// Returns the OwnerId if it exists, otherwise return null
+export const getOwnerId = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("Owner")
+    .select("owner_id")
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching owner id:", error.message);
+    return null;
+  }
+
+  return data?.owner_id || null;
+};
+
+
+export type Property = { 
+  property_id: string;
+  address: string; 
+  description: string; 
+  pin: string; 
+  name: string; 
+  type?: string; 
+  status?: string; 
+  lastUpdated?: string; 
+  completionStatus?: number; 
+  totalFloorArea?: number;
+  spaces?: Space[];
+  images?: string[];
+};
+export type Space = {
+  space_id: string;
+  name: string;
+  type: string;
+  assets: Asset[];
+};
+
+export type Asset = {
+  asset_id: string;
+  type: string;
+  description: string;
+};
+// Takes in userId
+// Returns property objects that the user owns
+export const getProperty = async (userID: string) => {
+    const { data, error } = await supabase
+        .from("owner_property_view")
+        .select(`
+            address,
+            description,
+            pin,
+            property_name, 
+            property_id
+        `)
+        .eq("user_id", userID);
+
+    if (error) {
+        console.error("Error fetching property id:", error.message);
+        return null;
+    }
+
+    // Map raw DB columns to your Property type
+    const properties: Property[] = data.map((row) => ({
+      property_id: row.property_id,
+      name: row.property_name, // map DB column → type field
+      address: row.address,
+      description: row.description,
+      pin: row.pin,
+    }));
+
+    return properties || null;
+
+    //return data || null;
+}
+
+export const getChangeLogs = async (propertyIds: string[]) => {
+  const { data: changes, error } = await supabase
+    .from("changelog_property_view")
+    .select(`
+      changelog_id,
+      changelog_specifications,
+      changelog_description,
+      changelog_created_at,
+      changelog_status,
+      user: User ( first_name, last_name ),
+      property_id
+    `)
+    .in("property_id", propertyIds)
+    .order("changelog_created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching change log:", error);
+    return null;
+  }
+
+  return changes;
+};
+
+
+export const getPropertyDetails = async (propertyId: string) => {
+  const { data, error } = await supabase
+    .from("property_assets_full_view")
+    .select("*")
+    .eq("property_id", propertyId);
+
+  if (error) {
+    console.error("Error fetching property id:", error.message);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Base property info from first row
+  const first = data[0];
+  const property: Property = {
+    property_id: first.property_property_id,
+    name: first.property_name,
+    address: first.property_address,
+    description: first.property_description,
+    pin: first.property_pin,
+    type: first.property_type,
+    status: first.property_status,
+    lastUpdated: first.property_lastupdated,
+    completionStatus: first.property_completionstatus,
+    totalFloorArea: first.property_total_floor_area,
+    spaces: [],
+    images: []
+  };
+
+  // Group by spaces
+  const spaceMap: Record<string, Space> = {};
+
+  for (const row of data) {
+    if (!row.spaces_id) continue;
+
+    if (!spaceMap[row.spaces_id]) {
+      spaceMap[row.spaces_id] = {
+        space_id: row.spaces_id,
+        name: row.spaces_name,
+        type: row.spaces_type,
+        assets: [],
+      };
+    }
+
+    if (row.assets_id) {
+      spaceMap[row.spaces_id].assets.push({
+        asset_id: row.assets_id,
+        type: row.assettypes_name,
+        description: row.assets_description,
+      });
+    }
+  }
+
+  property.spaces = Object.values(spaceMap);
+
+  return property;
+}
+
+export type Owner = {
+  owner_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+};
+
+export const getPropertyOwners = async (propertyId: string) => {
+  const { data, error } = await supabase
+    .from("owner_property_view")
+    .select("owner_id, first_name, last_name, email")
+    .eq("property_id", propertyId);
+  if (error) {
+    console.error("Error fetching property owners:", error.message);
+    return null;
+  }
+  const owners: Owner[] = data.map((row) => ({
+    owner_id: row.owner_id,
+    first_name: row.first_name, 
+    last_name: row.last_name,
+    email: row.email,
+  }));
+  return owners || null;
+}
