@@ -131,7 +131,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<OwnerDashboard userId={userId} />} />
+          <Route index element={<OwnerDashboardPage userId={userId} />} />
           <Route path="properties" element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
           <Route path="properties/new" element={<PropertyOnboarding />} />
           <Route path="properties/:propertyId" element={<OwnerPropertyDetailPage />} />
@@ -214,6 +214,18 @@ function OwnerPropertyDetailPage() {
     />
   );
 }
+
+function OwnerDashboardPage({ userId }: { userId: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <OwnerDashboard
+      userId={userId}
+      onAddProperty={() => navigate("/owner/properties/new")}
+    />
+  );
+}
+
 
 /** ---------- 404 ---------- */
 function NotFound() {
