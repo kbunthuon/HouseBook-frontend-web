@@ -23,14 +23,15 @@ export function Auth({ onLogin }: AuthProps) {
     userType: "owner" as "admin" | "owner"
   });
   const [serverError, setServerError] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
+  const [signupErrors, setSignupErrors] = useState<Record<string, string[]>>({});
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate input
     const newErrors = await validateSignup(signupData);
-    setErrors(newErrors);
+    setSignupErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
     // Validation passes, check if backend is able to sign up
@@ -50,7 +51,7 @@ export function Auth({ onLogin }: AuthProps) {
 
     // Validate input
     const newErrors = await validateLogin(loginEmail, loginPassword);
-    setErrors(newErrors);
+    setLoginErrors(newErrors);
     
     if (Object.keys(newErrors).length > 0) return;
 
@@ -100,8 +101,8 @@ export function Auth({ onLogin }: AuthProps) {
                       autoComplete="on"
                       required
                     />
-                    {errors.loginEmail && (
-                      <p className="text-red-600 text-sm mt-1">{errors.loginEmail}</p>
+                    {loginErrors.loginEmail && (
+                      <p className="text-red-600 text-sm mt-1">{loginErrors.loginEmail}</p>
                     )}
                   </div>
                   <div>
@@ -114,8 +115,8 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="••••••••"
                       required
                     />
-                    {errors.loginPassword && (
-                      <p className="text-red-600 text-sm mt-1">{errors.loginPassword}</p>
+                    {loginErrors.loginPassword && (
+                      <p className="text-red-600 text-sm mt-1">{loginErrors.loginPassword}</p>
                     )}
                     {serverError && (
                       <p className="text-red-600 text-sm mt-1">{serverError}</p>
@@ -142,8 +143,12 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="John"
                       required
                     />
-                    {errors.first_name && (
-                      <p className="text-red-500 text-sm">{errors.first_name}</p>
+                    {signupErrors.first_name && (
+                      <ul className="text-red-500 text-sm list-disc list-inside mt-1">
+                        {signupErrors.first_name.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <div>
@@ -158,8 +163,12 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="Doe"
                       required
                     />
-                    {errors.last_name && (
-                      <p className="text-red-500 text-sm">{errors.last_name}</p>
+                    {signupErrors.last_name && (
+                      <ul className="text-red-500 text-sm list-disc list-inside mt-1">
+                        {signupErrors.last_name.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <div>
@@ -181,8 +190,12 @@ export function Auth({ onLogin }: AuthProps) {
                       autoComplete="on"
                       required
                     />
-                    {errors.email && (
-                      <p className="text-red-500 text-sm">{errors.email}</p>
+                    {signupErrors.email && (
+                      <ul className="text-red-500 text-sm list-disc list-inside mt-1">
+                        {signupErrors.email.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <div>
@@ -197,8 +210,12 @@ export function Auth({ onLogin }: AuthProps) {
                       autoComplete="on"
                       required
                     />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm">{errors.phone}</p>
+                    {signupErrors.phone && (
+                      <ul className="text-red-500 text-sm list-disc list-inside mt-1">
+                        {signupErrors.phone.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <div>
@@ -213,8 +230,12 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="••••••••"
                       required
                     />
-                    {errors.password && (
-                      <p className="text-red-500 text-sm">{errors.password}</p>
+                    {signupErrors.password && (
+                      <ul className="text-red-500 text-sm list-disc list-inside mt-1">
+                        {signupErrors.password.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                   <Button type="submit" className="w-full">

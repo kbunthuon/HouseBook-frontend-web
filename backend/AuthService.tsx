@@ -93,27 +93,46 @@ export async function loginUser(email: string, password: string) {
 }
 
 export const validateSignup = async (signupData: SignupData) => {
-  const newErrors: Record<string, string> = {};
+  const newErrors: Record<string, string[]> = {};
+  newErrors.first_name = [];
+  newErrors.last_name = [];
+  newErrors.email = [];
+  newErrors.phone = [];
+  newErrors.password = [];
   // First name and last name allows Unicode characters for accent mark and so on, no numbers or special characters except from dashes
   // or apostrophe and so on.
   if (!signupData.first_name.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u))
-    newErrors.first_name = "Invalid first name";
+    newErrors.first_name.push("Invalid first name.");
   if (!signupData.last_name.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u)) 
-    newErrors.last_name = "Invalid last name";
+    newErrors.last_name.push("Invalid last name.");
 
   // Match email so that it matches string@string.string format
   const valid = await isValidEmail(signupData.email);
   if (!valid) {
-    newErrors.email = "Invalid email format or domain does not exist";
+    newErrors.email.push("Invalid email format or domain does not exist.");
   }
 
   // Checks for valid phone number and dashes if there are any
   if (!signupData.phone.match(/^[0-9]{2,4}[- ]?[0-9]{3,4}[- ]?[0-9]{3,4}$/))
-    newErrors.phone = "Invalid phone number format.";
+    newErrors.phone.push("Invalid phone number format.");
 
   // Makes sure the password is at least MINPASSWORDLEN long
-  if (signupData.password.length < MINPASSWORDLEN)
-    newErrors.password = `Password must be at least ${MINPASSWORDLEN} characters.`;
+  // Has one uppercase letter, one lowercase letter, one digit and one special character
+  const passwordErrors: string[] = [];
+  const password = signupData.password;
+
+  if (password.length < MINPASSWORDLEN)
+    passwordErrors.push(`Password must be at least ${MINPASSWORDLEN} characters.`);
+  if (!/[A-Z]/.test(password))
+    passwordErrors.push("Password must contain at least one uppercase letter.");
+  if (!/[a-z]/.test(password))
+    passwordErrors.push("Password must contain at least one lowercase letter.");
+  if (!/[0-9]/.test(password))
+    passwordErrors.push("Password must contain at least one digit.");
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    passwordErrors.push("Password must contain at least one special character.");
+
+  if (passwordErrors.length > 0) newErrors.password = passwordErrors;
 
   return newErrors;
 };
@@ -123,7 +142,7 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
   const valid = await isValidEmail(loginEmail);
   if (!valid) {
-    newErrors.email = "Invalid email format or domain does not exist";
+    newErrors.email = "Invalid email format or domain does not exist.";
   }
   if (loginPassword.length < MINPASSWORDLEN)
     newErrors.loginPassword = `Password must be at least ${MINPASSWORDLEN} characters.`;
