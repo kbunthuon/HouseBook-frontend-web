@@ -31,6 +31,7 @@ export type Property = {
   totalFloorArea?: number;
   spaces?: Space[];
   images?: string[];
+  created_at: string;
 };
 export type Space = {
   space_id: string;
@@ -54,7 +55,8 @@ export const getProperty = async (userID: string) => {
             description,
             pin,
             property_name, 
-            property_id
+            property_id,
+            property_created_at
         `)
         .eq("user_id", userID);
 
@@ -66,13 +68,14 @@ export const getProperty = async (userID: string) => {
     // Map raw DB columns to your Property type
     const properties: Property[] = data.map((row) => ({
       property_id: row.property_id,
-      name: row.property_name, // map DB column → type field
+      name: row.property_name, // map DB column to type field
       address: row.address,
       description: row.description,
       pin: row.pin,
+      created_at: row.property_created_at
     }));
 
-    return properties || null;
+    return properties ?? [];
 
     //return data || null;
 }
@@ -129,6 +132,7 @@ export const getPropertyDetails = async (propertyId: string) => {
     lastUpdated: first.property_lastupdated,
     completionStatus: first.property_completionstatus,
     totalFloorArea: first.property_total_floor_area,
+    created_at: first.property_created_at,
     spaces: [],
     images: []
   };
