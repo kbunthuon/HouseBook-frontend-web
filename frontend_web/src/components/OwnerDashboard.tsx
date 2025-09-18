@@ -42,12 +42,18 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         try {
           // Get owner ID
           const ownerRes = await getOwnerId(userId);
-          if ("error" in ownerRes) throw new Error(ownerRes.error);
+          if (!ownerRes || "error" in ownerRes) {
+            throw new Error(ownerRes?.error || "Owner response is null");
+          }
+
           const ownerId = ownerRes.ownerId;
 
           // Get properties for this owner
           const propertiesRes = await getProperty(userId);
-          if ("error" in propertiesRes) throw new Error(propertiesRes.error);
+          if (!propertiesRes || "error" in propertiesRes) {
+            throw new Error(propertiesRes?.error || "Properties response is null");
+          }
+
           setOwnerProperties(propertiesRes);
 
           if (propertiesRes && propertiesRes.length > 0) {

@@ -1,6 +1,6 @@
 import { FormData, SpaceInt, OwnerData } from "../types";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL; // your Render backend URL
+const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 interface OnboardResponse {
   propertyId?: string;

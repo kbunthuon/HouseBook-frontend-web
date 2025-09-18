@@ -2,8 +2,7 @@ import { SignupData, LoginResponse } from "../types";
 
 
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL; // replace with your Render backend URL
-
+const BASE_URL = import.meta.env.VITE_BACKEND_URL; 
 // Signup function
 export const signup = async (signupData: SignupData): Promise<LoginResponse | { errors: any }> => {
   const res = await fetch(`${BASE_URL}/auth/signup`, {

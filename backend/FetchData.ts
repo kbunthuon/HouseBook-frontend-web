@@ -57,11 +57,11 @@ export const getProperty = async (userID: string) => {
             property_name, 
             property_id,
             property_created_at,
-            property_type,
-            property_status,
-            property_lastupdated,
-            property_completionstatus,
-            property_total_floor_area
+            type,
+            status,
+            last_updated,
+            completion_status,
+            total_floor_area
         `)
         .eq("user_id", userID);
 
