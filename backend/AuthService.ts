@@ -1,5 +1,5 @@
 // src/services/authService.ts
-import {supabase} from "./config/supabaseClient";
+import {supabase} from "./config/supabaseClient.js";
 import dns from "dns/promises";
 
 const MINPASSWORDLEN = 8;

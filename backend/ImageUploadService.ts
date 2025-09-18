@@ -1,4 +1,4 @@
-import {supabase} from "./config/supabaseClient";
+import {supabase} from "./config/supabaseClient.js";
 
 export const uploadPropertyImage = async (fileBuffer: Buffer, filePath: string, mimetype?: string) => {
   try {

@@ -1,5 +1,5 @@
-import {supabase} from "./config/supabaseClient";
-import { getOwnerId, getUserIdByEmail } from "./FetchData";
+import {supabase} from "./config/supabaseClient.js";
+import { getOwnerId, getUserIdByEmail } from "./FetchData.js";
 
 // Setting what OwnerData looks like
 export interface OwnerData {

@@ -1,4 +1,4 @@
-import {supabase} from "./config/supabaseClient";
+import {supabase} from "./config/supabaseClient.js";
 
 export const fetchAssetTypes = async (): Promise<{ id: string; name: string }[]> => {
   const { data, error } = await supabase
