@@ -24,13 +24,13 @@ export type Property = {
   description: string; 
   pin: string; 
   name: string; 
-  type?: string; 
-  status?: string; 
-  lastUpdated?: string; 
-  completionStatus?: number; 
-  totalFloorArea?: number;
-  spaces?: Space[];
-  images?: string[];
+  type: string; 
+  status: string; 
+  lastUpdated: string; 
+  completionStatus: number; 
+  totalFloorArea: number;
+  spaces: Space[];
+  images: string[];
   created_at: string;
 };
 export type Space = {
@@ -56,7 +56,12 @@ export const getProperty = async (userID: string) => {
             pin,
             property_name, 
             property_id,
-            property_created_at
+            property_created_at,
+            property_type,
+            property_status,
+            property_lastupdated,
+            property_completionstatus,
+            property_total_floor_area
         `)
         .eq("user_id", userID);
 
@@ -72,7 +77,14 @@ export const getProperty = async (userID: string) => {
       address: row.address,
       description: row.description,
       pin: row.pin,
-      created_at: row.property_created_at
+      created_at: row.property_created_at,
+      type: row.property_type,
+      status: row.property_status,
+      lastUpdated: row.property_lastupdated,
+      completionStatus: row.property_completionstatus,
+      totalFloorArea: row.property_total_floor_area,
+      spaces: [], // Placeholder, populate as needed
+      images: []  // Placeholder, populate as needed
     }));
 
     return properties ?? [];

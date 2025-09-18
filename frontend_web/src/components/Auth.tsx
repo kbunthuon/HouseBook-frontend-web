@@ -5,8 +5,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
-import { signupUser, loginUser, validateLogin, validateSignup } from "../../../backend/AuthService";
-
+//import { signupUser, loginUser, validateLogin, validateSignup } from "../../../backend/AuthService";
+import { signup, login, validateLogin, validateSignup  } from "../services/AuthApi";
 interface AuthProps {
   onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
 }
@@ -30,17 +30,21 @@ export function Auth({ onLogin }: AuthProps) {
     e.preventDefault();
 
     // Validate input
-    const newErrors = await validateSignup(signupData);
-    setSignupErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    const { valid, errors } = await validateSignup(signupData);
+    setSignupErrors(errors || {});
+
+    if (!valid) return;
 
     // Validation passes, check if backend is able to sign up
     try {
-      const result = await signupUser(signupData);
-      if (result) {
-        onLogin(result.email, result.userType, result.userId);
-        console.log("Signup successful!", result);
+      const response = await signup(signupData);
+      if ("errors" in response) {
+        setSignupErrors(response.errors);
+        return;
       }
+
+      // Successful signup
+      onLogin(response.email, response.userType, response.userId);
     } catch (err: any) {
       setServerError(err.message || "Sign-up failed. Please try again.");
     }
@@ -49,19 +53,25 @@ export function Auth({ onLogin }: AuthProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate input
-    const newErrors = await validateLogin(loginEmail, loginPassword);
-    setLoginErrors(newErrors);
+    setServerError("");
+
+    // 1. Validate input via API
+    const { valid, errors } = await validateLogin(loginEmail, loginPassword);
+    setLoginErrors(errors || {});
     
-    if (Object.keys(newErrors).length > 0) return;
+    if (!valid) return;
 
     // Validation passes, check if this user info exists as an owner or an admin
     try {
-      const result = await loginUser(loginEmail, loginPassword);
-      if (result) {
-        onLogin(result.email, result.userType, result.userId);
-        console.log("Signup successful!", result);
+      const response = await login(loginEmail, loginPassword);
+      if ("errors" in response) {
+        setLoginErrors(response.errors);
+        return;
       }
+
+      // Successful login
+      onLogin(response.email, response.userType, response.userId);
+      console.log("Login successful!", response);
     } catch (err: any) {
       setServerError(err.message || "Sign-in failed. Please try again.");
     }

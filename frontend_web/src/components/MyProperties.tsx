@@ -5,21 +5,13 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-import { getProperty } from "../../../backend/FetchData";
+import { Property } from "../types";
+import { fetchPropertiesByUserId } from "../services/propertyApi";
 
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
-}
-
-interface Property {
-  property_id: string;
-  name: string;
-  address: string;
-  type: string;
-  status: string;
-  completionStatus: string;
 }
 
 export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
@@ -30,7 +22,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
   useEffect(() => {
     const loadProperties = async () => {
       setLoading(true);
-      const properties = await getProperty(userID); 
+      const properties = await fetchPropertiesByUserId(userID); 
       setMyProperties(properties || []);
       setLoading(false);
     };

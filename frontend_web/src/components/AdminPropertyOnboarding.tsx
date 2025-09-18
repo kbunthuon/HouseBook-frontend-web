@@ -12,15 +12,19 @@ import { Upload, CheckCircle, Building } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
-import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
-import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
-import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
+//import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+//import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
+//import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
+
+import { getAssetTypes, getSpaceEnums } from "../services/propertyApi";
+import { FormData, SpaceInt, OwnerData} from "../types"
+import { adminOnboardProperty } from "../services/onboardingApi";
 import { ROUTES } from "./Routes";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaces, setSpaces] = useState<SpaceInt[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     // General Information
@@ -42,20 +46,29 @@ export function AdminPropertyOnboarding() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const getEnums = async () => {
-      const types = await fetchSpaceEnum();
-      setSpaceTypes(types);
+    const fetchEnumsAndAssets = async () => {
+      // Fetch space types
+      const spaceResult = await getSpaceEnums();
+      if ("error" in spaceResult) {
+        console.error("Failed to fetch space enums:", spaceResult.error);
+        setSpaceTypes([]);
+      } else {
+        setSpaceTypes(spaceResult);
+      }
+
+      // Fetch asset types
+      const assetResult = await getAssetTypes();
+      if ("error" in assetResult) {
+        console.error("Failed to fetch asset types:", assetResult.error);
+        setAssetTypes([]);
+      } else {
+        setAssetTypes(assetResult);
+      }
     };
-    getEnums();
+
+    fetchEnumsAndAssets();
   }, []);
 
-  useEffect(() => {
-    const getAssetTypes = async () => {
-      const types = await fetchAssetTypes();
-      setAssetTypes(types);
-    };
-    getAssetTypes();
-  }, []);
 
   const steps = [
     { id: 1, title: "Owner details", description: "Get owner details to onboard property for" },
@@ -72,10 +85,14 @@ export function AdminPropertyOnboarding() {
     } else if (currentStep == steps.length) {
       // No longer Next button, this will be complete onboarding
       // Let backend handle saving information in database
-      const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
-      console.log(propertyId);
-      
-      navigate(ROUTES.ownerPropertiesList);
+      const result = await adminOnboardProperty(ownerData, formData, spaces);
+      if (result.error) {
+        console.error(result.error);
+        // optionally show error to user
+      } else {
+        console.log("Property onboarded with ID:", result.propertyId);
+        navigate(ROUTES.ownerPropertiesList);
+      }
     }
   };
 
@@ -96,12 +113,12 @@ export function AdminPropertyOnboarding() {
 
   // Add a new Space
   const addSpace = () => {
-    setSpaces((prev: Space[]) => [...prev, { type: "", name: "", assets: [] }]);
+    setSpaces((prev: SpaceInt[]) => [...prev, { type: "", name: "", assets: [] }]);
   };
 
   // Update Space Name
   const updateSpaceName = (index: number, name: string) => {
-    setSpaces((prev: Space[]) => {
+    setSpaces((prev: SpaceInt[]) => {
       const newSpaces = [...prev]
       newSpaces[index] = { ...newSpaces[index], name };
       return newSpaces;

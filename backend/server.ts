@@ -171,6 +171,34 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+// POST /auth/validate-signup
+app.post("/auth/validate-signup", async (req, res) => {
+  try {
+    const signupData: SignupData = req.body;
+    const errors = await validateSignup(signupData);
+    const hasErrors = Object.values(errors).some(arr => arr.length > 0);
+    res.json({ errors, valid: !hasErrors });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Validation failed" });
+  }
+});
+
+// POST /auth/validate-login
+app.post("/auth/validate-login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const errors = await validateLogin(email, password);
+    const hasErrors = Object.keys(errors).length > 0;
+    res.json({ errors, valid: !hasErrors });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Validation failed" });
+  }
+});
+
+
+
 app.post("/upload/property-image", upload.single("file"), async (req, res) => {
   const file = req.file;
   const { filePath } = req.body;
