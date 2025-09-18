@@ -1,4 +1,4 @@
-import supabase from "../config/supabaseClient";
+import {supabase} from "./config/supabaseClient";
 
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null

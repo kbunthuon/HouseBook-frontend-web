@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",             // output code uses ES2020 features
+    "module": "ESNext",             // keeps ES module syntax (import/export)
+    "moduleResolution": "node",     // resolves modules like Node.js
+    "esModuleInterop": true,        // allows default imports from CommonJS modules
+    "outDir": "dist",               // compiled JS goes here
+    "ignoreDeprecations": "6.0"     // silences the node10 deprecation warning
+  },
+  "include": ["**/*.ts", "**/*.tsx"],   // compiles all TS/TSX files
+  "exclude": ["node_modules"]           // ignores node_modules
+}
