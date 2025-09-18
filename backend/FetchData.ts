@@ -78,11 +78,11 @@ export const getProperty = async (userID: string) => {
       description: row.description,
       pin: row.pin,
       created_at: row.property_created_at,
-      type: row.property_type,
-      status: row.property_status,
-      lastUpdated: row.property_lastupdated,
-      completionStatus: row.property_completionstatus,
-      totalFloorArea: row.property_total_floor_area,
+      type: row.type,
+      status: row.status,
+      lastUpdated: row.last_updated,
+      completionStatus: row.completion_status,
+      totalFloorArea: row.total_floor_area,
       spaces: [], // Placeholder, populate as needed
       images: []  // Placeholder, populate as needed
     }));
