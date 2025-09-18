@@ -12,13 +12,13 @@ import { Upload, CheckCircle, Building } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
-import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
-import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
+import { getSpaceEnums } from "../services/propertyApi";
+import { getAssetTypes } from "../services/propertyApi";
 import { ownerOnboardProperty, FormData, Space} from "../../../backend/OnboardPropertyService";
 import { ROUTES } from "./Routes";
 
 export function OwnerPropertyOnboarding() {
-  const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
+  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -35,20 +35,31 @@ export function OwnerPropertyOnboarding() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const getEnums = async () => {
-      const types = await fetchSpaceEnum();
-      setSpaceTypes(types);
+    const fetchEnums = async () => {
+      const result = await getSpaceEnums();
+      if (Array.isArray(result)) {
+        setSpaceTypes(result); // safe, string[]
+      } else {
+        console.error("Failed to fetch space types:", result.error);
+        setSpaceTypes([]); // fallback empty array
+      }
     };
-    getEnums();
+    fetchEnums();
   }, []);
 
   useEffect(() => {
-    const getAssetTypes = async () => {
-      const types = await fetchAssetTypes();
-      setAssetTypes(types);
+    const fetchAssets = async () => {
+      const result = await getAssetTypes();
+      if (Array.isArray(result)) {
+        setAssetTypes(result); // safe, AssetType[]
+      } else {
+        console.error("Failed to fetch asset types:", result.error);
+        setAssetTypes([]); // fallback empty array
+      }
     };
-    getAssetTypes();
+    fetchAssets();
   }, []);
+
 
   const steps = [
     { id: 1, title: "General Information", description: "Property details, location and images" },

@@ -56,5 +56,11 @@
     server: {
       port: 3000,
       open: true,
+      fs: {
+        strict: true,
+      },
+      watch: {
+        ignored: ['**/backend/**', '**/node_modules/**'], // don't watch backend
+      },
     },
   });

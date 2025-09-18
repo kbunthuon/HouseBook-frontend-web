@@ -9,11 +9,12 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { React, useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-
+//import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { Property, Owner } from "../types";
+import { getPropertyDetails, getPropertyOwners } from "../services/propertyApi";
 interface EditHistoryItem {
   id: number;
   date: string;
@@ -349,25 +350,29 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        setLoading(true);
-        setError(null);
         console.log("Fetching details for property ID:", propertyId);
-        const result = await getPropertyDetails(propertyId);
-        if (result) {
-          setProperty(result);
+
+        const propertyResult = await getPropertyDetails(propertyId);
+        if ("error" in propertyResult) {
+          setError(propertyResult.error);
+          setProperty(null);
         } else {
-          setError("Property not found");
+          setProperty(propertyResult);
+          console.log("Spaces data:", propertyResult.spaces);
         }
 
-        console.log("Spaces data:", result?.spaces);
-
-        const ownerResult = await getPropertyOwners(propertyId);
-        if (ownerResult) {
-          setOwners(ownerResult);
+        const ownersResult = await getPropertyOwners(propertyId);
+        if ("error" in ownersResult) {
+          setError(ownersResult.error);
+          setOwners(null);
         } else {
-          setError("Owner not found");
+          setOwners(ownersResult);
         }
+
       } catch (err: any) {
         setError(err.message ?? "Unexpected error");
       } finally {
@@ -376,7 +381,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     };
 
     fetchData();
-  }, [propertyId]); // re-run if the propertyId changes
+  }, [propertyId]);
 
   const SpecificationSection = ({ title, items, children }: { title: string; items?: Record<string, string>; children?: React.ReactNode }) => (
     <Card>
