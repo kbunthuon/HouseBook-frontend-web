@@ -29,10 +29,6 @@ app.use(express.json());
 // Multer setup (memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Render port
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
 // Fetch data endpoints
 // GET owner id by userId
 app.get("/owner/:userId", async (req, res) => {
