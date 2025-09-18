@@ -8,18 +8,18 @@ import {
   getPropertyDetails,
   getPropertyOwners,
   getUserIdByEmail
-} from "./FetchData";
+} from "./FetchData.js";
 
-import { fetchSpaceEnum } from "./FetchSpaceEnum";
+import { fetchSpaceEnum } from "./FetchSpaceEnum.js";
 
-import { ownerOnboardProperty, adminOnboardProperty } from "./OnboardPropertyService";
+import { ownerOnboardProperty, adminOnboardProperty } from "./OnboardPropertyService.js";
 
-import { fetchAssetTypes } from "./FetchAssetTypes";
+import { fetchAssetTypes } from "./FetchAssetTypes.js";
 
-import { signupUser, loginUser, validateSignup, validateLogin, SignupData } from "./AuthService";
+import { signupUser, loginUser, validateSignup, validateLogin, SignupData } from "./AuthService.js";
 
 import multer from "multer";
-import { uploadPropertyImage } from "./ImageUploadService";
+import { uploadPropertyImage } from "./ImageUploadService.js";
 
 
 const app = express();
@@ -28,6 +28,10 @@ app.use(express.json());
 
 // Multer setup (memory storage)
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Render port
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Fetch data endpoints
 // GET owner id by userId
