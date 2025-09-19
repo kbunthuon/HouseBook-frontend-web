@@ -37,10 +37,8 @@ interface ChangeLog {
   changelog_description: string;
   changelog_status: "pending" | "approved" | "rejected" | "ACCEPTED"; // unify later
   changelog_created_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-  };
+  user_first_name: string | null;
+  user_last_name: string | null;
 }
 
 
@@ -70,8 +68,9 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
               changelog_description,
               changelog_created_at,
               changelog_status,
-              user: User ( first_name, last_name ),
-              property_id
+              property_id,
+              user_first_name,
+              user_last_name
             `)
             .in("property_id", propertyIds)
             .order("changelog_created_at", { ascending: false });
@@ -250,7 +249,11 @@ function formatDateTime(timestamp: string | number | Date) {
                         {myProperties.find(
                           (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
-                      <TableCell>{request.user?.first_name ?? "Unknown User"}</TableCell>
+                      <TableCell>
+                        {request.user_first_name || request.user_last_name
+                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                          : "Unknown User"}
+                      </TableCell>
                       <TableCell>{request.changelog_description}</TableCell>
                       <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
                       <TableCell>
