@@ -10,26 +10,42 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
+
 
 
 interface OwnerDashboardProps {
   userId: string;
 }
 
+// interface ChangeLog {
+//   property_id: any;
+//   changelog_id: string;
+//   asset_id: string;
+//   changelog_specifications: Record<string, any>;
+//   changelog_description: string;
+//   changedlog_changed_by_user_id: string;
+//   changelog_status: string;
+//   changelog_created_at: string;
+// }
 
 interface ChangeLog {
-  id: string;
-  asset_id: string;
-  specifications: Record<string, any>;
-  change_description: string;
-  changed_by_user_id: string;
-  created_at: string;
+  property_id: string;
+  changelog_id: string;
+  changelog_specifications: Record<string, any>;
+  changelog_description: string;
+  changelog_status: "pending" | "approved" | "rejected" | "ACCEPTED"; // unify later
+  changelog_created_at: string;
+  user?: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
+
 export function OwnerDashboard({ userId }: OwnerDashboardProps) {
-  const [myProperties, setOwnerProperties] = useState<any[]>([])
+  const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
 
@@ -41,42 +57,45 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         if (!ownerId) throw Error("Owner ID not found");
         
         const properties = await getProperty(userId);
-        setOwnerProperties(properties);
+        setOwnerProperties(properties ?? []);
 
 
         if (properties && properties.length > 0) {
-              const propertyIds = properties.map((p: any) => p.property_id);
-              const { data: changes, error: changesError } = await supabase
-                .from("changelog_property_view")
-                .select(`
-                  changelog_id,
-                  changelog_specifications,
-                  changelog_description,
-                  changelog_created_at,
-                  changelog_status,
-                  user: User ( first_name, last_name ),
-                  property_id
-                `)
-                .in("property_id", propertyIds)
-                .order("changelog_created_at", { ascending: false });
+          const propertyIds = properties.map((p: any) => p.property_id);
+          const { data: changes, error: changesError } = await supabase
+            .from("changelog_property_view")
+            .select(`
+              changelog_id,
+              changelog_specifications,
+              changelog_description,
+              changelog_created_at,
+              changelog_status,
+              user: User ( first_name, last_name ),
+              property_id
+            `)
+            .in("property_id", propertyIds)
+            .order("changelog_created_at", { ascending: false });
 
-              if (changesError) {
-                console.error("Error fetching change log:", changesError);
-                setLoading(false);
-                return;
-              }
+          if (changesError) {
+            console.error("Error fetching change log:", changesError);
+            setLoading(false);
+            return;
+          }
+          // Normalizing user from array so that it is a single object
+          const normalizedChanges = (changes ?? []).map((c: any) => ({
+            ...c,
+            user: c.user && c.user.length > 0 ? c.user[0] : null,
+          }));
 
-              setRequests(changes ?? []);
-            
-                          } else {
-              setRequests([]);
-            }
+          setRequests(normalizedChanges);
+        } else {
+          setRequests([]);
+        }
 
       } catch (error) {
         console.error(error);
         setOwnerProperties([]);
 
-        
       } finally {
         setLoading(false);
       }
@@ -153,11 +172,11 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   };
 
-const approveEdit = (editId: number) => {
+const approveEdit = (editId: string) => {
     console.log(`Approved transfer ${editId}`);
   };
 
-  const rejectEdit = (editId: number) => {
+  const rejectEdit = (editId: string) => {
     console.log(`Rejected transfer ${editId}`);
   };
 
@@ -255,12 +274,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={request.changelog_changed_by_user_id} readOnly />
+                                    <Input value={`${request.user?.first_name ?? ""} ${request.user?.last_name ?? ""}`} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
@@ -286,12 +305,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="flex justify-end space-x-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => rejectEdit(request.id)}
+                                    onClick={() => rejectEdit(request.changelog_id)}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button onClick={() => approveEdit(request.changelog_id)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>
@@ -304,14 +323,14 @@ function formatDateTime(timestamp: string | number | Date) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => approveEdit(request.id)}
+                                onClick={() => approveEdit(request.changelog_id)}
                               >
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => rejectEdit(request.id)}
+                                onClick={() => rejectEdit(request.changelog_id)}
                               >
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
