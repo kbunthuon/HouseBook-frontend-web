@@ -12,6 +12,9 @@ import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-re
 import { React, useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
+import { PinManagementDialog } from "./PinManagementDialog";
+import { PinTable } from "./PinTable";
+import { toast } from "sonner@2.0.3";
 import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 
 interface EditHistoryItem {
@@ -23,6 +26,15 @@ interface EditHistoryItem {
   editedBy: string;
 }
 
+interface AccessPin {
+  id: string;
+  pin: string;
+  accessibleSections: string[];
+  isActive: boolean;
+  createdAt: string;
+  lastUsed?: string;
+}
+
 interface PropertyDetailProps {
   propertyId: string;
   onBack: () => void;
@@ -30,11 +42,30 @@ interface PropertyDetailProps {
 
 export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<string>("");
   const [editingField, setEditingField] = useState<string>("");
   const [selectedSectionForTimeline, setSelectedSectionForTimeline] = useState<string>("");
   const [editDescription, setEditDescription] = useState("");
+  const [accessPins, setAccessPins] = useState<AccessPin[]>([
+    {
+      id: "1",
+      pin: "123456",
+      accessibleSections: ["General Details", "Exterior Specifications", "Property Images"],
+      isActive: true,
+      createdAt: "2024-01-15T10:30:00Z",
+      lastUsed: "2024-01-18T14:20:00Z"
+    },
+    {
+      id: "2", 
+      pin: "789012",
+      accessibleSections: ["Kitchen Appliances", "Bathroom Fixtures", "Lighting & Electrical"],
+      isActive: false,
+      createdAt: "2024-01-10T09:15:00Z",
+      lastUsed: "2024-01-12T16:45:00Z"
+    }
+  ]);
 
   // Define all editable fields organized by section
   const sectionFields = {
@@ -273,6 +304,38 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     return keyMap[title] || "generalDetails";
   };
 
+  // PIN management functions
+  const handleSavePin = (pin: string, sections: string[]) => {
+    const newPin: AccessPin = {
+      id: Date.now().toString(),
+      pin,
+      accessibleSections: sections,
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+    setAccessPins(prev => [...prev, newPin]);
+    toast.success("Access PIN created successfully");
+  };
+
+  const handleUpdatePin = (pinId: string, sections: string[]) => {
+    setAccessPins(prev => prev.map(pin => 
+      pin.id === pinId ? { ...pin, accessibleSections: sections } : pin
+    ));
+  };
+
+  const handleDeletePin = (pinId: string) => {
+    setAccessPins(prev => prev.filter(pin => pin.id !== pinId));
+    toast.success("Access PIN deleted successfully");
+  };
+
+  const handleToggleActive = (pinId: string, isActive: boolean) => {
+    setAccessPins(prev => prev.map(pin => 
+      pin.id === pinId ? { ...pin, isActive } : pin
+    ));
+    toast.success(`PIN ${isActive ? 'activated' : 'deactivated'} successfully`);
+  };
+
+
   // Mock property data - in real app this would come from API
   /*
   const propertyData = {
@@ -425,8 +488,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </CardContent>
     </Card>
   );
-
-  const value = "https://house-book-frontend-web.vercel.app";
+  
+  const value = "https://house-book-frontend-web.vercel.app/owner";
 
   const length = 6;
 
@@ -488,20 +551,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <h4>Property PIN</h4>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <code className="bg-muted px-3 py-2 rounded font-mono">{pin}</code>
-                    <Button variant="outline" size="sm" onClick={regenerate}>
-                      Regenerate
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={copy}>
-                      Copy
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Share this PIN with authorized personnel for property access
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => setIsPinDialogOpen(true)}
+                    className="w-full"
+                    size="sm"
+                  >
+                    Generate New PIN
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    {accessPins.length} active PIN{accessPins.length !== 1 ? 's' : ''} created
                   </p>
+                  
                 </div>
                 <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
                   <QRCodeCanvas
@@ -514,8 +575,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               </div>
             </CardContent>
           </Card>
+          
         </div>
       </div>
+
+      
 
       <Separator />
 
@@ -605,6 +669,24 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           />
         ))}
       </div>
+
+      {/* Access PINs Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Key className="h-5 w-5 mr-2" />
+            Access PINs Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PinTable 
+            pins={accessPins}
+            onUpdatePin={handleUpdatePin}
+            onDeletePin={handleDeletePin}
+            onToggleActive={handleToggleActive}
+          />
+        </CardContent>
+      </Card>
 
       {/*
       <div className="grid gap-6 md:grid-cols-2">
@@ -735,53 +817,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Timeline Dialog */}
-      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
-        <DialogContent className="w-full sm:w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Clock className="h-5 w-5 mr-2" />
-              Edit History - {selectedSectionForTimeline}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[400px] py-4">
-            <div className="space-y-4">
-              {(editHistory[getSectionKey(selectedSectionForTimeline)] || []).map((edit, index) => (
-                <div key={edit.id} className="flex space-x-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-3 h-3 bg-primary rounded-full" />
-                    {index < (editHistory[getSectionKey(selectedSectionForTimeline)] || []).length - 1 && (
-                      <div className="w-0.5 h-16 bg-border mt-2" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{edit.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Field: {edit.field?.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {edit.editedBy}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(edit.date)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(!editHistory[getSectionKey(selectedSectionForTimeline)] || editHistory[getSectionKey(selectedSectionForTimeline)].length === 0) && (
-                <div className="text-center text-muted-foreground py-8">
-                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No edit history available for this section</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      {/* PIN Management Dialog */}
+      <PinManagementDialog 
+        open={isPinDialogOpen}
+        onOpenChange={setIsPinDialogOpen}
+        onSave={handleSavePin}
+        propertyId={propertyId}
+      />
     </div>
   );
 }
