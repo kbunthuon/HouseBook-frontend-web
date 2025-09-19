@@ -48,7 +48,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
-  const [splashImage, setSplashImage] = useState<string | null>(null);
 
   useEffect (() => {
     const getOwnerProps = async () => {
@@ -105,24 +104,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     getOwnerProps();
 
   },[userId])
-
-  useEffect(() => {
-    const getSplashImage = async () => {  
-      try {
-        const splashImage = await getPropertyImages("Main");
-        if (splashImage && splashImage.length > 0) {
-          setSplashImage(splashImage[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching splash image:", error);
-        setSplashImage(null);
-      }
-
-    };
-    getSplashImage();
-  }, []);
-
-
 
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
@@ -374,13 +355,24 @@ function formatDateTime(timestamp: string | number | Date) {
           <CardContent>
             <div className="flex space-x-6 overflow-x-auto py-6">
               {myProperties.map((property) => (
-                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition">
-                  
+                <div
+                  key={property.property_id}
+                  className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition"
+                >
                   {/* property image */}
-                  <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground">Property Image </span>
+                  <div className="w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    {property.splash_image ? (
+                      <img
+                        src={property.splash_image}
+                        alt={`${property.address} splash`}
+                        className="max-h-40 max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">No image</span>
+                    )}
                   </div>
 
+                  {/* property info */}
                   <div className="flex-1 mt-4">
                     <div className="font-medium">{property.address}</div>
                     <div className="text-medium text-muted-foreground">
@@ -389,11 +381,14 @@ function formatDateTime(timestamp: string | number | Date) {
                   </div>
                 </div>
               ))}
+
               {myProperties.length === 0 && (
                 <div className="text-center py-6">
                   <Building className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
-                  <p className="text-muted-foreground">Add your first property to get started</p>
+                  <p className="text-muted-foreground">
+                    Add your first property to get started
+                  </p>
                   <Button className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Property
@@ -402,6 +397,7 @@ function formatDateTime(timestamp: string | number | Date) {
               )}
             </div>
           </CardContent>
+
         </Card>
       </div>
 

@@ -32,6 +32,7 @@ export type Property = {
   spaces?: Space[];
   images?: string[];
   created_at: string;
+  splash_image?: string;
 };
 export type Space = {
   space_id: string;
@@ -48,41 +49,59 @@ export type Asset = {
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
-    const { data, error } = await supabase
-        .from("owner_property_view")
-        .select(`
-            address,
-            description,
-            pin,
-            property_name, 
-            property_id,
-            property_created_at,
-            type,
-            status,
-            completion_status,
-            last_updated
-        `)
-        .eq("user_id", userID);
+  const { data, error } = await supabase
+    .from("owner_property_view")
+    .select(`
+      address,
+      description,
+      pin,
+      property_name, 
+      property_id,
+      property_created_at,
+      type,
+      status,
+      last_updated,
+      completion_status,
+      total_floor_area,
+      splash_image
+    `)
+    .eq("user_id", userID);
 
-    if (error) {
-        console.error("Error fetching property id:", error.message);
-        return null;
-    }
+  if (error) {
+    console.error("Error fetching property id:", error.message);
+    return [];
+  }
 
-    // Map raw DB columns to your Property type
-    const properties: Property[] = data.map((row) => ({
+  const properties: Property[] = data.map((row) => {
+    // Get the actual public URL for the splash image
+    const splashImageUrl = row.splash_image
+      ? supabase.storage
+          .from("PropertyImage")
+          .getPublicUrl(row.splash_image)
+          .data?.publicUrl ?? ''
+      : '';
+
+    return {
       property_id: row.property_id,
-      name: row.property_name, // map DB column to type field
+      name: row.property_name,
       address: row.address,
       description: row.description,
       pin: row.pin,
-      created_at: row.property_created_at
-    }));
+      created_at: row.property_created_at,
+      type: row.type,
+      status: row.status,
+      lastUpdated: row.last_updated,
+      completionStatus: row.completion_status,
+      totalFloorArea: row.total_floor_area,
+      spaces: [],  // populate later if needed
+      images: [],  // populate later if needed
+      splash_image: splashImageUrl,
+    };
+  });
 
-    return properties ?? [];
-
-    //return data || null;
-}
+  console.log("Fetched properties:", properties);
+  return properties;
+};
 
 export const getChangeLogs = async (propertyIds: string[]) => {
   const { data: changes, error } = await supabase
