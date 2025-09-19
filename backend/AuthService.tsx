@@ -1,6 +1,5 @@
 // src/services/authService.ts
 import supabase from "../config/supabaseClient";
-import dns from "dns/promises";
 
 const MINPASSWORDLEN = 4;
 
@@ -107,10 +106,10 @@ export const validateSignup = async (signupData: SignupData) => {
     newErrors.last_name.push("Invalid last name.");
 
   // Match email so that it matches string@string.string format
-  // const valid = await isValidEmail(signupData.email);
-  // if (!valid) {
-  //   newErrors.email.push("Invalid email format or domain does not exist.");
-  // }
+  const valid = await validateEmail(signupData.email);
+  if (!valid) {
+    newErrors.email.push("Invalid email format or domain does not exist.");
+  }
 
   // Checks for valid phone number and dashes if there are any
   if (!signupData.phone.match(/^[0-9]{2,4}[- ]?[0-9]{3,4}[- ]?[0-9]{3,4}$/))
@@ -140,10 +139,10 @@ export const validateSignup = async (signupData: SignupData) => {
 export const validateLogin = async (loginEmail: string, loginPassword: string) => {
   const newErrors: Record<string, string> = {};
 
-  // const valid = await isValidEmail(loginEmail);
-  // if (!valid) {
-  //   newErrors.email = "Invalid email format or domain does not exist.";
-  // }
+  const valid = await validateEmail(loginEmail);
+  if (!valid) {
+    newErrors.email = "Invalid email format or domain does not exist.";
+  }
   if (loginPassword.length < MINPASSWORDLEN)
     newErrors.loginPassword = `Password must be at least ${MINPASSWORDLEN} characters.`;
 
@@ -152,32 +151,45 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
 
 // ---------------HELPER FUNCTIONS---------------------------
-async function domainExists(email: string): Promise<boolean> {
-  const domain = email.split("@")[1];
-  if (domain === "housebook.com") return true;
-  try {
-    const records = await dns.resolveMx(domain);
-    return records && records.length > 0;
-  } catch {
-    return false;
-  }
-}
+// async function domainExists(email: string): Promise<boolean> {
+//   const domain = email.split("@")[1];
+//   if (domain === "housebook.com") return true;
+//   try {
+//     const records = await dns.resolveMx(domain);
+//     return records && records.length > 0;
+//   } catch {
+//     return false;
+//   }
+// }
 
-async function isValidEmail(email: string): Promise<boolean> {
-  const trimmedEmail = email.trim();
+// async function isValidEmail(email: string): Promise<boolean> {
+//   const trimmedEmail = email.trim();
 
-  // Allow special housebook.com domain
-  if (trimmedEmail.endsWith("@housebook.com")) {
-    return true;
-  }
+//   // Allow special housebook.com domain
+//   if (trimmedEmail.endsWith("@housebook.com")) {
+//     return true;
+//   }
 
-  const domain = trimmedEmail.split("@")[1];
-  try {
-    const records = await dns.resolveMx(domain);
-    return true;
-  } catch {
-    return false; // Domain does not exist
-  }
-}
+//   const domain = trimmedEmail.split("@")[1];
+//   try {
+//     const records = await dns.resolveMx(domain);
+//     return true;
+//   } catch {
+//     return false; // Domain does not exist
+//   }
+// }
 
 
+export const validateEmail = async (email: string) => {
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}/validate-email`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }
+  );
+
+  const data = await res.json();
+  return data;
+};
