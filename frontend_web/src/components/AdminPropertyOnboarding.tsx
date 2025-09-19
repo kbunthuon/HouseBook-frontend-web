@@ -9,15 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, CheckCircle, Building } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
-import { onboardProperty, FormData, Space} from "../../../backend/OnboardPropertyService";
+import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
+import { ROUTES } from "./Routes";
 
-export function PropertyOnboarding() {
-  const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
+export function AdminPropertyOnboarding() {
+  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -30,6 +31,15 @@ export function PropertyOnboarding() {
     floorPlans: [] as File[],
     buildingPlans: [] as File[]
   });
+  const [ownerData, setOwnerData] = useState<OwnerData>({
+    firstName: "",
+    lastName: "",
+    address: "",
+    email: "",
+    phone: ""
+  });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getEnums = async () => {
@@ -48,20 +58,24 @@ export function PropertyOnboarding() {
   }, []);
 
   const steps = [
-    { id: 1, title: "General Information", description: "Property details, location and images" },
-    { id: 2, title: "Adding Spaces and Assets", description: "Insert the rooms and assets in each room" },
-    { id: 3, title: "Submission", description: "Check if all the data is correct and submit" }
+    { id: 1, title: "Owner details", description: "Get owner details to onboard property for" },
+    { id: 2, title: "General Information", description: "Property details, location and images" },
+    { id: 3, title: "Adding Spaces and Assets", description: "Insert the rooms and assets in each room" },
+    { id: 4, title: "Submission", description: "Check if all the data is correct and submit" }
   ];
 
   const progress = (currentStep / steps.length) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
       // No longer Next button, this will be complete onboarding
       // Let backend handle saving information in database
-      onboardProperty(formData, spaces);
+      const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
+      console.log(propertyId);
+      
+      navigate(ROUTES.ownerPropertiesList);
     }
   };
 
@@ -115,7 +129,7 @@ export function PropertyOnboarding() {
     });
   };
 
-  // // Update Asset fields
+  // Update Asset fields
   const updateAsset = (
     spaceIndex: number,
     assetIndex: number,
@@ -180,9 +194,59 @@ export function PropertyOnboarding() {
     });
   };
 
+  // Update OwnerData
+  const updateOwnerData = (field: keyof OwnerData, value: string) => {
+      setOwnerData(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
+        return (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="Owner First Name">Owner First Name</Label>
+                <Input
+                  id="ownerFirstName"
+                  value={ownerData.firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, firstName: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="OwnerLastName">Owner Last Name</Label>
+                <Input
+                  id="ownerLastName"
+                  value={ownerData.lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, lastName: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="Phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={ownerData.phone}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="Email">Email</Label>
+                <Input
+                  id="email"
+                  value={ownerData.email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, email: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+        )
+    
+      case 2:
         return (
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -191,7 +255,7 @@ export function PropertyOnboarding() {
                 <Input
                   id="propertyName"
                   value={formData.propertyName}
-                  onChange={(e: React.FormEvent) => setFormData({...formData, propertyName: e.target.value})}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyName: e.target.value})}
                 />
               </div>
               <div>
@@ -199,7 +263,7 @@ export function PropertyOnboarding() {
                 <Input
                   id="propertyDescription"
                   value={formData.propertyDescription}
-                  onChange={(e: React.FormEvent) => setFormData({...formData, propertyDescription: e.target.value})}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
                 />
               </div>
             </div>
@@ -208,7 +272,7 @@ export function PropertyOnboarding() {
               <Textarea
                 id="address"
                 value={formData.address}
-                onChange={(e: React.FormEvent) => setFormData({...formData, address: e.target.value})}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, address: e.target.value})}
               />
             </div>
             <div>
@@ -220,7 +284,7 @@ export function PropertyOnboarding() {
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e: React.FormEvent) => handleFileUpload('floorPlans', e.target.files)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileUpload('floorPlans', e.target.files)}
                     className="hidden"
                     id="floorPlans"
                   />
@@ -247,7 +311,7 @@ export function PropertyOnboarding() {
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e: React.FormEvent) => handleFileUpload('buildingPlans', e.target.files)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileUpload('buildingPlans', e.target.files)}
                     className="hidden"
                     id="buildingPlans"
                   />
@@ -268,7 +332,7 @@ export function PropertyOnboarding() {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="space-y-4">
             {spaces.map((space, spaceIndex) => (
@@ -417,7 +481,7 @@ export function PropertyOnboarding() {
             </div>
             )
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Review Your Submission</h2>
