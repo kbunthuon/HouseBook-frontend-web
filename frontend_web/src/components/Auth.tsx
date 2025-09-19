@@ -39,7 +39,7 @@ export function Auth({ onLogin }: AuthProps) {
       const result = await signupUser(signupData);
       if (result) {
         onLogin(result.email, result.userType, result.userId);
-        console.log("Signup successful!", result);
+        console.log("Sign-up successful!", result);
       }
     } catch (err: any) {
       setServerError(err.message || "Sign-up failed. Please try again.");
@@ -60,7 +60,7 @@ export function Auth({ onLogin }: AuthProps) {
       const result = await loginUser(loginEmail, loginPassword);
       if (result) {
         onLogin(result.email, result.userType, result.userId);
-        console.log("Signup successful!", result);
+        console.log("Sign-in successful!", result);
       }
     } catch (err: any) {
       setServerError(err.message || "Sign-in failed. Please try again.");

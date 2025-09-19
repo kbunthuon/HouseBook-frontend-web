@@ -2,7 +2,7 @@
 import supabase from "../config/supabaseClient";
 import dns from "dns/promises";
 
-const MINPASSWORDLEN = 8;
+const MINPASSWORDLEN = 4;
 
 export interface SignupData {
   email: string;
@@ -107,10 +107,10 @@ export const validateSignup = async (signupData: SignupData) => {
     newErrors.last_name.push("Invalid last name.");
 
   // Match email so that it matches string@string.string format
-  const valid = await isValidEmail(signupData.email);
-  if (!valid) {
-    newErrors.email.push("Invalid email format or domain does not exist.");
-  }
+  // const valid = await isValidEmail(signupData.email);
+  // if (!valid) {
+  //   newErrors.email.push("Invalid email format or domain does not exist.");
+  // }
 
   // Checks for valid phone number and dashes if there are any
   if (!signupData.phone.match(/^[0-9]{2,4}[- ]?[0-9]{3,4}[- ]?[0-9]{3,4}$/))
@@ -140,10 +140,10 @@ export const validateSignup = async (signupData: SignupData) => {
 export const validateLogin = async (loginEmail: string, loginPassword: string) => {
   const newErrors: Record<string, string> = {};
 
-  const valid = await isValidEmail(loginEmail);
-  if (!valid) {
-    newErrors.email = "Invalid email format or domain does not exist.";
-  }
+  // const valid = await isValidEmail(loginEmail);
+  // if (!valid) {
+  //   newErrors.email = "Invalid email format or domain does not exist.";
+  // }
   if (loginPassword.length < MINPASSWORDLEN)
     newErrors.loginPassword = `Password must be at least ${MINPASSWORDLEN} characters.`;
 
@@ -179,3 +179,5 @@ async function isValidEmail(email: string): Promise<boolean> {
     return false; // Domain does not exist
   }
 }
+
+
