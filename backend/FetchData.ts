@@ -24,10 +24,10 @@ export type Property = {
   description: string; 
   pin: string; 
   name: string; 
-  type?: string; 
-  status?: string; 
-  lastUpdated?: string; 
-  completionStatus?: number; 
+  type: string; 
+  status: string; 
+  lastUpdated: string; 
+  completionStatus: number; 
   totalFloorArea?: number;
   spaces?: Space[];
   images?: string[];
@@ -56,7 +56,11 @@ export const getProperty = async (userID: string) => {
             pin,
             property_name, 
             property_id,
-            property_created_at
+            property_created_at,
+            type,
+            status,
+            completion_status,
+            last_updated
         `)
         .eq("user_id", userID);
 
@@ -169,11 +173,22 @@ export const getPropertyDetails = async (propertyId: string) => {
   return property;
 }
 
-export const getPropertyImages = async (propertyId: string) => {
-  const { data: imagesData } = await supabase
-  .from("PropertyImages")
-  .select("image_link")
-  .eq("property_id", propertyId);
+export const getPropertyImages = async (propertyId: string, imageName?: string) => {
+  let query = supabase
+    .from("PropertyImages")
+    .select("image_link")
+    .eq("property_id", propertyId);
+
+  if (imageName) {
+    query = query.eq("image_name", imageName);
+  }
+
+  const { data: imagesData, error } = await query;
+
+  if (error) {
+    console.error("Error fetching images:", error);
+    return [];
+  }
 
   console.log("Image row:", imagesData);
   console.log(propertyId);
@@ -189,6 +204,8 @@ export const getPropertyImages = async (propertyId: string) => {
 
   return Array.from(imageSet);
 }
+
+
 
 export type Owner = {
   owner_id: string;

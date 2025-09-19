@@ -9,7 +9,7 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { React, useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
 import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";

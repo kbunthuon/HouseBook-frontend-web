@@ -10,7 +10,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, Property } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 
@@ -48,6 +48,7 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [splashImage, setSplashImage] = useState<string | null>(null);
 
   useEffect (() => {
     const getOwnerProps = async () => {
@@ -104,6 +105,24 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     getOwnerProps();
 
   },[userId])
+
+  useEffect(() => {
+    const getSplashImage = async () => {  
+      try {
+        const splashImage = await getPropertyImages("Main");
+        if (splashImage && splashImage.length > 0) {
+          setSplashImage(splashImage[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching splash image:", error);
+        setSplashImage(null);
+      }
+
+    };
+    getSplashImage();
+  }, []);
+
+
 
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
