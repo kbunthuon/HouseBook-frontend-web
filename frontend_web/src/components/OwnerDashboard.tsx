@@ -122,30 +122,6 @@ export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
     }
   ];
 
-  const upcomingTasks = [
-    {
-      id: 1,
-      task: "Property inspection due",
-      property: "Rose Wood Retreat",
-      dueDate: "Tomorrow",
-      priority: "high"
-    },
-    {
-      id: 2,
-      task: "Quarterly report generation",
-      property: "All Properties",
-      dueDate: "Next week",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      task: "Update utility information",
-      property: "Sunset Villa",
-      dueDate: "2 weeks",
-      priority: "low"
-    }
-  ];
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "destructive";
