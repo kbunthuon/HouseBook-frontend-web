@@ -17,6 +17,7 @@ import supabase from "../../../config/supabaseClient.ts"
 
 interface OwnerDashboardProps {
   userId: string;
+  onAddProperty: () => void;
 }
 
 // interface ChangeLog {
@@ -117,7 +118,7 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     },
     {
       title: "Active Properties",
-      value: activeProperties.toString(),
+      value: myProperties.length.toString(),
       change: "All operational",
       icon: TrendingUp,
       color: "text-green-600"
@@ -138,30 +139,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   ];
 
-  const upcomingTasks = [
-    {
-      id: 1,
-      task: "Property inspection due",
-      property: "Rose Wood Retreat",
-      dueDate: "Tomorrow",
-      priority: "high"
-    },
-    {
-      id: 2,
-      task: "Quarterly report generation",
-      property: "All Properties",
-      dueDate: "Next week",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      task: "Update utility information",
-      property: "Sunset Villa",
-      dueDate: "2 weeks",
-      priority: "low"
-    }
-  ];
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "destructive";
@@ -171,26 +148,55 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   };
 
-const approveEdit = (editId: string) => {
-    console.log(`Approved transfer ${editId}`);
+const approveEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "ACCEPTED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Approved edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+      )
+      );
+
+    }
   };
 
-  const rejectEdit = (editId: string) => {
-    console.log(`Rejected transfer ${editId}`);
-  };
+const rejectEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "DECLINED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Declined edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+      )
+      );
+    }
+  }
 
   const getEditStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "secondary";
-      case "approved":
+      case "PENDING":
         return "default";
-      case "rejected":
+      case "ACCEPTED":
+        return "secondary";
+      case "DECLINED":
         return "destructive";
       default:
         return "secondary";
     }
-  };
+};
 
 function formatDate(timestamp: string | number | Date) {
   const dateObject = new Date(timestamp);
@@ -231,19 +237,20 @@ function formatDateTime(timestamp: string | number | Date) {
               <CardTitle>Pending Edit Requests</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="max-h-[300px] overflow-y-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Property</TableHead>
                     <TableHead>Requested By</TableHead>
-                    <TableHead>Field Edited</TableHead>
+                    <TableHead>Change Description</TableHead>
                     <TableHead>Request Date</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Inspect</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {requests.map((request) => (
+                <TableBody className="overflow-y:auto height:200px">
+                  {requests.slice(0, 15).map((request) => (
                     <TableRow key={request.changelog_id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
@@ -273,16 +280,18 @@ function formatDateTime(timestamp: string | number | Date) {
                               <DialogHeader>
                                 <DialogTitle>Edit Request Details</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4">
+                              <div className="space-y-6">
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
                                   (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
-                                <div className="grid gap-4 md:grid-cols-2">
+                                <div className="grid gap-4 md:grid-cols-1">
                                   <div>
                                     <Label>Requested By</Label>
+
                                     <Input value={`${request.user?.first_name ?? ""} ${request.user?.last_name ?? ""}`} readOnly />
+
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
@@ -290,7 +299,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                   </div>
                                 </div>
                                 <div>
-                                    <Label>Field Edited</Label>
+                                    <Label>Change Description</Label>
                                     <Input value={request.changelog_description} readOnly />
                                   </div>
                                 <div>
@@ -321,7 +330,7 @@ function formatDateTime(timestamp: string | number | Date) {
                               </div>
                             </DialogContent>
                           </Dialog>
-                          {request.changelog_status === "ACCEPTED" && (
+                          {/* {request.changelog_status === "ACCEPTED" && (
                             <>
                               <Button
                                 variant="ghost"
@@ -338,30 +347,31 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
                             </>
-                          )}
+                          )} */}
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>My Properties</CardTitle>
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="outline" onClick={onAddProperty}>
               <Plus className="h-4 w-4 mr-2" />
               Add Property
             </Button>
           </CardHeader>
+          
           <CardContent>
-            <div className="flex space-x-6 overflow-x-auto py-6">
+            <div className="flex overflow-x-auto py-6 gap-6">
               {myProperties.map((property) => (
-                <div
-                  key={property.property_id}
-                  className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition"
-                >
+                <div key={property.property_id} className="flex-none w-96 sm:w-80 md:w-96 lg:w-[28rem] xl:w-[32rem] flex flex-col p-6 sm:p-8 rounded-2xl bg-gray-50 shadow-md hover:shadow-lg transition">
+                  
+
                   {/* property image */}
                   <div className="w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                     {property.splash_image ? (
@@ -377,9 +387,9 @@ function formatDateTime(timestamp: string | number | Date) {
 
                   {/* property info */}
                   <div className="flex-1 mt-4">
-                    <div className="font-medium">{property.address}</div>
+                    <div className="font-large">{property.address}</div>
                     <div className="text-medium text-muted-foreground">
-                      Created {formatDate(property.created_at)}
+                      {property.name}
                     </div>
                   </div>
                 </div>
