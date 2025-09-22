@@ -36,14 +36,14 @@ interface ChangeLog {
   changelog_id: string;
   changelog_specifications: Record<string, any>;
   changelog_description: string;
-  changelog_status: "pending" | "approved" | "rejected" | "ACCEPTED"; // unify later
+  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
   changelog_created_at: string;
   user_first_name: string | null;
   user_last_name: string | null;
 }
 
 
-export function OwnerDashboard({ userId }: OwnerDashboardProps) {
+export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
