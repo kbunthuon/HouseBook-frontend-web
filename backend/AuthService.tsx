@@ -181,18 +181,21 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
 
 export const validateEmail = async (email: string) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error("User not logged in");
+
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`},
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`},
       body: JSON.stringify({ email }),
     }
   );
 
   const data = await res.json();
-  console.log("jaja");
   console.log(data);
-  console.log("juju");
   return data;
 };
