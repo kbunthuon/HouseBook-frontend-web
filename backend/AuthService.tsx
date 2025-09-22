@@ -153,51 +153,58 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
 
 // ---------------HELPER FUNCTIONS---------------------------
-// async function domainExists(email: string): Promise<boolean> {
-//   const domain = email.split("@")[1];
-//   if (domain === "housebook.com") return true;
+// export const validateEmail = async (email: string) => {
 //   try {
-//     const records = await dns.resolveMx(domain);
-//     return records && records.length > 0;
-//   } catch {
-//     return false;
+//     const res = await fetch(
+//       `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}`,
+//       {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ email }),
+//       }
+//     );
+
+//     if (!res.ok) {
+//       const errorText = await res.text();
+//       console.error("Error response:", errorText);
+//       return { valid: false, reason: "Failed to validate email" };
+//     }
+
+//     const data = await res.json();
+//     console.log("Email validation result:", data);
+//     return data;
+//   } catch (err: any) {
+//     console.error("Network or DNS error:", err);
+//     return { valid: false, reason: err.message };
 //   }
-// }
-
-// async function isValidEmail(email: string): Promise<boolean> {
-//   const trimmedEmail = email.trim();
-
-//   // Allow special housebook.com domain
-//   if (trimmedEmail.endsWith("@housebook.com")) {
-//     return true;
-//   }
-
-//   const domain = trimmedEmail.split("@")[1];
-//   try {
-//     const records = await dns.resolveMx(domain);
-//     return true;
-//   } catch {
-//     return false; // Domain does not exist
-//   }
-// }
-
-
+// };
 export const validateEmail = async (email: string) => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error("User not logged in");
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      }
+    );
 
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`},
-      body: JSON.stringify({ email }),
+    if (!res.ok) {
+      // handle HTTP errors
+      const text = await res.text();
+      console.error("Error response:", text);
+      return { valid: false, reason: text };
     }
-  );
 
-  const data = await res.json();
-  console.log(data);
-  return data;
+    const data = await res.json();
+    console.log("validateEmail response:", data);
+    return data; // { valid: boolean, records?: MXRecord[] }
+  } catch (err: unknown) {
+    console.error("Network or fetch error:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    return { valid: false, reason };
+  }
 };
+
