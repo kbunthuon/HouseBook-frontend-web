@@ -24,13 +24,15 @@ export type Property = {
   description: string; 
   pin: string; 
   name: string; 
-  type?: string; 
-  status?: string; 
-  lastUpdated?: string; 
-  completionStatus?: number; 
+  type: string; 
+  status: string; 
+  lastUpdated: string; 
+  completionStatus: number; 
   totalFloorArea?: number;
   spaces?: Space[];
   images?: string[];
+  created_at: string;
+  splash_image?: string;
 };
 export type Space = {
   space_id: string;
@@ -47,35 +49,59 @@ export type Asset = {
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
-    const { data, error } = await supabase
-        .from("owner_property_view")
-        .select(`
-            address,
-            description,
-            pin,
-            property_name, 
-            property_id
-        `)
-        .eq("user_id", userID);
+  const { data, error } = await supabase
+    .from("owner_property_view")
+    .select(`
+      address,
+      description,
+      pin,
+      property_name, 
+      property_id,
+      property_created_at,
+      type,
+      status,
+      last_updated,
+      completion_status,
+      total_floor_area,
+      splash_image
+    `)
+    .eq("user_id", userID);
 
-    if (error) {
-        console.error("Error fetching property id:", error.message);
-        return null;
-    }
+  if (error) {
+    console.error("Error fetching property id:", error.message);
+    return [];
+  }
 
-    // Map raw DB columns to your Property type
-    const properties: Property[] = data.map((row) => ({
+  const properties: Property[] = data.map((row) => {
+    // Get the actual public URL for the splash image
+    const splashImageUrl = row.splash_image
+      ? supabase.storage
+          .from("PropertyImage")
+          .getPublicUrl(row.splash_image)
+          .data?.publicUrl ?? ''
+      : '';
+
+    return {
       property_id: row.property_id,
-      name: row.property_name, // map DB column → type field
+      name: row.property_name,
       address: row.address,
       description: row.description,
       pin: row.pin,
-    }));
+      created_at: row.property_created_at,
+      type: row.type,
+      status: row.status,
+      lastUpdated: row.last_updated,
+      completionStatus: row.completion_status,
+      totalFloorArea: row.total_floor_area,
+      spaces: [],  // populate later if needed
+      images: [],  // populate later if needed
+      splash_image: splashImageUrl,
+    };
+  });
 
-    return properties || null;
-
-    //return data || null;
-}
+  console.log("Fetched properties:", properties);
+  return properties;
+};
 
 export const getChangeLogs = async (propertyIds: string[]) => {
   const { data: changes, error } = await supabase
@@ -129,6 +155,7 @@ export const getPropertyDetails = async (propertyId: string) => {
     lastUpdated: first.property_lastupdated,
     completionStatus: first.property_completionstatus,
     totalFloorArea: first.property_total_floor_area,
+    created_at: first.property_created_at,
     spaces: [],
     images: []
   };
@@ -137,6 +164,7 @@ export const getPropertyDetails = async (propertyId: string) => {
   const spaceMap: Record<string, Space> = {};
 
   for (const row of data) {
+    console.log(row);
     if (!row.spaces_id) continue;
 
     if (!spaceMap[row.spaces_id]) {
@@ -157,10 +185,46 @@ export const getPropertyDetails = async (propertyId: string) => {
     }
   }
 
+  property.images = await getPropertyImages(propertyId);
+
   property.spaces = Object.values(spaceMap);
 
   return property;
 }
+
+export const getPropertyImages = async (propertyId: string, imageName?: string) => {
+  let query = supabase
+    .from("PropertyImages")
+    .select("image_link")
+    .eq("property_id", propertyId);
+
+  if (imageName) {
+    query = query.eq("image_name", imageName);
+  }
+
+  const { data: imagesData, error } = await query;
+
+  if (error) {
+    console.error("Error fetching images:", error);
+    return [];
+  }
+
+  console.log("Image row:", imagesData);
+  console.log(propertyId);
+  const imageSet = new Set<string>();
+
+  imagesData?.forEach((row) => {
+    const { data: publicUrl } = supabase.storage
+      .from("PropertyImage")
+      .getPublicUrl(row.image_link);
+
+    if (publicUrl?.publicUrl) imageSet.add(publicUrl.publicUrl);
+  });
+
+  return Array.from(imageSet);
+}
+
+
 
 export type Owner = {
   owner_id: string;
