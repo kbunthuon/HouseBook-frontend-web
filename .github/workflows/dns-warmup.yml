@@ -14,4 +14,4 @@ jobs:
           curl -X POST "https://qpenkaurptbxsxrysixw.supabase.co/functions/v1/validate-email" \
                -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
                -H "Content-Type: application/json" \
-               -d '{}'
+               -d '{"email":"test@example.com"}'
