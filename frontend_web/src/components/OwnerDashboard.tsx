@@ -139,14 +139,6 @@ export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
     }
   ];
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "destructive";
-      case "medium": return "secondary";
-      case "low": return "default";
-      default: return "secondary";
-    }
-  };
 
 const approveEdit = async (id: string) => {
     const { data, error } = await supabase
@@ -228,9 +220,6 @@ function formatDateTime(timestamp: string | number | Date) {
           Overview of your property portfolio
         </p>
       </div>
-
-      
-
       <div className="grid gap-6 md:grid-cols-1">
         <Card>
             <CardHeader>
@@ -289,9 +278,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>
                                     <Label>Requested By</Label>
-
-                                    <Input value={`${request.user?.first_name ?? ""} ${request.user?.last_name ?? ""}`} readOnly />
-
+                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
