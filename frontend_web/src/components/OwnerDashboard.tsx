@@ -139,38 +139,6 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   ];
 
-  const upcomingTasks = [
-    {
-      id: 1,
-      task: "Property inspection due",
-      property: "Rose Wood Retreat",
-      dueDate: "Tomorrow",
-      priority: "high"
-    },
-    {
-      id: 2,
-      task: "Quarterly report generation",
-      property: "All Properties",
-      dueDate: "Next week",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      task: "Update utility information",
-      property: "Sunset Villa",
-      dueDate: "2 weeks",
-      priority: "low"
-    }
-  ];
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "destructive";
-      case "medium": return "secondary";
-      case "low": return "default";
-      default: return "secondary";
-    }
-  };
 
 const approveEdit = (editId: string) => {
     console.log(`Approved transfer ${editId}`);
@@ -223,9 +191,6 @@ function formatDateTime(timestamp: string | number | Date) {
           Overview of your property portfolio
         </p>
       </div>
-
-      
-
       <div className="grid gap-6 md:grid-cols-1">
         <Card>
             <CardHeader>

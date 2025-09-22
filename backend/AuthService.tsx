@@ -141,7 +141,7 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
   const valid = await validateEmail(loginEmail);
   if (!valid) {
-    newErrors.email = "Invalid email format or domain does not exist.";
+    newErrors.loginEmail = "Invalid email format or domain does not exist.";
   }
   if (loginPassword.length < MINPASSWORDLEN)
     newErrors.loginPassword = `Password must be at least ${MINPASSWORDLEN} characters.`;
@@ -182,14 +182,17 @@ export const validateLogin = async (loginEmail: string, loginPassword: string) =
 
 export const validateEmail = async (email: string) => {
   const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}/validate-email`,
+    `${import.meta.env.VITE_SUPABASE_FUNCTION_URL}`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`},
       body: JSON.stringify({ email }),
     }
   );
 
   const data = await res.json();
+  console.log("jaja");
+  console.log(data);
+  console.log("juju");
   return data;
 };
