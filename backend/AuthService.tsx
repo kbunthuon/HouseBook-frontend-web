@@ -1,5 +1,7 @@
 // src/services/authService.ts
+/// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
+
 
 const MINPASSWORDLEN = 4;
 
