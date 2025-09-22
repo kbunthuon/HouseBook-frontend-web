@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-import { getProperty } from "../../../backend/FetchData";
+import { getProperty, Property } from "../../../backend/FetchData";
 
 interface MyPropertiesProps {
   ownerEmail: string;
@@ -13,6 +13,7 @@ interface MyPropertiesProps {
   onAddProperty?: () => void;
 }
 
+/*
 interface Property {
   property_id: string;
   name: string;
@@ -21,6 +22,7 @@ interface Property {
   status: string;
   completionStatus: string;
 }
+*/
 
 export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");

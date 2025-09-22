@@ -10,7 +10,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, Property } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 
@@ -37,10 +37,8 @@ interface ChangeLog {
   changelog_description: string;
   changelog_status: "pending" | "approved" | "rejected" | "ACCEPTED"; // unify later
   changelog_created_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-  };
+  user_first_name: string | null;
+  user_last_name: string | null;
 }
 
 
@@ -70,8 +68,9 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
               changelog_description,
               changelog_created_at,
               changelog_status,
-              user: User ( first_name, last_name ),
-              property_id
+              property_id,
+              user_first_name,
+              user_last_name
             `)
             .in("property_id", propertyIds)
             .order("changelog_created_at", { ascending: false });
@@ -215,7 +214,11 @@ function formatDateTime(timestamp: string | number | Date) {
                         {myProperties.find(
                           (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
-                      <TableCell>{request.user?.first_name ?? "Unknown User"}</TableCell>
+                      <TableCell>
+                        {request.user_first_name || request.user_last_name
+                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                          : "Unknown User"}
+                      </TableCell>
                       <TableCell>{request.changelog_description}</TableCell>
                       <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
                       <TableCell>
@@ -320,13 +323,24 @@ function formatDateTime(timestamp: string | number | Date) {
           <CardContent>
             <div className="flex space-x-6 overflow-x-auto py-6">
               {myProperties.map((property) => (
-                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition">
-                  
+                <div
+                  key={property.property_id}
+                  className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition"
+                >
                   {/* property image */}
-                  <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground">Property Image </span>
+                  <div className="w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    {property.splash_image ? (
+                      <img
+                        src={property.splash_image}
+                        alt={`${property.address} splash`}
+                        className="max-h-40 max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">No image</span>
+                    )}
                   </div>
 
+                  {/* property info */}
                   <div className="flex-1 mt-4">
                     <div className="font-medium">{property.address}</div>
                     <div className="text-medium text-muted-foreground">
@@ -335,11 +349,14 @@ function formatDateTime(timestamp: string | number | Date) {
                   </div>
                 </div>
               ))}
+
               {myProperties.length === 0 && (
                 <div className="text-center py-6">
                   <Building className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
-                  <p className="text-muted-foreground">Add your first property to get started</p>
+                  <p className="text-muted-foreground">
+                    Add your first property to get started
+                  </p>
                   <Button className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Property
@@ -348,6 +365,7 @@ function formatDateTime(timestamp: string | number | Date) {
               )}
             </div>
           </CardContent>
+
         </Card>
       </div>
 
