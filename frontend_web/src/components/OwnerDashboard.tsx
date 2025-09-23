@@ -10,26 +10,40 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
+
 
 
 interface OwnerDashboardProps {
   userId: string;
 }
 
+// interface ChangeLog {
+//   property_id: any;
+//   changelog_id: string;
+//   asset_id: string;
+//   changelog_specifications: Record<string, any>;
+//   changelog_description: string;
+//   changedlog_changed_by_user_id: string;
+//   changelog_status: string;
+//   changelog_created_at: string;
+// }
 
 interface ChangeLog {
-  id: string;
-  asset_id: string;
-  specifications: Record<string, any>;
-  change_description: string;
-  changed_by_user_id: string;
-  created_at: string;
+  property_id: string;
+  changelog_id: string;
+  changelog_specifications: Record<string, any>;
+  changelog_description: string;
+  changelog_status: "pending" | "approved" | "rejected" | "ACCEPTED"; // unify later
+  changelog_created_at: string;
+  user_first_name: string | null;
+  user_last_name: string | null;
 }
 
+
 export function OwnerDashboard({ userId }: OwnerDashboardProps) {
-  const [myProperties, setOwnerProperties] = useState<any[]>([])
+  const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
 
@@ -41,42 +55,46 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
         if (!ownerId) throw Error("Owner ID not found");
         
         const properties = await getProperty(userId);
-        setOwnerProperties(properties);
+        setOwnerProperties(properties ?? []);
 
 
         if (properties && properties.length > 0) {
-              const propertyIds = properties.map((p: any) => p.property_id);
-              const { data: changes, error: changesError } = await supabase
-                .from("changelog_property_view")
-                .select(`
-                  changelog_id,
-                  changelog_specifications,
-                  changelog_description,
-                  changelog_created_at,
-                  changelog_status,
-                  user: User ( first_name, last_name ),
-                  property_id
-                `)
-                .in("property_id", propertyIds)
-                .order("changelog_created_at", { ascending: false });
+          const propertyIds = properties.map((p: any) => p.property_id);
+          const { data: changes, error: changesError } = await supabase
+            .from("changelog_property_view")
+            .select(`
+              changelog_id,
+              changelog_specifications,
+              changelog_description,
+              changelog_created_at,
+              changelog_status,
+              property_id,
+              user_first_name,
+              user_last_name
+            `)
+            .in("property_id", propertyIds)
+            .order("changelog_created_at", { ascending: false });
 
-              if (changesError) {
-                console.error("Error fetching change log:", changesError);
-                setLoading(false);
-                return;
-              }
+          if (changesError) {
+            console.error("Error fetching change log:", changesError);
+            setLoading(false);
+            return;
+          }
+          // Normalizing user from array so that it is a single object
+          const normalizedChanges = (changes ?? []).map((c: any) => ({
+            ...c,
+            user: c.user && c.user.length > 0 ? c.user[0] : null,
+          }));
 
-              setRequests(changes ?? []);
-            
-                          } else {
-              setRequests([]);
-            }
+          setRequests(normalizedChanges);
+        } else {
+          setRequests([]);
+        }
 
       } catch (error) {
         console.error(error);
         setOwnerProperties([]);
 
-        
       } finally {
         setLoading(false);
       }
@@ -153,11 +171,11 @@ export function OwnerDashboard({ userId }: OwnerDashboardProps) {
     }
   };
 
-const approveEdit = (editId: number) => {
+const approveEdit = (editId: string) => {
     console.log(`Approved transfer ${editId}`);
   };
 
-  const rejectEdit = (editId: number) => {
+  const rejectEdit = (editId: string) => {
     console.log(`Rejected transfer ${editId}`);
   };
 
@@ -231,7 +249,11 @@ function formatDateTime(timestamp: string | number | Date) {
                         {myProperties.find(
                           (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
-                      <TableCell>{request.user?.first_name ?? "Unknown User"}</TableCell>
+                      <TableCell>
+                        {request.user_first_name || request.user_last_name
+                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                          : "Unknown User"}
+                      </TableCell>
                       <TableCell>{request.changelog_description}</TableCell>
                       <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
                       <TableCell>
@@ -255,12 +277,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={request.changelog_changed_by_user_id} readOnly />
+                                    <Input value={`${request.user?.first_name ?? ""} ${request.user?.last_name ?? ""}`} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
@@ -286,12 +308,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="flex justify-end space-x-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => rejectEdit(request.id)}
+                                    onClick={() => rejectEdit(request.changelog_id)}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button onClick={() => approveEdit(request.changelog_id)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>
@@ -304,14 +326,14 @@ function formatDateTime(timestamp: string | number | Date) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => approveEdit(request.id)}
+                                onClick={() => approveEdit(request.changelog_id)}
                               >
                                 <CheckCircle className="h-4 w-4 text-green-600" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => rejectEdit(request.id)}
+                                onClick={() => rejectEdit(request.changelog_id)}
                               >
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
@@ -336,13 +358,24 @@ function formatDateTime(timestamp: string | number | Date) {
           <CardContent>
             <div className="flex space-x-6 overflow-x-auto py-6">
               {myProperties.map((property) => (
-                <div key={property.property_id} className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition">
-                  
+                <div
+                  key={property.property_id}
+                  className="flex-none w-96 flex flex-col p-6 border rounded-2xl hover:shadow-lg transition"
+                >
                   {/* property image */}
-                  <div className="h-64 w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground">Property Image </span>
+                  <div className="w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    {property.splash_image ? (
+                      <img
+                        src={property.splash_image}
+                        alt={`${property.address} splash`}
+                        className="max-h-40 max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">No image</span>
+                    )}
                   </div>
 
+                  {/* property info */}
                   <div className="flex-1 mt-4">
                     <div className="font-medium">{property.address}</div>
                     <div className="text-medium text-muted-foreground">
@@ -351,11 +384,14 @@ function formatDateTime(timestamp: string | number | Date) {
                   </div>
                 </div>
               ))}
+
               {myProperties.length === 0 && (
                 <div className="text-center py-6">
                   <Building className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
-                  <p className="text-muted-foreground">Add your first property to get started</p>
+                  <p className="text-muted-foreground">
+                    Add your first property to get started
+                  </p>
                   <Button className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Property
@@ -364,6 +400,7 @@ function formatDateTime(timestamp: string | number | Date) {
               )}
             </div>
           </CardContent>
+
         </Card>
       </div>
 

@@ -18,7 +18,7 @@ import { ownerOnboardProperty, FormData, Space} from "../../../backend/OnboardPr
 import { ROUTES } from "./Routes";
 
 export function OwnerPropertyOnboarding() {
-  const [spaceTypes, setSpaceTypes] = useState<String[]>([]);
+  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);

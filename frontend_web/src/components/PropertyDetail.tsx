@@ -9,7 +9,7 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { React, useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
 import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
@@ -359,7 +359,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         } else {
           setError("Property not found");
         }
-
+        console.log("Property images:", result?.images);
         console.log("Spaces data:", result?.spaces);
 
         const ownerResult = await getPropertyOwners(propertyId);
@@ -529,14 +529,28 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <span className="text-muted-foreground">Property Image {i}</span>
+            {property?.images && property?.images.length > 0 ? (
+              property?.images.map((url, idx) => (
+                <div
+                  key={idx}
+                  className="aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center"
+                >
+                  <img
+                    src={url}
+                    alt={`Property Image ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-muted-foreground">
+                No images available
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
+
 
       {/* Specifications Grid */}
 
