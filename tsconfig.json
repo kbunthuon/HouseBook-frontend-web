@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "baseUrl": "./frontend_web/src",
+    "paths": {
+      "*": ["types/*"]
+    }
+  },
+  "include": ["frontend_web/src"],
+  "exclude": ["node_modules"]
+}
+
+
+/*
+
+What this does:
+
+baseUrl → points to frontend_web/src (your code lives there).
+
+paths → makes TypeScript look inside your src/types folder (where you put html2pdf.d.ts).
+
+types → includes Node.js type definitions.
+
+strict → keeps good type safety.
+
+*/
