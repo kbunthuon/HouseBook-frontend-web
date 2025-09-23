@@ -541,42 +541,24 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         
 
         {/* Access Control Section */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Key className="h-5 w-5 mr-2" />
-                Access Control
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-3">
-                  <Button 
-                    onClick={() => setIsPinDialogOpen(true)}
-                    className="w-full"
-                    size="sm"
-                  >
-                    Generate New PIN
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    {accessPins.length} active PIN{accessPins.length !== 1 ? 's' : ''} created
-                  </p>
-                  
-                </div>
-                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <QRCodeCanvas
-                    value={value}
-                    size={200}        // size in px
-                    level="H"         // error correction: L, M, Q, H
-                    includeMargin={true}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-        </div>
+        <div className="space-y-2 flex flex-col items-center">
+          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64 max-w-xs mx-auto">
+            <QRCodeCanvas
+              value={value}
+              size={200}        // size in px
+              level="H"         // error correction: L, M, Q, H
+              includeMargin={true}
+            />
+            
+          </div>
+          <Button 
+              onClick={() => setIsPinDialogOpen(true)}
+              className="w-64 max-w-xs mx-auto items-center justify-center"
+              size="sm"
+            >
+              Generate New PIN
+            </Button>
+          </div>
       </div>
 
       

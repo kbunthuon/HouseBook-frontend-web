@@ -7,6 +7,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Copy, Trash2, Settings, Check } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+import { useEffect } from "react";
+import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 
 interface AccessPin {
   id: string;
@@ -15,6 +17,7 @@ interface AccessPin {
   isActive: boolean;
   createdAt: string;
   lastUsed?: string;
+  propertyId: string;
 }
 
 interface PinTableProps {
@@ -22,24 +25,56 @@ interface PinTableProps {
   onUpdatePin: (pinId: string, sections: string[]) => void;
   onDeletePin: (pinId: string) => void;
   onToggleActive: (pinId: string, isActive: boolean) => void;
+  propertyId: string;
 }
 
-export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive }: PinTableProps) {
+export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, propertyId }: PinTableProps) {
   const [editingPin, setEditingPin] = useState<AccessPin | null>(null);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
 
-  const propertySections = [
-    "General Details",
-    "Walls & Ceilings", 
-    "Exterior Specifications",
-    "Flooring",
-    "Cabinetry & Bench Tops",
-    "Doors & Handles",
-    "Kitchen Appliances",
-    "Bathroom Fixtures",
-    "Lighting & Electrical",
-    "Property Images"
-  ];
+  // repetitive data fetching 
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [owners, setOwners] = useState<Owner[] | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching details for property ID:", propertyId);
+        const result = await getPropertyDetails(propertyId);
+        if (result) {
+          setProperty(result);
+        } else {
+          setError("Property not found");
+        }
+
+        console.log("Spaces data:", result?.spaces);
+
+        const ownerResult = await getPropertyOwners(propertyId);
+        if (ownerResult) {
+          setOwners(ownerResult);
+        } else {
+          setError("Owner not found");
+        }
+      } catch (err: any) {
+        setError(err.message ?? "Unexpected error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [propertyId]); // re-run if the propertyId changes
+
+  console.log("PinManagementDialog propertyId:", propertyId);
+
+  const propertySections =
+    property?.spaces?.flatMap((space) =>
+        space.assets.map((asset) => `${space.name}: ${asset.type}`)
+    ) ?? [];
 
   const copyToClipboard = async (text: string) => {
     try {
