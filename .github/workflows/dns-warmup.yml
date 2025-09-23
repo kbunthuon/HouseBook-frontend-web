@@ -1,0 +1,17 @@
+name: Keep Supabase Edge Function Warm
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  warm-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm-up Supabase Edge Function
+        run: |
+          curl -X POST "https://qpenkaurptbxsxrysixw.supabase.co/functions/v1/validate-email" \
+               -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+               -H "Content-Type: application/json" \
+               -d '{"email":"test@example.com"}'

@@ -283,7 +283,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="property">Select Property</Label>
-              <Select onValueChange={(value: string) => setReportConfig({ ...reportConfig, propertyId: value })}>
+              <Select onValueChange={(value: string) => setReportConfig({...reportConfig, propertyId: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder={loadingProperties ? "Loading..." : "Choose your property"} />
                 </SelectTrigger>
@@ -299,7 +299,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
             <div>
               <Label htmlFor="reportType">Report Type</Label>
-              <Select onValueChange={(value: string) => setReportConfig({ ...reportConfig, reportType: value })}>
+              <Select onValueChange={(value) => setReportConfig({...reportConfig, reportType: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
