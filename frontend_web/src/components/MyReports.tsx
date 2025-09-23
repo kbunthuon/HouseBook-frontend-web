@@ -10,6 +10,7 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
 import { getPropertyDetails, getProperty, getUserIdByEmail } from "../../../backend/FetchData";
+import { ImageUpload, getPropertyImages } from "../../../backend/ImageUpload";
 
 
 
@@ -72,6 +73,25 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   // NEW: State for real properties
   const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
+
+  // State for property images and selected images
+  const [propertyImages, setPropertyImages] = useState<{ name: string; url: string }[]>([]);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
+  // State for section selection
+  const [sectionSelection, setSectionSelection] = useState<{
+    generalInfo: boolean;
+    plans: boolean;
+    images: boolean;
+    spaces: { [spaceId: string]: boolean };
+    assets: { [assetId: string]: boolean };
+  }>({
+    generalInfo: true,
+    plans: true,
+    images: true,
+    spaces: {},
+    assets: {},
+  });
 
 
   // NEW: Fetch properties for the logged-in owner
@@ -186,6 +206,69 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     })();
   }, [reportConfig.propertyId]);
 
+  // Fetch property images when property changes
+  useEffect(() => {
+    if (!reportConfig.propertyId) {
+      setPropertyImages([]);
+      setSelectedImages([]);
+      return;
+    }
+    (async () => {
+      const imgs = await getPropertyImages(reportConfig.propertyId);
+      setPropertyImages(imgs);
+      setSelectedImages(imgs.map((img) => img.url)); // default: select all
+    })();
+  }, [reportConfig.propertyId]);
+
+  // Fetch property details (spaces/assets) and update section selection
+  useEffect(() => {
+    if (!reportConfig.propertyId) return;
+    (async () => {
+      const data = await getPropertyDetails(reportConfig.propertyId);
+      setProperty(data);
+      // Set default section/asset selection
+      if (data?.spaces) {
+        const newSpaces: { [spaceId: string]: boolean } = {};
+        const newAssets: { [assetId: string]: boolean } = {};
+        data.spaces.forEach((space: any) => {
+          newSpaces[space.space_id] = true;
+          (space.assets || []).forEach((asset: any) => {
+            newAssets[asset.asset_id] = true;
+          });
+        });
+        setSectionSelection((prev) => ({
+          ...prev,
+          spaces: newSpaces,
+          assets: newAssets,
+        }));
+      }
+    })();
+  }, [reportConfig.propertyId]);
+
+  // Handle image selection toggle
+  const handleImageSelect = (url: string) => {
+    setSelectedImages((prev) =>
+      prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url]
+    );
+  };
+
+  // Handle section/asset selection toggle
+  const handleSectionToggle = (type: "generalInfo" | "plans" | "images", checked: boolean) => {
+    setSectionSelection((prev) => ({ ...prev, [type]: checked }));
+  };
+  const handleSpaceToggle = (spaceId: string, checked: boolean) => {
+    setSectionSelection((prev) => ({
+      ...prev,
+      spaces: { ...prev.spaces, [spaceId]: checked },
+    }));
+  };
+  const handleAssetToggle = (assetId: string, checked: boolean) => {
+    setSectionSelection((prev) => ({
+      ...prev,
+      assets: { ...prev.assets, [assetId]: checked },
+    }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -229,6 +312,131 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Section selection checkboxes */}
+            <div>
+              <Label>Sections to include</Label>
+              <div className="flex flex-col gap-1 mt-1">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={sectionSelection.generalInfo}
+                    onChange={(e) => handleSectionToggle("generalInfo", e.target.checked)}
+                  /> General Information
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={sectionSelection.plans}
+                    onChange={(e) => handleSectionToggle("plans", e.target.checked)}
+                  /> Plans & Documents
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={sectionSelection.images}
+                    onChange={(e) => handleSectionToggle("images", e.target.checked)}
+                  /> Property Images
+                </label>
+              </div>
+            </div>
+
+            {/* Image upload and selection */}
+            {reportConfig.propertyId && (
+              <div>
+                <Label>Property Images</Label>
+                <ImageUpload
+                  propertyId={reportConfig.propertyId}
+                  existingImages={propertyImages}
+                  onUploadComplete={(imgs) => {
+                    setPropertyImages(imgs);
+                    // Only add new images to selection, keep user's previous selection
+                    setSelectedImages((prev) => {
+                      const newUrls = imgs.map((img) => img.url);
+                      // Keep selected images that still exist, add any new ones
+                      const stillSelected = prev.filter((url) => newUrls.includes(url));
+                      const added = newUrls.filter((url) => !stillSelected.includes(url));
+                      return [...stillSelected, ...added];
+                    });
+                  }}
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {propertyImages.map((img) => (
+                    <div key={img.url} className="relative">
+                      <img
+                        src={img.url}
+                        alt={img.name}
+                        style={{
+                          width: 80,
+                          height: 80,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: selectedImages.includes(img.url)
+                            ? "2px solid #0070f3"
+                            : "1px solid #ccc",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => handleImageSelect(img.url)}
+                        title={selectedImages.includes(img.url) ? "Deselect" : "Select"}
+                      />
+                      {selectedImages.includes(img.url) && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            right: 2,
+                            background: "#0070f3",
+                            color: "#fff",
+                            borderRadius: "50%",
+                            width: 18,
+                            height: 18,
+                            fontSize: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Space/asset selection */}
+            {property?.spaces && (
+              <div>
+                <Label>Spaces & Assets to include</Label>
+                <div className="flex flex-col gap-1 mt-1">
+                  {property.spaces.map((space: any) => (
+                    <div key={space.space_id} style={{ marginBottom: 4 }}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!sectionSelection.spaces[space.space_id]}
+                          onChange={(e) => handleSpaceToggle(space.space_id, e.target.checked)}
+                        />{" "}
+                        {space.name}
+                      </label>
+                      <div className="ml-4 flex flex-col gap-1">
+                        {(space.assets || []).map((asset: any) => (
+                          <label key={asset.asset_id}>
+                            <input
+                              type="checkbox"
+                              checked={!!sectionSelection.assets[asset.asset_id]}
+                              onChange={(e) => handleAssetToggle(asset.asset_id, e.target.checked)}
+                            />{" "}
+                            {asset.type}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {generatingReport && (
               <div className="space-y-2">
@@ -345,51 +553,83 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           </div>
 
           {/* General Information */}
-          <div className="pdf-section">
-            <div className="pdf-section-title">General Information</div>
-            <div className="pdf-sub">
-              <span className="pdf-label">Property Name:</span>
-              {property?.name || ""}
+          {sectionSelection.generalInfo && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">General Information</div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Property Name:</span>
+                {property?.name || ""}
+              </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Description:</span>
+                {property?.description || ""}
+              </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Address:</span>
+                {property?.address || ""}
+              </div>
             </div>
-            <div className="pdf-sub">
-              <span className="pdf-label">Description:</span>
-              {property?.description || ""}
-            </div>
-            <div className="pdf-sub">
-              <span className="pdf-label">Address:</span>
-              {property?.address || ""}
-            </div>
-          </div>
+          )}
 
           {/* Plans & Documents */}
-          <div className="pdf-section">
-            <div className="pdf-section-title">Plans & Documents</div>
-            <div className="pdf-sub">
-              <span className="pdf-label">Floor Plans:</span>
-              No floor plans uploaded
+          {sectionSelection.plans && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Plans & Documents</div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Floor Plans:</span>
+                No floor plans uploaded
+              </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Building Plans:</span>
+                No building plans uploaded
+              </div>
             </div>
-            <div className="pdf-sub">
-              <span className="pdf-label">Building Plans:</span>
-              No building plans uploaded
+          )}
+
+          {/* Property Images */}
+          {sectionSelection.images && selectedImages.length > 0 && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Property Images</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {selectedImages.map((url) => (
+                  <img
+                    key={url}
+                    src={url}
+                    alt="Property"
+                    style={{
+                      width: 120,
+                      height: 90,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      border: "1px solid #ccc",
+                      marginBottom: 6,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Dynamically render all spaces and their assets */}
-          {property?.spaces?.map((space: any) => (
-            <div className="pdf-section" key={space.space_id}>
-              <div className="pdf-section-title">{space.name}</div>
-              {space.assets && space.assets.length > 0 ? (
-                space.assets.map((asset: any) => (
-                  <div className="pdf-sub" key={asset.asset_id}>
-                    <span className="pdf-label">{asset.type}:</span>
-                    {asset.description || "No description available"}
-                  </div>
-                ))
-              ) : (
-                <div className="pdf-sub">No details available</div>
-              )}
-            </div>
-          ))}
+          {property?.spaces?.map((space: any) =>
+            sectionSelection.spaces[space.space_id] ? (
+              <div className="pdf-section" key={space.space_id}>
+                <div className="pdf-section-title">{space.name}</div>
+                {space.assets && space.assets.length > 0 ? (
+                  space.assets
+                    .filter((asset: any) => sectionSelection.assets[asset.asset_id])
+                    .map((asset: any) => (
+                      <div className="pdf-sub" key={asset.asset_id}>
+                        <span className="pdf-label">{asset.type}:</span>
+                        {asset.description || "No description available"}
+                      </div>
+                    ))
+                ) : (
+                  <div className="pdf-sub">No details available</div>
+                )}
+              </div>
+            ) : null
+          )}
         </div>
       </div>
     </div>
