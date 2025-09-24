@@ -7,7 +7,7 @@ import { Label } from "./ui/label.tsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "./ui/dialog.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
 import { Button } from "./ui/button.tsx";
-import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
+import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
 import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
@@ -17,7 +17,9 @@ import supabase from "../../../config/supabaseClient.ts"
 
 interface OwnerDashboardProps {
   userId: string;
-  onAddProperty: () => void;
+  onAddProperty?: () => void;
+  onViewProperty?: (propertyId: string) => void;
+  
 }
 
 interface ChangeLog {
@@ -32,7 +34,7 @@ interface ChangeLog {
 }
 
 
-export function OwnerDashboard({ userId, onAddProperty }: OwnerDashboardProps) {
+export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
@@ -340,8 +342,9 @@ return (
               {myProperties.map((property) => (
                 <div 
                   key={property.property_id} 
-                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col"
+                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
+                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">

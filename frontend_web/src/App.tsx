@@ -233,6 +233,7 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
   return (
     <OwnerDashboard
       userId={userId}
+      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
       onAddProperty={() => navigate("/owner/properties/new")}
     />
   );

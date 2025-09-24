@@ -65,7 +65,8 @@ export const getProperty = async (userID: string) => {
       total_floor_area,
       splash_image
     `)
-    .eq("user_id", userID);
+    .eq("user_id", userID)
+    .order("property_created_at", {ascending: false});
 
   if (error) {
     console.error("Error fetching property id:", error.message);
