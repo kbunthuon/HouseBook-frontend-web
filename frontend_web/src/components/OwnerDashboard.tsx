@@ -356,19 +356,23 @@ function formatDateTime(timestamp: string | number | Date) {
           <CardContent>
             <div className="flex overflow-x-auto py-6 gap-6">
               {myProperties.map((property) => (
-                <div key={property.property_id} className="flex-none w-96 sm:w-80 md:w-96 lg:w-[28rem] xl:w-[32rem] flex flex-col p-6 sm:p-8 rounded-2xl bg-gray-50 shadow-md hover:shadow-lg transition">
+                <div key={property.property_id} className="flex-none w-full h-full sm:w-80 md:w-96 lg:w-[28rem] xl:w-[32rem] flex flex-col p-6 sm:p-8 rounded-2xl bg-gray-50 shadow-md hover:shadow-lg transition">
                   
 
                   {/* property image */}
-                  <div className="w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                     {property.splash_image ? (
                       <img
                         src={property.splash_image}
                         alt={`${property.address} splash`}
-                        className="max-h-40 max-w-full object-contain"
+                        className="h-full w-full object-contain"
                       />
                     ) : (
-                      <span className="text-muted-foreground">No image</span>
+                      <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        <Building className="h-12 w-12 mb-2 object-contain" />
+                        <h3 className="text-sm font-medium">No Image</h3>
+                      </div>
+                      
                     )}
                   </div>
 
