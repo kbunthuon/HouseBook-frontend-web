@@ -335,21 +335,21 @@ return (
 
       <CardContent>
         {myProperties.length > 0 ? (
-          <div className="overflow-x-auto pb-6">
+          <div className="overflow-x-auto py-4">
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
                   key={property.property_id} 
-                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden"
-                  style={{ minWidth: '320px', maxWidth: '320px' }}
+                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col"
+                  style={{ minWidth: '320px', maxWidth: '320px'}}
                 >
                   {/* property image */}
-                  <div className="w-full h-48 bg-muted flex items-center justify-center">
+                  <div className="w-full flex-1 bg-muted flex items-center justify-center">
                     {property.splash_image ? (
                       <img
                         src={property.splash_image}
                         alt={`${property.address} splash`}
-                        className="h-full w-full object-cover"
+                        className="max-h-full max-w-full object-contain"
                       />
                     ) : (
                       <Building className="h-12 w-12 text-muted-foreground" />
@@ -357,10 +357,12 @@ return (
                   </div>
 
                   {/* property info */}
-                  <div className="h-32 px-2 py-2 flex flex-col justify-start">
-                    <div className="font-semibold text-lg truncate">{property.address}</div>
-                    <div className="text-sm text-muted-foreground truncate">
-                      {property.name}
+                  <div className="h-32 flex-shrink-0 flex flex-col justify-end text-center" >
+                    <div className="font-semibold text-md truncate px-4">
+                      {property.name || 'N/A'}
+                    </div>
+                    <div className="font-muted text-md truncate px-4">
+                      {property.address} 
                     </div>
                   </div>
                 </div>
@@ -368,7 +370,7 @@ return (
             </div>
           </div>
         ) : (
-          <div className="text-center py-6">
+          <div className="text-center py-6" >
             <Building className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">No Properties Yet</h3>
             <p className="text-muted-foreground">
