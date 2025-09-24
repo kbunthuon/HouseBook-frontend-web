@@ -20,7 +20,20 @@ import { ROUTES } from "./Routes";
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaces, setSpaces] = useState<Space[]>([
+    {
+      type: "",
+      name: "",
+      assets: [
+        {
+          typeId: "",
+          name: "",
+          description: "",
+          features: [{ name: "" , value: ""}]
+        }
+      ]
+    }
+  ]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     // General Information
@@ -186,6 +199,38 @@ export function OwnerPropertyOnboarding() {
     });
   };
 
+  // Step validators
+  const validateStep1 = () => {
+    return (
+      formData.propertyName.trim() !== "" &&        // Property name not null
+      formData.propertyDescription.trim() !== "" && // Property description not null
+      formData.address.trim() !== ""                // Property address not null 
+    );
+  };
+
+  const validateStep2 = () => {
+    return (
+      spaces.length > 0 && 
+      spaces.every(
+        s => s.name.trim() !== "" && 
+        s.type.trim() !== "" &&
+        s.assets.length > 0 && // Space must have at least one Asset
+        s.assets.every(
+          a => a.name.trim() !== "" && // Asset name not null
+          a.typeId != "" &&            // Asset type not null
+          a.features.length > 0 &&     // Asset must have at least one Feature
+          a.features.every(f => f.name.trim() !== "" && f.value.trim() !== "") // Each feature must have its fields filled
+        )
+      )
+    );
+  };
+
+  // Step validator mapping
+  const stepValidators: Record<number, () => boolean> = {
+    1: validateStep1,
+    2: validateStep2
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -198,6 +243,7 @@ export function OwnerPropertyOnboarding() {
                   id="propertyName"
                   value={formData.propertyName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyName: e.target.value})}
+                  required
                 />
               </div>
               <div>
@@ -206,6 +252,7 @@ export function OwnerPropertyOnboarding() {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
+                  required
                 />
               </div>
             </div>
@@ -313,6 +360,7 @@ export function OwnerPropertyOnboarding() {
                       onChange={(e) => updateSpaceName(spaceIndex, e.target.value)}
                       placeholder="Downstairs Bedroom"
                       autoComplete="off"
+                      required
                     />
                   </div>
                 </div>
@@ -352,9 +400,8 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           id={`asset-desc-${spaceIndex}-${assetIndex}`}
                           value={asset.description}
-                          onChange={(e) =>
-                            updateAsset(spaceIndex, assetIndex, "description", e.target.value)
-                          }
+                          onChange={(e) => updateAsset(spaceIndex, assetIndex, "description", e.target.value)}
+                          required
                         />
                       </div>
 
@@ -378,16 +425,14 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           placeholder="Feature Name"
                           value={feature.name}
-                          onChange={(e) =>
-                            updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)
-                          }
+                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)}
+                          required
                         />
                         <Input
                           placeholder="Feature Value"
                           value={feature.value}
-                          onChange={(e) =>
-                            updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)
-                          }
+                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)}
+                          required
                         />
                         <div className="flex justify-end">
                           <button
@@ -616,6 +661,7 @@ export function OwnerPropertyOnboarding() {
             </Button>
             <Button
               onClick={handleNext}
+              disabled={stepValidators[currentStep] ? !stepValidators[currentStep]() : false}
             >
               {currentStep === steps.length ? "Complete Onboarding" : "Next"}
             </Button>
