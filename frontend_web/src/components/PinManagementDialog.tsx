@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Space } from "lucide-react";
 import { useEffect } from "react";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { ChevronRight, ChevronDown } from "lucide-react";
+import { Property, Owner, getPropertyOwners, getPropertyDetails, AssetType, fetchAssetType } from "../../../backend/FetchData";
+
 
 interface PinManagementDialogProps {
   open: boolean;
@@ -19,6 +21,10 @@ interface PinManagementDialogProps {
 export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: PinManagementDialogProps) {
   const [generatedPin, setGeneratedPin] = useState("");
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
+  const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
+  const [assetTypeMap, setAssetTypeMap] = useState<Record<string, string[]>>({});
+  useEffect(() => { fetchAssetType().then(setAssetTypeMap); }, []);
+
 
   // NOTE: repetitive fetch code... should I move this to PropertyDetails or keep it separate??
 
@@ -26,6 +32,10 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [owners, setOwners] = useState<Owner[] | null>(null);
+  const [openSpaces, setOpenSpaces] = useState<Record<string, boolean>>({});
+
+  const toggleSpace = (name: string) =>
+    setOpenSpaces((prev) => ({ ...prev, [name]: !prev[name] }));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,10 +71,38 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   console.log("PinManagementDialog propertyId:", propertyId);
 
 
-  const propertySections =
-    property?.spaces?.flatMap((space) =>
-        space.assets.map((asset) => `${space.name}: ${asset.type}`)
-    ) ?? [];
+  type PropertySection = { name: string; assets: string[] };
+
+  const propertySections: PropertySection[] =
+    (property?.spaces ?? []).map(s => ({
+      name: s.name,
+      assets: (s.assets ?? []).map(a => a.type),
+    }));
+
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  const assetTypeToUIKeys = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of propertySections) {
+      for (const a of s.assets) {
+        const uiKey = `${s.name}: ${a}`;
+        const k = norm(a);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k)!.push(uiKey);
+      }
+    }
+    return map;
+  }, [propertySections]);
+
+  const uiKeysForDiscipline = (disciplineName: string) => {
+    const types = assetTypeMap[disciplineName] ?? [];
+    const keys: string[] = [];
+    types.forEach(t => {
+      const arr = assetTypeToUIKeys.get(norm(t)) ?? [];
+      keys.push(...arr);
+    });
+    return keys;
+  };
 
 
   const generatePin = () => {
@@ -72,12 +110,127 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
     setGeneratedPin(pin);
   };
 
-  const handleSectionChange = (section: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSections(prev => [...prev, section]);
-    } else {
-      setSelectedSections(prev => prev.filter(s => s !== section));
+  const reconcileParents = (keys: string[]) => {
+    const next = new Set(keys);
+    for (const s of propertySections) {
+      const allChild = s.assets.map(a => childKey(s.name, a));
+      const allPicked = allChild.every(k => next.has(k));
+      if (!allPicked) next.delete(s.name); // keep parent only if ALL children are picked
     }
+    return [...next];
+  };
+
+  const handleDisciplineToggle = (disciplineName: string, checked: boolean) => {
+    const thisKeys = new Set(uiKeysForDiscipline(disciplineName));
+  
+    if (checked) {
+      setSelectedDisciplines(prev => [...new Set([...prev, disciplineName])]);
+      setSelectedSections(prev => {
+        const next = new Set(prev);
+        thisKeys.forEach(k => next.add(k));           // add children
+        return syncParentsFromChildren(next);                       // <-- update parents
+      });
+      return;
+    }
+  
+    // deselect: remove keys from this discipline unless covered by another selected discipline
+    setSelectedDisciplines(prev => prev.filter(d => d !== disciplineName));
+    setSelectedSections(prev => {
+      const next = new Set(prev);
+      const keepByOthers = new Set<string>();
+
+      selectedDisciplines
+      .filter(d => d !== disciplineName)
+      .forEach(d => uiKeysForDiscipline(d).forEach(k => keepByOthers.add(k)));
+
+      thisKeys.forEach(k => {
+      if (!keepByOthers.has(k)) next.delete(k);                   // remove only if not kept
+    });
+
+    return syncParentsFromChildren(next);                         
+    });
+  };
+
+  // helpers
+  const isChildKey = (key: string) => key.includes(": ");
+  const childKey = (space: string, asset: string) => `${space}: ${asset}`;
+
+  const childKeysForSpace = (spaceName: string) =>
+  getAssetsForSpace(spaceName).map(a => childKey(spaceName, a));
+
+  const getAssetsForSpace = (spaceName: string) =>
+    propertySections.find(s => s.name === spaceName)?.assets ?? [];
+
+  /** Toggle a whole space exactly like clicking the parent checkbox */
+const applyParentToggle = (spaceName: string, checked: boolean) => {
+  const kids = childKeysForSpace(spaceName);
+  setSelectedSections(prev => {
+    const next = new Set(prev);
+    if (checked) {
+      next.add(spaceName);
+      kids.forEach(k => next.add(k));
+    } else {
+      next.delete(spaceName);
+      kids.forEach(k => next.delete(k));
+    }
+    return [...next];
+  });
+};
+
+const syncParentsFromChildren = (keys: Set<string>) => {
+  for (const s of propertySections) {
+    const kids = childKeysForSpace(s.name);
+    const selectedCount = kids.filter(k => keys.has(k)).length;
+
+    if (kids.length > 0 && selectedCount === kids.length) {
+      // all children selected -> parent ON
+      keys.add(s.name);
+    } else {
+      // none or partial -> parent OFF (indeterminate is visual only)
+      keys.delete(s.name);
+    }
+  }
+  return [...keys];
+};
+
+// --- unified handler (parent + child) ---
+const handleSectionChange = (section: string, checked: boolean) => {
+  // Parent clicked: act on parent + all children.
+  if (!isChildKey(section)) {
+    applyParentToggle(section, checked);
+    return;
+  }
+
+  // Child clicked: update child only, then recalc parent state.
+  const [spaceName] = section.split(": ");
+
+  setSelectedSections(prev => {
+    const next = new Set(prev);
+
+    if (checked) next.add(section);
+    else next.delete(section);
+
+    // Recalculate the parent: checked only if ALL children are selected.
+    const kids = childKeysForSpace(spaceName);
+    const allKidsSelected = kids.every(k => next.has(k));
+
+    if (allKidsSelected) {
+      // Imitate clicking the parent ON (keeps behavior identical to parent toggle)
+      next.add(spaceName);
+      // (kids are already all selected by definition)
+    } else {
+      // Any child missing -> parent must be OFF
+      next.delete(spaceName);
+    }
+
+    return [...next];
+  });
+};
+
+  const isSpaceIndeterminate = (spaceName: string) => {
+    const kids = childKeysForSpace(spaceName);
+    const picked = kids.filter(k => selectedSections.includes(k)).length;
+    return picked > 0 && picked < kids.length;
   };
 
   const handleSave = () => {
@@ -129,27 +282,94 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
 
           <Separator />
 
+          {/* Disciplines Section */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Label>Select disciplines for this PIN:</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+            {Object.keys(assetTypeMap).map(d => (
+              <label key={d} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={selectedDisciplines.includes(d)}
+                  onCheckedChange={(c) => handleDisciplineToggle(d, Boolean(c))}
+                />
+                <span className="text-sm">{d}</span>
+              </label>
+            ))}
+            </div>
+          </div>
+
           {/* Sections Access Control */}
           <div className="space-y-3">
             <Label>Select accessible sections for this PIN:</Label>
-            <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
-              {propertySections.map((section) => (
-                <div key={section} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={section}
-                    checked={selectedSections.includes(section)}
-                    onCheckedChange={(checked) => 
-                      handleSectionChange(section, checked as boolean)
-                    }
-                  />
-                  <Label 
-                    htmlFor={section}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {section}
-                  </Label>
+            <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto justify-items-start">
+              
+              {propertySections.map((space) => {
+              const expanded = !!openSpaces[space.name];
+              const parentChecked = selectedSections.includes(space.name);
+              const indeterminate = isSpaceIndeterminate(space.name);
+
+              return (
+                <div key={space.name} className="w-full">
+                  {/* Parent checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={space.name}
+                      checked={
+                        selectedSections.includes(space.name)
+                          ? true
+                          : isSpaceIndeterminate(space.name)
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(checked) => 
+                        handleSectionChange(space.name, checked as boolean)
+                      }
+                    />
+                    <Label 
+                      htmlFor={space.name}
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      {space.name}
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => toggleSpace(space.name)}
+                      aria-expanded={expanded}
+                      aria-controls={`children-${space.name}`}
+                      className="p-1 rounded hover:bg-muted"
+                    >
+                      {expanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {/* Child checkbox */}
+                  <div id={`children-${space.name}`}
+                    className={expanded ? "mt-1 pl-6 space-y-1" : "hidden"}>
+                    {space.assets.map((asset) => {
+                      const key = `${space.name}: ${asset}`;
+                      return (
+                        <div key={key} className="flex items-center gap-2">
+                          <Checkbox
+                            id={key}
+                            checked={selectedSections.includes(key)}
+                            onCheckedChange={(checked) =>
+                              handleSectionChange(key, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={key} className="text-sm font-normal cursor-pointer">
+                            {asset}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </div>
