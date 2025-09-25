@@ -491,18 +491,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   
   const value = "https://house-book-frontend-web.vercel.app/owner";
 
-  const length = 6;
+  // const length = 6;
 
-  // make a fresh pin when length changes; user can also regenerate
-  const [seed, setSeed] = useState(0);
-  const pin = useMemo(() => generatePin(length), [length, seed]);
+  // // make a fresh pin when length changes; user can also regenerate
+  // const [seed, setSeed] = useState(0);
+  // const pin = useMemo(() => generatePin(length), [length, seed]);
 
-  const regenerate = () => setSeed(s => s + 1);
+  // const regenerate = () => setSeed(s => s + 1);
 
-  const copy = async () => {
-    await navigator.clipboard.writeText(pin);
-    alert("PIN copied!");
-  };
+  // const copy = async () => {
+  //   await navigator.clipboard.writeText(pin);
+  //   alert("PIN copied!");
+  // };
 
   return (
     <div className="space-y-6">
@@ -556,7 +556,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               className="w-64 max-w-xs mx-auto items-center justify-center"
               size="sm"
             >
-              Generate New PIN
+              Create a New Job
             </Button>
           </div>
       </div>
@@ -807,6 +807,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               Cancel
             </Button>
             <Button onClick={handleSaveEdit} disabled={!editDescription.trim() || !editingField}>
+            {/* <Button onClick={handleSaveEdit} disabled={!editDescription.trim() || !editingField}> */}
               Save Changes
             </Button>
           </div>
@@ -814,12 +815,14 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Dialog>
 
       {/* PIN Management Dialog */}
-      <PinManagementDialog 
-        open={isPinDialogOpen}
-        onOpenChange={setIsPinDialogOpen}
-        onSave={handleSavePin}
-        propertyId={propertyId}
-      />
+      <section id="access-pins">
+        <PinManagementDialog 
+          open={isPinDialogOpen}
+          onOpenChange={setIsPinDialogOpen}
+          onSave={handleSavePin}
+          propertyId={propertyId}
+        />
+      </section>
     </div>
   );
 }

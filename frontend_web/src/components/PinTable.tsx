@@ -134,7 +134,7 @@ export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, prope
             <TableHead>Status</TableHead>
             <TableHead>Accessible Sections</TableHead>
             <TableHead>Created</TableHead>
-            <TableHead>Last Used</TableHead>
+            <TableHead>Session End</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>

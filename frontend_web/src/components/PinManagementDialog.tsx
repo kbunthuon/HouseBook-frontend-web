@@ -8,7 +8,9 @@ import { Separator } from "./ui/separator";
 import { RefreshCw, Space } from "lucide-react";
 import { useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Property, Owner, getPropertyOwners, getPropertyDetails, AssetType, fetchAssetType } from "../../../backend/FetchData";
+import { createPropertyPin } from "../../../backend/HandlePin";
 
 
 interface PinManagementDialogProps {
@@ -19,10 +21,17 @@ interface PinManagementDialogProps {
 }
 
 export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: PinManagementDialogProps) {
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
   const [generatedPin, setGeneratedPin] = useState("");
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [assetTypeMap, setAssetTypeMap] = useState<Record<string, string[]>>({});
+  const [formData, setFormData] = useState({
+    title: "",
+    end_time: "",
+  })
+
   useEffect(() => { fetchAssetType().then(setAssetTypeMap); }, []);
 
 
@@ -105,10 +114,10 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   };
 
 
-  const generatePin = () => {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedPin(pin);
-  };
+  // const generatePin = () => {
+  //   const pin = Math.floor(100000 + Math.random() * 900000).toString();
+  //   setGeneratedPin(pin);
+  // };
 
   const reconcileParents = (keys: string[]) => {
     const next = new Set(keys);
@@ -233,14 +242,130 @@ const handleSectionChange = (section: string, checked: boolean) => {
     return picked > 0 && picked < kids.length;
   };
 
-  const handleSave = () => {
-    if (generatedPin && selectedSections.length > 0) {
-      onSave(generatedPin, selectedSections);
-      setGeneratedPin("");
-      setSelectedSections([]);
-      onOpenChange(false);
+  // const handleSave = () => {
+  //   if (generatedPin && selectedSections.length > 0) {
+  //     onSave(generatedPin, selectedSections);
+  //     setGeneratedPin("");
+  //     setSelectedSections([]);
+  //     onOpenChange(false);
+  //   }
+  // };
+  const [endAt, setEndAt] = useState<string>("");  // e.g. "2025-09-26T14:30"
+
+  // for <input type="datetime-local"> min/default value in LOCAL time
+  function localInputValue(d = new Date()) {
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off * 60_000);
+    return local.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+  }
+
+  function oneHourFromNowISO() {
+    return new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  }
+
+  const onCreate = async () => {
+    console.log("[onCreate] start");
+    try {
+      setSaving(true);
+      setError(null);
+  
+      const row = {
+        property_id: propertyId,
+        tradie_id: undefined,
+        title: formData.title,
+        status: "Active" as const,
+        created_at: new Date().toISOString(),
+        end_time: endAt           // if user picked a time
+        ? new Date(endAt).toISOString()
+        : oneHourFromNowISO(),  // fallback
+      };
+  
+      console.log("[onCreate] inserting row:", row);
+  
+      const propertyPin = await createPropertyPin(row);
+  
+      console.log("[onCreate] insert OK");
+      onOpenChange(false);                       // close dialog
+      navigate(`/owner/properties/${propertyId}#access-pins`);
+    } catch (e: any) {
+      // PostgREST returns rich fields — surface them:
+      console.error("[onCreate] insert error", {
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+      });
+      setError(e?.message ?? "Failed to create PIN");
+    } finally {
+      setSaving(false);
+      console.log("[onCreate] done");
     }
   };
+  
+
+
+  // const onCreate = async () => {
+  //   console.log("[onCreate] start");
+  //   try {
+  //     setSaving(true);
+  //     setError(null);
+  
+  //     const now = new Date();
+  //     const t = formData.title.trim();
+  //     if (!t) {
+  //       setError("Please enter a title for this PIN.");
+  //       return;
+  //     }
+    
+  //     if (!endAt) {
+  //       setError("Please choose an expiry time.");
+  //       return;
+  //     }
+  //     const end = new Date(endAt);              // "YYYY-MM-DDTHH:mm" (local)
+  //     if (Number.isNaN(end.getTime())) {
+  //       setError("Expiry time is invalid.");
+  //       return;
+  //     }
+  //     if (end <= now) {
+  //       setError("Expiry time must be in the future.");
+  //       return;
+  //     }
+
+  //     const row = {
+  //       property_id: propertyId,
+  //       tradie_id: undefined,
+  //       title: t,
+  //       status: "Active",
+  //       created_at: now.toISOString(),
+  //       end_time: endAt           // if user picked a time
+  //       ? new Date(endAt).toISOString()
+  //       : oneHourFromNowISO(),  // fallback
+  //     };
+  //     console.log("[onCreate] inserting", row);
+  
+  //     await createPropertyPin({
+  //       property_id: propertyId,
+  //       tradie_id: undefined,
+  //       title: t,
+  //       status: "Active",
+  //       created_at: now.toISOString(),
+  //       end_time: endAt           // if user picked a time
+  //       ? new Date(endAt).toISOString()
+  //       : oneHourFromNowISO(),  // fallback
+  //     });
+  
+  //     console.log("[onCreate] success – closing dialog");
+  //     onOpenChange(false);
+  //     navigate(`/owner/properties/${propertyId}#access-pins`);
+  //     document.getElementById("access-pins")?.scrollIntoView({ behavior: "smooth" });
+  //   } catch (e: any) {
+  //     setError(e.message ?? "Failed to create PIN");
+  //   } finally {
+  //     setSaving(false);
+  //     console.log("[onCreate] done");
+  //   }
+  // };
+  
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -254,11 +379,31 @@ const handleSectionChange = (section: string, checked: boolean) => {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-full sm:w-[400px]">
         <DialogHeader>
-          <DialogTitle>Generate Property Access PIN</DialogTitle>
+          <DialogTitle>Create a New Job</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* PIN Generation Section */}
+          <div>
+            <Label htmlFor="jobTitle">Job Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(t) => setFormData({...formData, title: t.target.value})}
+              placeholder="National Grid"
+            />
+          </div>
+          <div>
+            <Label htmlFor="endTime">Pin Expiry</Label>
+            <input
+              id="endTime"
+              type="datetime-local"
+              className="mt-1 w-full rounded-md border px-3 py-2"
+              min={localInputValue()}          // can’t pick a past time
+              value={endAt}
+              onChange={(e) => setEndAt(e.target.value)}
+            />
+          </div>
+          {/* PIN Generation Section
           <div className="space-y-3">
             <Label>Generated PIN</Label>
             <div className="flex items-center space-x-2">
@@ -280,7 +425,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
             </div>
           </div>
 
-          <Separator />
+          <Separator /> */}
 
           {/* Disciplines Section */}
           <div className="space-y-3">
@@ -378,11 +523,8 @@ const handleSectionChange = (section: string, checked: boolean) => {
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave}
-            disabled={!generatedPin || selectedSections.length === 0}
-          >
-            Save PIN
+          <Button onClick={onCreate} disabled={saving}>
+            {saving ? "Creating…" : "Create Job"}
           </Button>
         </div>
       </DialogContent>
