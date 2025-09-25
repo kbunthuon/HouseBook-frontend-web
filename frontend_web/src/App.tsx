@@ -24,6 +24,7 @@ import { OwnerLayout } from "./components/OwnerLayout";
 import { OwnerDashboard } from "./components/OwnerDashboard";
 import { MyProperties } from "./components/MyProperties";
 import { MyReports } from "./components/MyReports";
+import { OwnerRequests } from "./components/OwnerRequests";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -146,6 +147,7 @@ export default function App() {
           <Route path="properties/new" element={<OwnerPropertyOnboarding />} />
           <Route path="properties/:propertyId" element={<OwnerPropertyDetailPage />} />
           <Route path="reports" element={<MyReports ownerEmail={userEmail} />} />
+          <Route path="requests" element={<OwnerRequests userId={userId}/>} />
         </Route>
 
         {/* 404 */}
@@ -231,6 +233,7 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
   return (
     <OwnerDashboard
       userId={userId}
+      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
       onAddProperty={() => navigate("/owner/properties/new")}
     />
   );

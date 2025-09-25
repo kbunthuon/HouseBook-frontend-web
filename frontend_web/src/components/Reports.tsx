@@ -125,7 +125,7 @@ export function Reports() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="property">Property</Label>
-              <Select onValueChange={(value) => setReportConfig({...reportConfig, propertyId: value})}>
+              <Select onValueChange={(value: string) => setReportConfig({...reportConfig, propertyId: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select property" />
                 </SelectTrigger>
@@ -141,7 +141,7 @@ export function Reports() {
 
             <div>
               <Label htmlFor="reportType">Report Type</Label>
-              <Select onValueChange={(value) => setReportConfig({...reportConfig, reportType: value})}>
+              <Select onValueChange={(value: string) => setReportConfig({...reportConfig, reportType: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
@@ -162,8 +162,8 @@ export function Reports() {
                   <Checkbox
                     id="includeImages"
                     checked={reportConfig.includeImages}
-                    onCheckedChange={(checked) => 
-                      setReportConfig({...reportConfig, includeImages: checked as boolean})
+                    onCheckedChange={(checked: boolean) => 
+                      setReportConfig({...reportConfig, includeImages: checked})
                     }
                   />
                   <Label htmlFor="includeImages">Images & Photos</Label>
@@ -172,8 +172,8 @@ export function Reports() {
                   <Checkbox
                     id="includePlans"
                     checked={reportConfig.includePlans}
-                    onCheckedChange={(checked) => 
-                      setReportConfig({...reportConfig, includePlans: checked as boolean})
+                    onCheckedChange={(checked: boolean) => 
+                      setReportConfig({...reportConfig, includePlans: checked})
                     }
                   />
                   <Label htmlFor="includePlans">Floor Plans & Drawings</Label>
@@ -182,8 +182,8 @@ export function Reports() {
                   <Checkbox
                     id="includeUtilities"
                     checked={reportConfig.includeUtilities}
-                    onCheckedChange={(checked) => 
-                      setReportConfig({...reportConfig, includeUtilities: checked as boolean})
+                    onCheckedChange={(checked: boolean) => 
+                      setReportConfig({...reportConfig, includeUtilities: checked})
                     }
                   />
                   <Label htmlFor="includeUtilities">Utility Information</Label>
@@ -192,8 +192,8 @@ export function Reports() {
                   <Checkbox
                     id="includeFittings"
                     checked={reportConfig.includeFittings}
-                    onCheckedChange={(checked) => 
-                      setReportConfig({...reportConfig, includeFittings: checked as boolean})
+                    onCheckedChange={(checked: boolean) => 
+                      setReportConfig({...reportConfig, includeFittings: checked})
                     }
                   />
                   <Label htmlFor="includeFittings">Fittings & Features</Label>

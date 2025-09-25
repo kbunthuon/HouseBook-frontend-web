@@ -16,6 +16,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
     { to: "/owner/properties", label: "My Properties", icon: Building },
     { to: "/owner/properties/new", label: "Add Property", icon: Plus },
     { to: "/owner/reports", label: "Reports", icon: FileText },
+    { to: "/owner/requests", label: "Requests", icon: FileText },
   ];
 
   return (

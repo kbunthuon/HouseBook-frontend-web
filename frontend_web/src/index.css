@@ -417,9 +417,25 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+
+  img { 
+    display: initial; 
+  }
+
+
+
 }
 
 @layer utilities {
+
+    /* ✅ NEW: PDF page-break helpers */
+  .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+  }
+
+
   .\@container\/card-header {
     container: card-header / inline-size;
   }
