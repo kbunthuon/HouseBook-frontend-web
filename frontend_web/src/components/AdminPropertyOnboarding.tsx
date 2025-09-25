@@ -20,7 +20,20 @@ import { ROUTES } from "./Routes";
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaces, setSpaces] = useState<Space[]>([
+    {
+      type: "",
+      name: "",
+      assets: [
+        {
+          typeId: "",
+          name: "",
+          description: "",
+          features: [{ name: "" , value: ""}]
+        }
+      ]
+    }
+  ]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     // General Information
@@ -75,7 +88,7 @@ export function AdminPropertyOnboarding() {
       const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerPropertiesList);
+      navigate(ROUTES.ownerProperties(propertyId));
     }
   };
 
@@ -200,6 +213,38 @@ export function AdminPropertyOnboarding() {
         ...prev,
         [field]: value,
       }));
+  };
+
+    // Step validators
+  const validateStep1 = () => {
+    return (
+      formData.propertyName.trim() !== "" &&        // Property name not null
+      formData.propertyDescription.trim() !== "" && // Property description not null
+      formData.address.trim() !== ""                // Property address not null 
+    );
+  };
+
+  const validateStep2 = () => {
+    return (
+      spaces.length > 0 && 
+      spaces.every(
+        s => s.name.trim() !== "" && 
+        s.type.trim() !== "" &&
+        s.assets.length > 0 && // Space must have at least one Asset
+        s.assets.every(
+          a => a.name.trim() !== "" && // Asset name not null
+          a.typeId != "" &&            // Asset type not null
+          a.features.length > 0 &&     // Asset must have at least one Feature
+          a.features.every(f => f.name.trim() !== "" && f.value.trim() !== "") // Each feature must have its fields filled
+        )
+      )
+    );
+  };
+
+  // Step validator mapping
+  const stepValidators: Record<number, () => boolean> = {
+    1: validateStep1,
+    2: validateStep2
   };
 
   const renderStep = () => {
@@ -552,51 +597,62 @@ export function AdminPropertyOnboarding() {
 
 
             {/* Spaces */}
-            {spaces.length === 0 ? (
-              <p className="text-muted-foreground">No spaces added yet.</p>
-            ) : (
-              <ul className="space-y-4">
-                {spaces.map((space, spaceIndex) => (
-                  <li key={spaceIndex} className="list-disc pl-4">
-                    {/* Space */}
-                    <span className="font-medium">
-                      {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
-                    </span>
+            <div className="border rounded-lg p-4 space-y-1">
+              {spaces.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No spaces added yet.
+                </p> // Fallback in case no spaces exist past the validation
+              ) : (
+                <ul className="space-y-4">
+                  {spaces.map((space, spaceIndex) => (
+                    <li key={spaceIndex} className="list-disc pl-6">
+                      {/* Space */}
+                      <span className="font-medium">
+                        {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                      </span>
 
-                    {/* Assets */}
-                    {space.assets.length > 0 ? (
-                      <ul className="list-disc pl-6 space-y-2 mt-2">
-                        {space.assets.map((asset, assetIndex) => (
-                          <li key={assetIndex}>
-                            <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
-                            {asset.description && (
-                              <span className="text-muted-foreground">
-                                {" "}
-                                — {asset.description}
-                              </span>
-                            )}
+                      {/* Assets */}
+                      <div className="p-4">
+                        {space.assets.length > 0 ? (
+                          <ul className="list-disc pl-6 space-y-2 mt-3">
+                            {space.assets.map((asset, assetIndex) => (
+                              <li key={assetIndex}>
+                                <span className="font-medium">
+                                  {asset.name || "Unnamed Asset"}
+                                </span>
+                                {asset.description && (
+                                  <span className="text-muted-foreground">
+                                    {" "}— {asset.description}
+                                  </span>
+                                )}
 
-                            {/* Asset Features */}
-                            {asset.features && asset.features.length > 0 && (
-                              <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
-                                {asset.features.map((feature, featureIndex) => (
-                                  <li key={featureIndex}>
-                                    {feature.name || "Unnamed Feature"}:{" "}
-                                    {feature.value || "No Value"}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="ml-6 text-sm text-muted-foreground">No assets added.</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+                                {/* Asset Features */}
+                                <div className="p-4">
+                                  {asset.features && asset.features.length > 0 && (
+                                    <ul className="pl-2 mt-3 space-y-2 text-sm text-muted-foreground">
+                                      {asset.features.map((feature, featureIndex) => (
+                                        <li key={featureIndex}>
+                                          {feature.name || "Unnamed Feature"}:{" "}
+                                          {feature.value || "No Value"}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="ml-6 text-sm text-muted-foreground">
+                            No assets added.
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         );
 
@@ -674,6 +730,7 @@ export function AdminPropertyOnboarding() {
             </Button>
             <Button
               onClick={handleNext}
+              disabled={stepValidators[currentStep] ? !stepValidators[currentStep]() : false}
             >
               {currentStep === steps.length ? "Complete Onboarding" : "Next"}
             </Button>

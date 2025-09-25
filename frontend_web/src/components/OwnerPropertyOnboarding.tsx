@@ -243,7 +243,7 @@ export function OwnerPropertyOnboarding() {
                   id="propertyName"
                   value={formData.propertyName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyName: e.target.value})}
-                  required
+                  
                 />
               </div>
               <div>
@@ -252,7 +252,7 @@ export function OwnerPropertyOnboarding() {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
-                  required
+                  
                 />
               </div>
             </div>
@@ -360,7 +360,7 @@ export function OwnerPropertyOnboarding() {
                       onChange={(e) => updateSpaceName(spaceIndex, e.target.value)}
                       placeholder="Downstairs Bedroom"
                       autoComplete="off"
-                      required
+                      
                     />
                   </div>
                 </div>
@@ -401,7 +401,7 @@ export function OwnerPropertyOnboarding() {
                           id={`asset-desc-${spaceIndex}-${assetIndex}`}
                           value={asset.description}
                           onChange={(e) => updateAsset(spaceIndex, assetIndex, "description", e.target.value)}
-                          required
+                          
                         />
                       </div>
 
@@ -426,13 +426,13 @@ export function OwnerPropertyOnboarding() {
                           placeholder="Feature Name"
                           value={feature.name}
                           onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)}
-                          required
+                          
                         />
                         <Input
                           placeholder="Feature Value"
                           value={feature.value}
                           onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)}
-                          required
+                          
                         />
                         <div className="flex justify-end">
                           <button
@@ -537,53 +537,63 @@ export function OwnerPropertyOnboarding() {
               </div>
             </div>
 
-
             {/* Spaces */}
-            {spaces.length === 0 ? (
-              <p className="text-muted-foreground">No spaces added yet.</p>
-            ) : (
-              <ul className="space-y-4">
-                {spaces.map((space, spaceIndex) => (
-                  <li key={spaceIndex} className="list-disc pl-4">
-                    {/* Space */}
-                    <span className="font-medium">
-                      {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
-                    </span>
+            <div className="border rounded-lg p-4 space-y-1">
+              {spaces.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No spaces added yet.
+                </p> // Fallback in case no spaces exist past the validation
+              ) : (
+                <ul className="space-y-4">
+                  {spaces.map((space, spaceIndex) => (
+                    <li key={spaceIndex} className="list-disc pl-6">
+                      {/* Space */}
+                      <span className="font-medium">
+                        {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                      </span>
 
-                    {/* Assets */}
-                    {space.assets.length > 0 ? (
-                      <ul className="list-disc pl-6 space-y-2 mt-2">
-                        {space.assets.map((asset, assetIndex) => (
-                          <li key={assetIndex}>
-                            <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
-                            {asset.description && (
-                              <span className="text-muted-foreground">
-                                {" "}
-                                — {asset.description}
-                              </span>
-                            )}
+                      {/* Assets */}
+                      <div className="p-4">
+                        {space.assets.length > 0 ? (
+                          <ul className="list-disc pl-6 space-y-2 mt-3">
+                            {space.assets.map((asset, assetIndex) => (
+                              <li key={assetIndex}>
+                                <span className="font-medium">
+                                  {asset.name || "Unnamed Asset"}
+                                </span>
+                                {asset.description && (
+                                  <span className="text-muted-foreground">
+                                    {" "}— {asset.description}
+                                  </span>
+                                )}
 
-                            {/* Asset Features */}
-                            {asset.features && asset.features.length > 0 && (
-                              <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
-                                {asset.features.map((feature, featureIndex) => (
-                                  <li key={featureIndex}>
-                                    {feature.name || "Unnamed Feature"}:{" "}
-                                    {feature.value || "No Value"}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="ml-6 text-sm text-muted-foreground">No assets added.</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+                                {/* Asset Features */}
+                                <div className="p-4">
+                                  {asset.features && asset.features.length > 0 && (
+                                    <ul className="pl-2 mt-3 space-y-2 text-sm text-muted-foreground">
+                                      {asset.features.map((feature, featureIndex) => (
+                                        <li key={featureIndex}>
+                                          {feature.name || "Unnamed Feature"}:{" "}
+                                          {feature.value || "No Value"}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="ml-6 text-sm text-muted-foreground">
+                            No assets added.
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         );
 
