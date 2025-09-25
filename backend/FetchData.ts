@@ -113,8 +113,9 @@ export const getChangeLogs = async (propertyIds: string[]) => {
       changelog_description,
       changelog_created_at,
       changelog_status,
-      user: User ( first_name, last_name ),
-      property_id
+      property_id,
+      user_first_name,
+      user_last_name
     `)
     .in("property_id", propertyIds)
     .order("changelog_created_at", { ascending: false });

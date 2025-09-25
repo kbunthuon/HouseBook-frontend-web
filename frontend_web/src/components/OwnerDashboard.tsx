@@ -10,7 +10,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 
@@ -51,27 +51,15 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
         if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
-          const { data: changes, error: changesError } = await supabase
-            .from("changelog_property_view")
-            .select(`
-              changelog_id,
-              changelog_specifications,
-              changelog_description,
-              changelog_created_at,
-              changelog_status,
-              property_id,
-              user_first_name,
-              user_last_name
-            `)
-            .in("property_id", propertyIds)
-            .order("changelog_created_at", { ascending: false });
+        const propertyIds = properties.map((p: any) => p.property_id);
+        const changes = await getChangeLogs(propertyIds);
 
-          if (changesError) {
-            console.error("Error fetching change log:", changesError);
-            setLoading(false);
-            return;
-          }
+          if (!changes) {
+          console.error("Error fetching change logs.");
+          setLoading(false);
+          return;
+        }
+
           // Normalizing user from array so that it is a single object
           const normalizedChanges = (changes ?? []).map((c: any) => ({
             ...c,
@@ -122,7 +110,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
       color: "text-purple-600"
     },
     {
-      title: "Access Requests",
+      title: "Active Pins",
       value: "8",
       change: "+2 this week",
       icon: Key,
