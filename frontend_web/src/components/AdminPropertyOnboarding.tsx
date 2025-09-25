@@ -47,7 +47,6 @@ export function AdminPropertyOnboarding() {
   const [ownerData, setOwnerData] = useState<OwnerData>({
     firstName: "",
     lastName: "",
-    address: "",
     email: "",
     phone: ""
   });
@@ -207,16 +206,17 @@ export function AdminPropertyOnboarding() {
     });
   };
 
-  // Update OwnerData
-  const updateOwnerData = (field: keyof OwnerData, value: string) => {
-      setOwnerData(prev => ({
-        ...prev,
-        [field]: value,
-      }));
+  // Step validators
+  const validateStep1 = () => {
+    return (
+      ownerData.phone.trim() !== "" &&
+      ownerData.firstName.trim() !== "" &&
+      ownerData.lastName.trim() !== "" &&
+      ownerData.email.trim() !== ""
+    );
   };
 
-    // Step validators
-  const validateStep1 = () => {
+  const validateStep2 = () => {
     return (
       formData.propertyName.trim() !== "" &&        // Property name not null
       formData.propertyDescription.trim() !== "" && // Property description not null
@@ -224,7 +224,7 @@ export function AdminPropertyOnboarding() {
     );
   };
 
-  const validateStep2 = () => {
+  const validateStep3 = () => {
     return (
       spaces.length > 0 && 
       spaces.every(
@@ -244,7 +244,8 @@ export function AdminPropertyOnboarding() {
   // Step validator mapping
   const stepValidators: Record<number, () => boolean> = {
     1: validateStep1,
-    2: validateStep2
+    2: validateStep2,
+    3: validateStep3
   };
 
   const renderStep = () => {

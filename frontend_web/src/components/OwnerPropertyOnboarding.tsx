@@ -80,7 +80,7 @@ export function OwnerPropertyOnboarding() {
       const propertyId = await ownerOnboardProperty(formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerPropertiesList);
+      navigate(ROUTES.ownerProperties(propertyId));
     }
   };
 
