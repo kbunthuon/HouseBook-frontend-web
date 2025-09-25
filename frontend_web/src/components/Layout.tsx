@@ -23,13 +23,13 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="w-64 bg-card border-r border-border">
+      <div className="w-64 sm:w-56 md:w-64 bg-card border-r border-border flex flex-col">
         <div className="p-6 border-b border-border">
           <h1 className="text-2xl font-bold text-primary">HouseBook</h1>
           <p className="text-sm text-muted-foreground">Admin Portal</p>
         </div>
         
-        <nav className="p-4 space-y-2">
+        <nav className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2">
           {menuItems.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}

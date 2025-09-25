@@ -10,7 +10,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, Property, getPropertyImages } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, Property, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 
@@ -36,61 +36,49 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
   const [requests, setRequests] = useState<ChangeLog[]>([]);
 
   useEffect (() => {
-    const getOwnerProps = async () => {
-      try {
-        // Get owner id
-        const ownerId = await getOwnerId(userId);
-        if (!ownerId) throw Error("Owner ID not found");
-        
-        const properties = await getProperty(userId);
-        setOwnerProperties(properties ?? []);
-
-
-        if (properties && properties.length > 0) {
+      const getOwnerProps = async () => {
+        try {
+          // Get owner id
+          const ownerId = await getOwnerId(userId);
+          if (!ownerId) throw Error("Owner ID not found");
+          
+          const properties = await getProperty(userId);
+          setOwnerProperties(properties ?? []);
+  
+  
+          if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
-          const { data: changes, error: changesError } = await supabase
-            .from("changelog_property_view")
-            .select(`
-              changelog_id,
-              changelog_specifications,
-              changelog_description,
-              changelog_created_at,
-              changelog_status,
-              property_id,
-              user_first_name,
-              user_last_name
-            `)
-            .in("property_id", propertyIds)
-            .order("changelog_created_at", { ascending: false });
-
-          if (changesError) {
-            console.error("Error fetching change log:", changesError);
+          const changes = await getChangeLogs(propertyIds);
+  
+            if (!changes) {
+            console.error("Error fetching change logs.");
             setLoading(false);
             return;
           }
-          // Normalizing user from array so that it is a single object
-          const normalizedChanges = (changes ?? []).map((c: any) => ({
-            ...c,
-            user: c.user && c.user.length > 0 ? c.user[0] : null,
-          }));
-
-          setRequests(normalizedChanges);
-        } else {
-          setRequests([]);
+  
+            // Normalizing user from array so that it is a single object
+            const normalizedChanges = (changes ?? []).map((c: any) => ({
+              ...c,
+              user: c.user && c.user.length > 0 ? c.user[0] : null,
+            }));
+  
+            setRequests(normalizedChanges);
+          } else {
+            setRequests([]);
+          }
+  
+        } catch (error) {
+          console.error(error);
+          setOwnerProperties([]);
+  
+        } finally {
+          setLoading(false);
         }
-
-      } catch (error) {
-        console.error(error);
-        setOwnerProperties([]);
-
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getOwnerProps();
-
-  },[userId])
+      };
+  
+      getOwnerProps();
+  
+    },[userId])
 
 
 const approveEdit = async (id: string) => {
