@@ -9,8 +9,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
-import { getPropertyDetails, getProperty, getUserIdByEmail } from "../../../backend/FetchData";
-import { ImageUpload, getPropertyImages } from "../../../backend/ImageUpload";
+import { getPropertyDetails, getProperty, getUserIdByEmail, getPropertyImages } from "../../../backend/FetchData";
 
 
 
@@ -214,36 +213,36 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       return;
     }
     (async () => {
+      // getPropertyImages returns array of URLs or {name, url}
       const imgs = await getPropertyImages(reportConfig.propertyId);
-      setPropertyImages(imgs);
-      setSelectedImages(imgs.map((img) => img.url)); // default: select all
+      // Support both string[] and {name, url}[]
+      let imgObjs: { name: string; url: string }[] = [];
+      if (imgs.length > 0 && typeof imgs[0] === "string") {
+        imgObjs = imgs.map((url: string, idx: number) => ({ name: `Image ${idx + 1}`, url }));
+      } else {
+        imgObjs = imgs;
+      }
+      setPropertyImages(imgObjs);
+      setSelectedImages(imgObjs.map((img) => img.url)); // default: select all
+      // Sync to backend
+      syncSelectionToBackend(reportConfig.propertyId, imgObjs.map((img) => img.url), sectionSelection);
     })();
+    // eslint-disable-next-line
   }, [reportConfig.propertyId]);
 
-  // Fetch property details (spaces/assets) and update section selection
+  // Sync image/feature selection to backend whenever they change
   useEffect(() => {
     if (!reportConfig.propertyId) return;
-    (async () => {
-      const data = await getPropertyDetails(reportConfig.propertyId);
-      setProperty(data);
-      // Set default section/asset selection
-      if (data?.spaces) {
-        const newSpaces: { [spaceId: string]: boolean } = {};
-        const newAssets: { [assetId: string]: boolean } = {};
-        data.spaces.forEach((space: any) => {
-          newSpaces[space.space_id] = true;
-          (space.assets || []).forEach((asset: any) => {
-            newAssets[asset.asset_id] = true;
-          });
-        });
-        setSectionSelection((prev) => ({
-          ...prev,
-          spaces: newSpaces,
-          assets: newAssets,
-        }));
-      }
-    })();
-  }, [reportConfig.propertyId]);
+    syncSelectionToBackend(reportConfig.propertyId, selectedImages, sectionSelection);
+    // eslint-disable-next-line
+  }, [selectedImages, sectionSelection]);
+
+  // Add this placeholder for backend sync (replace with real API call as needed)
+  async function syncSelectionToBackend(propertyId: string, selectedImages: string[], selectedFeatures: {spaces: any, assets: any}) {
+    // TODO: Implement backend sync logic here
+    // For now, just log
+    console.log("Syncing selection to backend", { propertyId, selectedImages, selectedFeatures });
+  }
 
   // Handle image selection toggle
   const handleImageSelect = (url: string) => {
@@ -253,7 +252,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   };
 
   // Handle section/asset selection toggle
-  const handleSectionToggle = (type: "generalInfo" | "plans" | "images", checked: boolean) => {
+  const handleSectionToggle = (type: "generalInfo" | "plans", checked: boolean) => {
     setSectionSelection((prev) => ({ ...prev, [type]: checked }));
   };
   const handleSpaceToggle = (spaceId: string, checked: boolean) => {
@@ -269,18 +268,55 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }));
   };
 
+  // Add select all logic for images and spaces/assets
+  const allImagesSelected = propertyImages.length > 0 && selectedImages.length === propertyImages.length;
+  const handleSelectAllImages = (checked: boolean) => {
+    setSelectedImages(checked ? propertyImages.map(img => img.url) : []);
+  };
+
+  const allSpacesSelected = property?.spaces && Object.values(sectionSelection.spaces).filter(Boolean).length === property.spaces.length;
+  const handleSelectAllSpaces = (checked: boolean) => {
+    if (!property?.spaces) return;
+    const newSpaces: { [spaceId: string]: boolean } = {};
+    property.spaces.forEach((space: any) => {
+      newSpaces[space.space_id] = checked;
+    });
+    setSectionSelection(prev => ({
+      ...prev,
+      spaces: newSpaces,
+    }));
+  };
+
+  const allAssetsSelected = property?.spaces && property.spaces
+    .flatMap((space: any) => space.assets || [])
+    .every((asset: any) => sectionSelection.assets[asset.asset_id]);
+  const handleSelectAllAssets = (checked: boolean) => {
+    if (!property?.spaces) return;
+    const newAssets: { [assetId: string]: boolean } = {};
+    property.spaces.forEach((space: any) => {
+      (space.assets || []).forEach((asset: any) => {
+        newAssets[asset.asset_id] = checked;
+      });
+    });
+    setSectionSelection(prev => ({
+      ...prev,
+      assets: newAssets,
+    }));
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-2xl mx-auto">
       {/* Controls */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-5 w-5" />
-              Generate New Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <FileText className="mr-2 h-5 w-5" />
+            Generate New Report
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Property & Report Type */}
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="property">Select Property</Label>
               <Select onValueChange={(value: string) => setReportConfig({...reportConfig, propertyId: value})}>
@@ -296,7 +332,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="reportType">Report Type</Label>
               <Select onValueChange={(value) => setReportConfig({...reportConfig, reportType: value})}>
@@ -312,152 +347,157 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            {/* Section selection checkboxes */}
-            <div>
-              <Label>Sections to include</Label>
-              <div className="flex flex-col gap-1 mt-1">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={sectionSelection.generalInfo}
-                    onChange={(e) => handleSectionToggle("generalInfo", e.target.checked)}
-                  /> General Information
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={sectionSelection.plans}
-                    onChange={(e) => handleSectionToggle("plans", e.target.checked)}
-                  /> Plans & Documents
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={sectionSelection.images}
-                    onChange={(e) => handleSectionToggle("images", e.target.checked)}
-                  /> Property Images
-                </label>
+          {/* Section selection checkboxes */}
+          <div className="space-y-2">
+            <Label className="block mb-1">Sections to include</Label>
+            <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={sectionSelection.generalInfo}
+                  onChange={(e) => handleSectionToggle("generalInfo", e.target.checked)}
+                /> General Information
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={sectionSelection.plans}
+                  onChange={(e) => handleSectionToggle("plans", e.target.checked)}
+                /> Plans & Documents
+              </label>
+            </div>
+          </div>
+
+          {/* Property Images selection */}
+          {propertyImages.length > 0 && (
+            <div className="space-y-2">
+              <Label className="block mb-1">Property Images</Label>
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  checked={allImagesSelected}
+                  onChange={e => handleSelectAllImages(e.target.checked)}
+                  id="selectAllImages"
+                />
+                <Label htmlFor="selectAllImages" className="ml-2 text-sm cursor-pointer">Select All Images</Label>
+              </div>
+              <div className="flex flex-wrap gap-3 bg-muted/50 rounded-lg p-3">
+                {propertyImages.map((img) => (
+                  <div key={img.url} className="relative group">
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: selectedImages.includes(img.url)
+                          ? "2px solid #0070f3"
+                          : "1px solid #ccc",
+                        cursor: "pointer",
+                        boxShadow: selectedImages.includes(img.url) ? "0 0 0 2px #0070f3" : undefined,
+                        transition: "box-shadow 0.2s"
+                      }}
+                      onClick={() => handleImageSelect(img.url)}
+                      title={selectedImages.includes(img.url) ? "Deselect" : "Select"}
+                    />
+                    {selectedImages.includes(img.url) && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 2,
+                          right: 2,
+                          background: "#0070f3",
+                          color: "#fff",
+                          borderRadius: "50%",
+                          width: 18,
+                          height: 18,
+                          fontSize: 12,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Image upload and selection */}
-            {reportConfig.propertyId && (
-              <div>
-                <Label>Property Images</Label>
-                <ImageUpload
-                  propertyId={reportConfig.propertyId}
-                  existingImages={propertyImages}
-                  onUploadComplete={(imgs) => {
-                    setPropertyImages(imgs);
-                    // Only add new images to selection, keep user's previous selection
-                    setSelectedImages((prev) => {
-                      const newUrls = imgs.map((img) => img.url);
-                      // Keep selected images that still exist, add any new ones
-                      const stillSelected = prev.filter((url) => newUrls.includes(url));
-                      const added = newUrls.filter((url) => !stillSelected.includes(url));
-                      return [...stillSelected, ...added];
-                    });
-                  }}
+          {/* Space/asset selection */}
+          {property?.spaces && (
+            <div className="space-y-2">
+              <Label className="block mb-1">Spaces & Assets to include</Label>
+              <div className="flex items-center gap-4 mb-2">
+                <input
+                  type="checkbox"
+                  checked={!!allSpacesSelected}
+                  onChange={e => handleSelectAllSpaces(e.target.checked)}
+                  id="selectAllSpaces"
                 />
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {propertyImages.map((img) => (
-                    <div key={img.url} className="relative">
-                      <img
-                        src={img.url}
-                        alt={img.name}
-                        style={{
-                          width: 80,
-                          height: 80,
-                          objectFit: "cover",
-                          borderRadius: 8,
-                          border: selectedImages.includes(img.url)
-                            ? "2px solid #0070f3"
-                            : "1px solid #ccc",
-                          cursor: "pointer",
-                        }}
-                        onClick={() => handleImageSelect(img.url)}
-                        title={selectedImages.includes(img.url) ? "Deselect" : "Select"}
+                <Label htmlFor="selectAllSpaces" className="text-sm cursor-pointer">Select All Spaces</Label>
+                <input
+                  type="checkbox"
+                  checked={!!allAssetsSelected}
+                  onChange={e => handleSelectAllAssets(e.target.checked)}
+                  id="selectAllAssets"
+                />
+                <Label htmlFor="selectAllAssets" className="text-sm cursor-pointer">Select All Assets</Label>
+              </div>
+              <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
+                {property.spaces.map((space: any) => (
+                  <div key={space.space_id} className="mb-1">
+                    <label className="flex items-center gap-2 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={!!sectionSelection.spaces[space.space_id]}
+                        onChange={(e) => handleSpaceToggle(space.space_id, e.target.checked)}
                       />
-                      {selectedImages.includes(img.url) && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: 2,
-                            right: 2,
-                            background: "#0070f3",
-                            color: "#fff",
-                            borderRadius: "50%",
-                            width: 18,
-                            height: 18,
-                            fontSize: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          ✓
-                        </span>
-                      )}
+                      {space.name}
+                    </label>
+                    <div className="ml-6 flex flex-col gap-1">
+                      {(space.assets || []).map((asset: any) => (
+                        <label key={asset.asset_id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={!!sectionSelection.assets[asset.asset_id]}
+                            onChange={(e) => handleAssetToggle(asset.asset_id, e.target.checked)}
+                          />
+                          {asset.type}
+                        </label>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Space/asset selection */}
-            {property?.spaces && (
-              <div>
-                <Label>Spaces & Assets to include</Label>
-                <div className="flex flex-col gap-1 mt-1">
-                  {property.spaces.map((space: any) => (
-                    <div key={space.space_id} style={{ marginBottom: 4 }}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={!!sectionSelection.spaces[space.space_id]}
-                          onChange={(e) => handleSpaceToggle(space.space_id, e.target.checked)}
-                        />{" "}
-                        {space.name}
-                      </label>
-                      <div className="ml-4 flex flex-col gap-1">
-                        {(space.assets || []).map((asset: any) => (
-                          <label key={asset.asset_id}>
-                            <input
-                              type="checkbox"
-                              checked={!!sectionSelection.assets[asset.asset_id]}
-                              onChange={(e) => handleAssetToggle(asset.asset_id, e.target.checked)}
-                            />{" "}
-                            {asset.type}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {generatingReport && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Generating report...</span>
+                <span>{reportProgress}%</span>
               </div>
-            )}
+              <Progress value={reportProgress} />
+            </div>
+          )}
 
-            {generatingReport && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Generating report...</span>
-                  <span>{reportProgress}%</span>
-                </div>
-                <Progress value={reportProgress} />
-              </div>
-            )}
-
-            <Button
-              onClick={handleGenerateReport}
-              className="w-full"
-              disabled={generatingReport || !reportConfig.propertyId || !reportConfig.reportType}
-            >
-              {generatingReport ? "Generating..." : "Generate Report"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          <Button
+            onClick={handleGenerateReport}
+            className="w-full"
+            disabled={generatingReport || !reportConfig.propertyId || !reportConfig.reportType}
+          >
+            {generatingReport ? "Generating..." : "Generate Report"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Error message */}
       {errorMsg && (
@@ -481,155 +521,247 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           ref={previewRef}
           style={{
             width: 794,
-            background: "#fff",
-            padding: 24,
-            color: "#000",
-            fontFamily: "sans-serif",
+            minHeight: 1123,
+            background: "#f7f8fa",
+            padding: 0,
+            color: "#222",
+            fontFamily: "'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif",
+            boxSizing: "border-box",
           }}
         >
           <style>
             {`
               :root, * {
                 --background: #fff !important;
-                --foreground: #000 !important;
+                --foreground: #222 !important;
                 --card: #fff !important;
-                --card-foreground: #000 !important;
+                --card-foreground: #222 !important;
                 --popover: #fff !important;
-                --popover-foreground: #000 !important;
-                --primary: #000 !important;
+                --popover-foreground: #222 !important;
+                --primary: #1a237e !important;
                 --primary-foreground: #fff !important;
-                --secondary: #eee !important;
-                --secondary-foreground: #000 !important;
-                --muted: #eee !important;
-                --muted-foreground: #888 !important;
-                --accent: #eee !important;
-                --accent-foreground: #000 !important;
+                --secondary: #f3f6fa !important;
+                --secondary-foreground: #222 !important;
+                --muted: #ececf0 !important;
+                --muted-foreground: #717182 !important;
+                --accent: #e9ebef !important;
+                --accent-foreground: #222 !important;
                 --destructive: #d4183d !important;
                 --destructive-foreground: #fff !important;
-                --border: #ccc !important;
+                --border: #e5e7eb !important;
                 --input: #fff !important;
                 --input-background: #fff !important;
-                --ring: #000 !important;
+                --ring: #1a237e !important;
                 --sidebar: #fff !important;
-                --sidebar-foreground: #000 !important;
-                --sidebar-primary: #000 !important;
+                --sidebar-foreground: #222 !important;
+                --sidebar-primary: #1a237e !important;
                 --sidebar-primary-foreground: #fff !important;
-                --sidebar-accent: #eee !important;
-                --sidebar-accent-foreground: #000 !important;
-                --sidebar-border: #ccc !important;
-                --sidebar-ring: #000 !important;
-                color: #000 !important;
+                --sidebar-accent: #f3f6fa !important;
+                --sidebar-accent-foreground: #222 !important;
+                --sidebar-border: #e5e7eb !important;
+                --sidebar-ring: #1a237e !important;
+                color: #222 !important;
                 background: #fff !important;
               }
+              @media print {
+                .pdf-header, .pdf-footer { position: fixed; width: 100%; left: 0; }
+                .pdf-header { top: 0; }
+                .pdf-footer { bottom: 0; }
+              }
+              .pdf-header {
+                background: #fff;
+                border-bottom: 2px solid #e5e7eb;
+                padding: 24px 40px 12px 40px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+              }
+              .pdf-logo {
+                font-size: 1.3rem;
+                font-weight: 700;
+                color: #1a237e;
+                letter-spacing: 1px;
+              }
+              .pdf-title {
+                font-size: 1.1rem;
+                font-weight: 600;
+                color: #222;
+                letter-spacing: 0.5px;
+              }
+              .pdf-footer {
+                background: #fff;
+                border-top: 1px solid #e5e7eb;
+                color: #888;
+                font-size: 0.95rem;
+                text-align: right;
+                padding: 10px 40px 10px 0;
+              }
+              .pdf-content {
+                padding: 36px 40px 24px 40px;
+              }
               .pdf-section {
-                border: 1px solid #ccc;
-                border-radius: 12px;
-                padding: 18px 24px;
-                margin-bottom: 18px;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 2px 8px rgba(30, 41, 59, 0.04);
+                border-radius: 10px;
+                padding: 24px 32px 20px 32px;
+                margin-bottom: 28px;
+                margin-top: 0;
               }
               .pdf-section-title {
-                font-size: 1.1rem;
-                font-weight: bold;
-                margin-bottom: 8px;
+                font-size: 1.18rem;
+                font-weight: 600;
+                margin-bottom: 14px;
+                color: #1a237e;
+                letter-spacing: 0.2px;
+                border-left: 4px solid #1a237e;
+                padding-left: 12px;
+                background: #f3f6fa;
               }
               .pdf-label {
-                font-weight: bold;
+                font-weight: 500;
                 margin-right: 6px;
+                color: #374151;
               }
               .pdf-sub {
-                color: #444;
-                font-size: 0.98rem;
-                margin-bottom: 4px;
+                color: #222;
+                font-size: 1.01rem;
+                margin-bottom: 7px;
+                line-height: 1.7;
               }
               .pdf-divider {
-                border-bottom: 1px solid #eee;
-                margin: 18px 0;
+                border-bottom: 2px solid #e5e7eb;
+                margin: 18px 0 24px 0;
+              }
+              .pdf-images-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px;
+                margin-top: 8px;
+              }
+              .pdf-image-container {
+                background: #f3f6fa;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(30, 41, 59, 0.07);
+                padding: 8px;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 220px;
+                min-height: 160px;
+                max-width: 260px;
+                max-height: 180px;
+              }
+              .pdf-image {
+                width: 220px;
+                height: 150px;
+                object-fit: cover;
+                border-radius: 6px;
+                box-shadow: 0 2px 8px rgba(30, 41, 59, 0.10);
+                border: 1px solid #e5e7eb;
+                background: #fff;
+              }
+              .pdf-space-title {
+                font-size: 1.05rem;
+                font-weight: 500;
+                color: #374151;
+                margin-bottom: 8px;
+                margin-top: 8px;
               }
             `}
           </style>
-          <div style={{ marginBottom: 24 }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}>Review Your Submission</h2>
-            <div className="pdf-divider" />
+          {/* PDF Header */}
+          <div className="pdf-header">
+            <span className="pdf-logo">HouseBook</span>
+            <span className="pdf-title">Property Report</span>
           </div>
-
-          {/* General Information */}
-          {sectionSelection.generalInfo && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">General Information</div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Property Name:</span>
-                {property?.name || ""}
-              </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Description:</span>
-                {property?.description || ""}
-              </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Address:</span>
-                {property?.address || ""}
-              </div>
+          <div className="pdf-content">
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: "1.45rem", fontWeight: 700, marginBottom: 4, color: "#1a237e" }}>
+                Review Your Submission
+              </h2>
+              <div className="pdf-divider" />
             </div>
-          )}
 
-          {/* Plans & Documents */}
-          {sectionSelection.plans && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">Plans & Documents</div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Floor Plans:</span>
-                No floor plans uploaded
+            {/* General Information */}
+            {sectionSelection.generalInfo && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">General Information</div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Property Name:</span>
+                  {property?.name || ""}
+                </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Description:</span>
+                  {property?.description || ""}
+                </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Address:</span>
+                  {property?.address || ""}
+                </div>
               </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Building Plans:</span>
-                No building plans uploaded
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Property Images */}
-          {sectionSelection.images && selectedImages.length > 0 && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">Property Images</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {selectedImages.map((url) => (
-                  <img
-                    key={url}
-                    src={url}
-                    alt="Property"
-                    style={{
-                      width: 120,
-                      height: 90,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                      border: "1px solid #ccc",
-                      marginBottom: 6,
-                    }}
-                  />
-                ))}
+            {/* Plans & Documents */}
+            {sectionSelection.plans && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">Plans & Documents</div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Floor Plans:</span>
+                  No floor plans uploaded
+                </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Building Plans:</span>
+                  No building plans uploaded
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Dynamically render all spaces and their assets */}
-          {property?.spaces?.map((space: any) =>
-            sectionSelection.spaces[space.space_id] ? (
-              <div className="pdf-section" key={space.space_id}>
-                <div className="pdf-section-title">{space.name}</div>
-                {space.assets && space.assets.length > 0 ? (
-                  space.assets
-                    .filter((asset: any) => sectionSelection.assets[asset.asset_id])
-                    .map((asset: any) => (
-                      <div className="pdf-sub" key={asset.asset_id}>
-                        <span className="pdf-label">{asset.type}:</span>
-                        {asset.description || "No description available"}
-                      </div>
-                    ))
-                ) : (
-                  <div className="pdf-sub">No details available</div>
-                )}
+            {/* Property Images */}
+            {selectedImages.length > 0 && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">Property Images</div>
+                <div className="pdf-images-row">
+                  {selectedImages.map((url, idx) => (
+                    <div className="pdf-image-container" key={url + idx}>
+                      <img
+                        src={url}
+                        alt={`Property ${idx + 1}`}
+                        className="pdf-image"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : null
-          )}
+            )}
+
+            {/* Dynamically render all spaces and their assets */}
+            {property?.spaces?.map((space: any) =>
+              sectionSelection.spaces[space.space_id] ? (
+                <div className="pdf-section" key={space.space_id}>
+                  <div className="pdf-section-title">{space.name}</div>
+                  {space.assets && space.assets.length > 0 ? (
+                    space.assets
+                      .filter((asset: any) => sectionSelection.assets[asset.asset_id])
+                      .map((asset: any) => (
+                        <div className="pdf-sub" key={asset.asset_id}>
+                          <span className="pdf-label">{asset.type}:</span>
+                          {asset.description || "No description available"}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="pdf-sub">No details available</div>
+                  )}
+                </div>
+              ) : null
+            )}
+          </div>
+          {/* PDF Footer */}
+          {/* <div className="pdf-footer">
+            Generated by HouseBook &mdash; {new Date().toLocaleDateString()}
+          </div> */}
         </div>
       </div>
     </div>
