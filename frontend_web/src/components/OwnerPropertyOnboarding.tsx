@@ -20,20 +20,7 @@ import { ROUTES } from "./Routes";
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([
-    {
-      type: "",
-      name: "",
-      assets: [
-        {
-          typeId: "",
-          name: "",
-          description: "",
-          features: [{ name: "" , value: ""}]
-        }
-      ]
-    }
-  ]);
+  const [spaces, setSpaces] = useState<Space[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     // General Information
@@ -80,7 +67,7 @@ export function OwnerPropertyOnboarding() {
       const propertyId = await ownerOnboardProperty(formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerProperties(propertyId));
+      navigate(ROUTES.ownerPropertiesList);
     }
   };
 
@@ -199,38 +186,6 @@ export function OwnerPropertyOnboarding() {
     });
   };
 
-  // Step validators
-  const validateStep1 = () => {
-    return (
-      formData.propertyName.trim() !== "" &&        // Property name not null
-      formData.propertyDescription.trim() !== "" && // Property description not null
-      formData.address.trim() !== ""                // Property address not null 
-    );
-  };
-
-  const validateStep2 = () => {
-    return (
-      spaces.length > 0 && 
-      spaces.every(
-        s => s.name.trim() !== "" && 
-        s.type.trim() !== "" &&
-        s.assets.length > 0 && // Space must have at least one Asset
-        s.assets.every(
-          a => a.name.trim() !== "" && // Asset name not null
-          a.typeId != "" &&            // Asset type not null
-          a.features.length > 0 &&     // Asset must have at least one Feature
-          a.features.every(f => f.name.trim() !== "" && f.value.trim() !== "") // Each feature must have its fields filled
-        )
-      )
-    );
-  };
-
-  // Step validator mapping
-  const stepValidators: Record<number, () => boolean> = {
-    1: validateStep1,
-    2: validateStep2
-  };
-
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -243,7 +198,6 @@ export function OwnerPropertyOnboarding() {
                   id="propertyName"
                   value={formData.propertyName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyName: e.target.value})}
-                  
                 />
               </div>
               <div>
@@ -252,7 +206,6 @@ export function OwnerPropertyOnboarding() {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
-                  
                 />
               </div>
             </div>
@@ -360,7 +313,6 @@ export function OwnerPropertyOnboarding() {
                       onChange={(e) => updateSpaceName(spaceIndex, e.target.value)}
                       placeholder="Downstairs Bedroom"
                       autoComplete="off"
-                      
                     />
                   </div>
                 </div>
@@ -400,8 +352,9 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           id={`asset-desc-${spaceIndex}-${assetIndex}`}
                           value={asset.description}
-                          onChange={(e) => updateAsset(spaceIndex, assetIndex, "description", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateAsset(spaceIndex, assetIndex, "description", e.target.value)
+                          }
                         />
                       </div>
 
@@ -425,14 +378,16 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           placeholder="Feature Name"
                           value={feature.name}
-                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)
+                          }
                         />
                         <Input
                           placeholder="Feature Value"
                           value={feature.value}
-                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)
+                          }
                         />
                         <div className="flex justify-end">
                           <button
@@ -537,63 +492,53 @@ export function OwnerPropertyOnboarding() {
               </div>
             </div>
 
+
             {/* Spaces */}
-            <div className="border rounded-lg p-4 space-y-1">
-              {spaces.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No spaces added yet.
-                </p> // Fallback in case no spaces exist past the validation
-              ) : (
-                <ul className="space-y-4">
-                  {spaces.map((space, spaceIndex) => (
-                    <li key={spaceIndex} className="list-disc pl-6">
-                      {/* Space */}
-                      <span className="font-medium">
-                        {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
-                      </span>
+            {spaces.length === 0 ? (
+              <p className="text-muted-foreground">No spaces added yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {spaces.map((space, spaceIndex) => (
+                  <li key={spaceIndex} className="list-disc pl-4">
+                    {/* Space */}
+                    <span className="font-medium">
+                      {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                    </span>
 
-                      {/* Assets */}
-                      <div className="p-4">
-                        {space.assets.length > 0 ? (
-                          <ul className="list-disc pl-6 space-y-2 mt-3">
-                            {space.assets.map((asset, assetIndex) => (
-                              <li key={assetIndex}>
-                                <span className="font-medium">
-                                  {asset.name || "Unnamed Asset"}
-                                </span>
-                                {asset.description && (
-                                  <span className="text-muted-foreground">
-                                    {" "}— {asset.description}
-                                  </span>
-                                )}
+                    {/* Assets */}
+                    {space.assets.length > 0 ? (
+                      <ul className="list-disc pl-6 space-y-2 mt-2">
+                        {space.assets.map((asset, assetIndex) => (
+                          <li key={assetIndex}>
+                            <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
+                            {asset.description && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                — {asset.description}
+                              </span>
+                            )}
 
-                                {/* Asset Features */}
-                                <div className="p-4">
-                                  {asset.features && asset.features.length > 0 && (
-                                    <ul className="pl-2 mt-3 space-y-2 text-sm text-muted-foreground">
-                                      {asset.features.map((feature, featureIndex) => (
-                                        <li key={featureIndex}>
-                                          {feature.name || "Unnamed Feature"}:{" "}
-                                          {feature.value || "No Value"}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="ml-6 text-sm text-muted-foreground">
-                            No assets added.
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                            {/* Asset Features */}
+                            {asset.features && asset.features.length > 0 && (
+                              <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
+                                {asset.features.map((feature, featureIndex) => (
+                                  <li key={featureIndex}>
+                                    {feature.name || "Unnamed Feature"}:{" "}
+                                    {feature.value || "No Value"}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ml-6 text-sm text-muted-foreground">No assets added.</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         );
 
@@ -671,7 +616,6 @@ export function OwnerPropertyOnboarding() {
             </Button>
             <Button
               onClick={handleNext}
-              disabled={stepValidators[currentStep] ? !stepValidators[currentStep]() : false}
             >
               {currentStep === steps.length ? "Complete Onboarding" : "Next"}
             </Button>

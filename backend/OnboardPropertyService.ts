@@ -1,10 +1,11 @@
 import supabase from "../config/supabaseClient";
-import { getOwnerId, getUserInfoByEmail } from "./FetchData";
+import { getOwnerId, getUserIdByEmail } from "./FetchData";
 
 // Setting what OwnerData looks like
 export interface OwnerData {
   firstName: string,
   lastName: string,
+  address: string,
   email: string,
   phone: string
 }
@@ -68,36 +69,20 @@ export async function adminOnboardProperty(ownerData: OwnerData, formData: FormD
   // }
 
   // Get the user id using the owner's email
-  const userData = await getUserInfoByEmail(ownerData.email);
-  if (!userData) throw new Error("User data not returned from signup. Email not found.");
-  console.log("userData:", userData);
-
-  // Check details: first name, last name and phone
-  let errorFound = false;
-  if (ownerData.firstName != userData.first_name) {
-    console.error("First name is not correct");
-    errorFound = true;
-  }
-  if (ownerData.lastName != userData.last_name) {
-    console.error("Last name is not correct");
-    errorFound = true;
-  }
-  if (ownerData.phone != userData.phone) {
-    console.error("Phone number is not correct");
-    errorFound = true;
-  }
-  if (errorFound) console.error("Invalid inputs");
-
-
+  const userId = await getUserIdByEmail(ownerData.email);
+  if (!userId) throw new Error("User ID not returned from signup");
+  console.log("userId:");
+  console.log(userId);
+  
   // Get the owner id
-  const ownerId = await getOwnerId(userData.user_id);
+  const ownerId = await getOwnerId(userId);
 
   // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);
 
   // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
   // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
-  await saveDetails(spaces, propertyId, userData.user_id);
+  await saveDetails(spaces, propertyId, userId);
 
   return propertyId || null;
 

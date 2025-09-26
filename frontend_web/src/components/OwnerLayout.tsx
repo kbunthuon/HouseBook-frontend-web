@@ -1,5 +1,5 @@
 import { Button } from "./ui/button";
-import { Home, Building, FileText, Plus, LogOut, UserPen } from "lucide-react";
+import { Home, Building, FileText, Plus, LogOut } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 interface OwnerLayoutProps {
@@ -16,7 +16,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
     { to: "/owner/properties", label: "My Properties", icon: Building },
     { to: "/owner/properties/new", label: "Add Property", icon: Plus },
     { to: "/owner/reports", label: "Reports", icon: FileText },
-    { to: "/owner/requests", label: "Requests", icon: UserPen },
+    { to: "/owner/requests", label: "Requests", icon: FileText },
   ];
 
   return (
