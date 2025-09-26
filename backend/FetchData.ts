@@ -113,8 +113,9 @@ export const getChangeLogs = async (propertyIds: string[]) => {
       changelog_description,
       changelog_created_at,
       changelog_status,
-      user: User ( first_name, last_name ),
-      property_id
+      property_id,
+      user_first_name,
+      user_last_name
     `)
     .in("property_id", propertyIds)
     .order("changelog_created_at", { ascending: false });
@@ -252,21 +253,18 @@ export const getPropertyOwners = async (propertyId: string) => {
   return owners || null;
 }
 
-export const getUserIdByEmail = async (email: string) => {
+export const getUserInfoByEmail = async (email: string) => {
   // Query the "users" table for the row with the matching email
   const { data, error } = await supabase
     .from("User")
-    .select("user_id")
+    .select("user_id, first_name, last_name, phone")
     .eq("email", email.trim())
     .maybeSingle();
 
-  console.log("data");
-  console.log(data);
-
   if (error) {
-    console.error("Error fetching user ID:", error);
+    console.error("Error fetching User Infor by Email:", error);
     return null;
   }
 
-  return data?.user_id || null;
+  return data || null;
 };

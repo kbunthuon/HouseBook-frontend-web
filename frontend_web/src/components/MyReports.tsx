@@ -9,7 +9,12 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
+<<<<<<< HEAD
 import { getPropertyDetails, getProperty, getUserIdByEmail, getPropertyImages } from "../../../backend/FetchData";
+=======
+import { getPropertyDetails, getProperty, getUserInfoByEmail } from "../../../backend/FetchData";
+import { ImageUpload, getPropertyImages } from "../../../backend/ImageUpload";
+>>>>>>> main
 
 
 
@@ -99,14 +104,14 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       setLoadingProperties(true);
       try {
         // Get userId from email
-        const userId = await getUserIdByEmail(ownerEmail);
-        if (!userId) {
+        const userData = await getUserInfoByEmail(ownerEmail);
+        if (!userData) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
         // Fetch properties from backend
-        const props = await getProperty(userId);
+        const props = await getProperty(userData.user_id);
         if (props && Array.isArray(props)) {
           setMyProperties(props.map((p) => ({ id: p.property_id, name: p.name })));
         } else {
