@@ -1,5 +1,6 @@
 import supabase from "../config/supabaseClient";
-
+import { Property, Space } from "../frontend_web/src/types/propertyTypes";
+import { Owner } from "../frontend_web/src/types/userTypes";
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
 export const getOwnerId = async (userId: string) => {
@@ -17,42 +18,6 @@ export const getOwnerId = async (userId: string) => {
   return data?.owner_id || null;
 };
 
-
-export type Property = { 
-  property_id: string;
-  address: string; 
-  description: string; 
-  pin: string; 
-  name: string; 
-  type: string; 
-  status: string; 
-  lastUpdated: string; 
-  completionStatus: number; 
-  totalFloorArea?: number;
-  spaces?: Space[];
-  images?: string[];
-  created_at: string;
-  splash_image?: string;
-};
-export type Space = {
-  space_id: string;
-  name: string;
-  type: string;
-  assets: Asset[];
-};
-
-export type Asset = {
-  asset_id: string;
-  type: string;
-  description: string;
-};
-
-export type Owner = {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-};
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
