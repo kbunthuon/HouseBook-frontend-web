@@ -46,6 +46,13 @@ export type Asset = {
   type: string;
   description: string;
 };
+
+export type Owner = {
+  owner_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+};
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
@@ -225,15 +232,6 @@ export const getPropertyImages = async (propertyId: string, imageName?: string) 
 
   return Array.from(imageSet);
 }
-
-
-
-export type Owner = {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-};
 
 export const getPropertyOwners = async (propertyId: string) => {
   const { data, error } = await supabase

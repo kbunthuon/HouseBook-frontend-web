@@ -26,20 +26,20 @@ export interface AssetFeature {
   value: string;
 }
 
-export interface Asset {
+export interface AssetInt {
   typeId: string;
   name: string;  // Only to display in the frontend, name is not stored in database
   description: string; // description is stored in database
   features: AssetFeature[];
 }
 
-export interface Space {
+export interface SpaceInt {
   type: string;
   name: string;
-  assets: Asset[];
+  assets: AssetInt[];
 }
 
-export async function ownerOnboardProperty(formData: FormData, spaces: Space[]) {
+export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
   // Get the user id
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw new Error("User ID not returned from signup");
@@ -59,7 +59,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: Space[]) 
 
 }
 
-export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: Space[]) {
+export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: SpaceInt[]) {
   // Check if this user account exists
   // const exists = await checkOwnerExists(ownerData);
   // if (!exists) {
@@ -160,7 +160,7 @@ const saveProperty = async (formData: FormData, ownerId: string) => {
   }
 };
 
-const saveDetails = async (spaces: Space[], propertyId: string, userId: string) => {
+const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: string) => {
   try {
     for (const space of spaces) {
       // 1. Insert Space
