@@ -14,13 +14,14 @@ import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
-import { ownerOnboardProperty, FormData, Space} from "../../../backend/OnboardPropertyService";
+import { ownerOnboardProperty} from "../../../backend/OnboardPropertyService";
+import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
 
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([
+  const [spaces, setSpaces] = useState<SpaceInt[]>([
     {
       type: "",
       name: "",
@@ -101,12 +102,12 @@ export function OwnerPropertyOnboarding() {
 
   // Add a new Space
   const addSpace = () => {
-    setSpaces((prev: Space[]) => [...prev, { type: "", name: "", assets: [] }]);
+    setSpaces((prev: SpaceInt[]) => [...prev, { type: "", name: "", assets: [] }]);
   };
 
   // Update Space Name
   const updateSpaceName = (index: number, name: string) => {
-    setSpaces((prev: Space[]) => {
+    setSpaces((prev: SpaceInt[]) => {
       const newSpaces = [...prev]
       newSpaces[index] = { ...newSpaces[index], name };
       return newSpaces;
