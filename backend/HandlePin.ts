@@ -3,9 +3,9 @@ import supabase from "../config/supabaseClient";
 
 export interface NewPinRow {
     property_id: string;
-    tradie_id?: string;
+    tradie_id?: string | null;
     title: string;
-    status?: "Active" | "Inactive";
+    status?: "PENDING" | "ACCEPTED" | "REVOKED" | "DELETED";
     created_at?: string;              // ISO
     end_time?: string;                // ISO         
   }
@@ -18,7 +18,7 @@ export interface NewPinRow {
   
   export async function createPropertyPin(row: NewPinRow) {
     const { error } = await supabase
-      .from("Jobs")          
+      .from("Jobs")
       .insert([{
         property_id: row.property_id,
         tradie_id: row.tradie_id,

@@ -271,9 +271,9 @@ const handleSectionChange = (section: string, checked: boolean) => {
   
       const row = {
         property_id: propertyId,
-        tradie_id: undefined,
+        tradie_id: null,
         title: formData.title,
-        status: "Active" as const,
+        status: "PENDING" as const,
         created_at: new Date().toISOString(),
         end_time: endAt           // if user picked a time
         ? new Date(endAt).toISOString()
