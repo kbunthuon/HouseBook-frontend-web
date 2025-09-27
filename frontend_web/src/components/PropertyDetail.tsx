@@ -16,8 +16,8 @@ import { PinTable } from "./PinTable";
 import { toast } from "sonner";
 import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
-import { Owner, AccessPin } from "../types/serverTypes";
-// import { AccessPin } from "./PinTable"
+import { Owner } from "../types/serverTypes";
+import { AccessPin } from "./PinTable"
 
 interface EditHistoryItem {
   id: number;
