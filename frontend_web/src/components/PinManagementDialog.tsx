@@ -9,9 +9,10 @@ import { RefreshCw, Space } from "lucide-react";
 import { useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-import { fetchAssetTypes, AssetType, fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
+import { getPropertyDetails } from "../../../backend/FetchData";
+import { fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
 import { insertJobsInfo, Job, JobStatus } from "../../../backend/JobService";
+import { Property } from "../types/serverTypes"
 
 interface PinManagementDialogProps {
   open: boolean;
@@ -53,9 +54,6 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   // NOTE: repetitive fetch code... should I move this to PropertyDetails or keep it separate??
 
   const [property, setProperty] = useState<Property | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [owners, setOwners] = useState<Owner[] | null>(null);
   const [openSpaces, setOpenSpaces] = useState<Record<string, boolean>>({});
 
   const toggleSpace = (name: string) => setOpenSpaces((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -64,20 +62,15 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setError(null);
         // console.log("Fetching details for property ID:", propertyId);
         const result = await getPropertyDetails(propertyId);
         if (result) {
           setProperty(result);
-        } else {
-          setError("Property not found");
         }
 
       } catch (err: any) {
-        setError(err.message ?? "Unexpected error");
-      } finally {
-        setLoading(false);
+        console.error(err.message);
+        return;
       }
     };
 
@@ -311,7 +304,6 @@ const handleSectionChange = (section: string, checked: boolean) => {
     // console.log("[onCreate] start");
     try {
       setSaving(true);
-      setError(null);
   
       // console.log("[onCreate] inserting job:", jobData);
       
@@ -332,7 +324,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
         hint: e?.hint,
         code: e?.code,
       });
-      setError(e?.message ?? "Failed to create PIN");
+      console.error(e.message);
     } finally {
       setSaving(false);
       console.log("[onCreate] done");

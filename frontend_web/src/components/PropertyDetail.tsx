@@ -11,13 +11,13 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { generatePin } from "./utils/generatePin";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-import { Property, Space } from "../types/serverTypes";
-import { Owner } from "../types/serverTypes";
+import { Property } from "../types/serverTypes";
+import { Owner, AccessPin } from "../types/serverTypes";
+// import { AccessPin } from "./PinTable"
 
 interface EditHistoryItem {
   id: number;
@@ -28,14 +28,14 @@ interface EditHistoryItem {
   editedBy: string;
 }
 
-interface AccessPin {
-  id: string;
-  pin: string;
-  accessibleSections: string[];
-  isActive: boolean;
-  createdAt: string;
-  lastUsed?: string;
-}
+// interface AccessPin {
+//   id: string;
+//   pin: string;
+//   accessibleSections: string[];
+//   isActive: boolean;
+//   createdAt: string;
+//   lastUsed?: string;
+// }
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -678,6 +678,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardHeader>
         <CardContent>
           <PinTable 
+            propertyId={propertyId}
             pins={accessPins}
             onUpdatePin={handleUpdatePin}
             onDeletePin={handleDeletePin}

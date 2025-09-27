@@ -6,18 +6,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { Copy, Trash2, Settings, Check } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { useEffect } from "react";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { Property, Owner } from "../types/serverTypes"
 
-interface AccessPin {
+export interface AccessPin {
   id: string;
   pin: string;
   accessibleSections: string[];
   isActive: boolean;
   createdAt: string;
   lastUsed?: string;
-  propertyId: string;
+  propertyId?: string;
 }
 
 interface PinTableProps {
