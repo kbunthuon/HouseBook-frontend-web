@@ -222,8 +222,8 @@ export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, prope
                   <Checkbox
                     id={`edit-${section}`}
                     checked={selectedSections.includes(section)}
-                    onCheckedChange={(checked) => 
-                      handleSectionChange(section, checked as boolean)
+                    onCheckedChange={(checked: boolean) => 
+                      handleSectionChange(section, checked)
                     }
                   />
                   <Label 

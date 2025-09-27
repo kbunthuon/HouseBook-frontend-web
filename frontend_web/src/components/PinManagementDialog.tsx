@@ -9,9 +9,10 @@ import { RefreshCw, Space } from "lucide-react";
 import { useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Property, Owner, getPropertyOwners, getPropertyDetails, AssetType, fetchAssetType } from "../../../backend/FetchData";
+import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 import { createPropertyPin } from "../../../backend/HandlePin";
-
+import { fetchAssetTypes, AssetType, fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
+import { insertJobsTable, Job, JobStatus } from "../../../backend/JobService";
 
 interface PinManagementDialogProps {
   open: boolean;
@@ -27,13 +28,27 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [assetTypeMap, setAssetTypeMap] = useState<Record<string, string[]>>({});
-  const [formData, setFormData] = useState({
+  const [jobData, setJobData] = useState<Job>({
+    id: "",
+    property_id: "",
+    tradie_id: null,
     title: "",
-    end_time: "",
-  })
+    status: JobStatus.PENDING,
+    created_at: "",
+    end_time: null,
+    expired: false,
+    pin: "",
+  });
 
-  useEffect(() => { fetchAssetType().then(setAssetTypeMap); }, []);
+  // Updating jobData, keeping info already in it the same and enforcing types eg with status. Status requires type JobStatus
+  const updateJobData = <K extends keyof Job>(field: K, value: Job[K]) => {
+    setJobData((prev) => prev ? { ...prev, [field]: value } : prev);
+  };
 
+  // Fetch the asset type mapping
+  useEffect(() => {
+    fetchAssetTypesGroupedByDiscipline().then(setAssetTypeMap);
+  }, []);
 
   // NOTE: repetitive fetch code... should I move this to PropertyDetails or keep it separate??
 
@@ -46,12 +61,13 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const toggleSpace = (name: string) =>
     setOpenSpaces((prev) => ({ ...prev, [name]: !prev[name] }));
 
+  // fetching property details
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log("Fetching details for property ID:", propertyId);
+        // console.log("Fetching details for property ID:", propertyId);
         const result = await getPropertyDetails(propertyId);
         if (result) {
           setProperty(result);
@@ -59,7 +75,7 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
           setError("Property not found");
         }
 
-        console.log("Spaces data:", result?.spaces);
+        // console.log("Spaces data:", result?.spaces);
 
         const ownerResult = await getPropertyOwners(propertyId);
         if (ownerResult) {
@@ -77,11 +93,10 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
     fetchData();
   }, [propertyId]); // re-run if the propertyId changes
 
-  console.log("PinManagementDialog propertyId:", propertyId);
+  // console.log("PinManagementDialog propertyId:", propertyId);
 
-
+  // Fetch property details to check what the spaces are
   type PropertySection = { name: string; assets: string[] };
-
   const propertySections: PropertySection[] =
     (property?.spaces ?? []).map(s => ({
       name: s.name,
@@ -119,15 +134,15 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   //   setGeneratedPin(pin);
   // };
 
-  const reconcileParents = (keys: string[]) => {
-    const next = new Set(keys);
-    for (const s of propertySections) {
-      const allChild = s.assets.map(a => childKey(s.name, a));
-      const allPicked = allChild.every(k => next.has(k));
-      if (!allPicked) next.delete(s.name); // keep parent only if ALL children are picked
-    }
-    return [...next];
-  };
+  // const reconcileParents = (keys: string[]) => {
+  //   const next = new Set(keys);
+  //   for (const s of propertySections) {
+  //     const allChild = s.assets.map(a => childKey(s.name, a));
+  //     const allPicked = allChild.every(k => next.has(k));
+  //     if (!allPicked) next.delete(s.name); // keep parent only if ALL children are picked
+  //   }
+  //   return [...next];
+  // };
 
   const handleDisciplineToggle = (disciplineName: string, checked: boolean) => {
     const thisKeys = new Set(uiKeysForDiscipline(disciplineName));
@@ -264,25 +279,30 @@ const handleSectionChange = (section: string, checked: boolean) => {
   }
 
   const onCreate = async () => {
-    console.log("[onCreate] start");
+    // console.log("[onCreate] start");
     try {
       setSaving(true);
       setError(null);
   
-      const row = {
-        property_id: propertyId,
-        tradie_id: null,
-        title: formData.title,
-        status: "PENDING" as const,
-        created_at: new Date().toISOString(),
-        end_time: endAt           // if user picked a time
-        ? new Date(endAt).toISOString()
-        : oneHourFromNowISO(),  // fallback
-      };
+      // const row = {
+      //   property_id: propertyId,
+      //   tradie_id: null,
+      //   title: jobData.title,
+      //   status: "PENDING" as const,
+      //   created_at: new Date().toISOString(),
+      //   end_time: endAt           // if user picked a time
+      //   ? new Date(endAt).toISOString()
+      //   : oneHourFromNowISO(),  // fallback
+      // };
   
-      console.log("[onCreate] inserting row:", row);
-  
-      const propertyPin = await createPropertyPin(row);
+      // console.log("[onCreate] inserting job:", jobData);
+      
+      // Setting the propertyId
+      updateJobData("property_id", propertyId);
+
+      // Inserting the data to the Jobs table
+      console.log(jobData);
+      const insertedJobDataInstance = await insertJobsTable(jobData);
   
       console.log("[onCreate] insert OK");
       onOpenChange(false);                       // close dialog
@@ -298,7 +318,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
       setError(e?.message ?? "Failed to create PIN");
     } finally {
       setSaving(false);
-      console.log("[onCreate] done");
+      console.log("[onCreate] done"); 
     }
   };
   
@@ -387,9 +407,10 @@ const handleSectionChange = (section: string, checked: boolean) => {
             <Label htmlFor="jobTitle">Job Title</Label>
             <Input
               id="title"
-              value={formData.title}
-              onChange={(t) => setFormData({...formData, title: t.target.value})}
-              placeholder="National Grid"
+              value={jobData.title}
+              onChange={(e) => updateJobData("title", e.target.value)}
+              placeholder="e.g. Painting walls in downstairs bedroom"
+              required
             />
           </div>
           <div>
@@ -399,8 +420,8 @@ const handleSectionChange = (section: string, checked: boolean) => {
               type="datetime-local"
               className="mt-1 w-full rounded-md border px-3 py-2"
               min={localInputValue()}          // can’t pick a past time
-              value={endAt}
-              onChange={(e) => setEndAt(e.target.value)}
+              value={jobData.end_time || undefined}
+              onChange={(e) => updateJobData("end_time", new Date(e.target.value).toISOString())}
             />
           </div>
           {/* PIN Generation Section
@@ -437,7 +458,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
               <label key={d} className="flex items-center space-x-2">
                 <Checkbox
                   checked={selectedDisciplines.includes(d)}
-                  onCheckedChange={(c) => handleDisciplineToggle(d, Boolean(c))}
+                  onCheckedChange={(c: boolean) => handleDisciplineToggle(d, c)}
                 />
                 <span className="text-sm">{d}</span>
               </label>
@@ -468,8 +489,8 @@ const handleSectionChange = (section: string, checked: boolean) => {
                             ? "indeterminate"
                             : false
                       }
-                      onCheckedChange={(checked) => 
-                        handleSectionChange(space.name, checked as boolean)
+                      onCheckedChange={(checked : boolean) => 
+                        handleSectionChange(space.name, checked)
                       }
                     />
                     <Label 
@@ -502,8 +523,8 @@ const handleSectionChange = (section: string, checked: boolean) => {
                           <Checkbox
                             id={key}
                             checked={selectedSections.includes(key)}
-                            onCheckedChange={(checked) =>
-                              handleSectionChange(key, checked as boolean)
+                            onCheckedChange={(checked: boolean) =>
+                              handleSectionChange(key, checked)
                             }
                           />
                           <Label htmlFor={key} className="text-sm font-normal cursor-pointer">

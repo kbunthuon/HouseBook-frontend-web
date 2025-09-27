@@ -140,7 +140,7 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
       property_id: job.property_id,
       title: job.title,
       status: JobStatus.PENDING, // Start off a job with PENDING status
-      end_time: job.end_time? new Date(job.end_time).toISOString() : null,
+      end_time: job.end_time? new Date(job.end_time).toISOString() : oneHourFromNowISO(),
       expired: false, // Just created, cannot be expired
     } 
   ]).select(); // returns the inserted row
@@ -152,6 +152,9 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
   return data[0] as Job;
 }
 
+function oneHourFromNowISO() {
+  return new Date(Date.now() + 60 * 60 * 1000).toISOString();
+}
 
 export async function insertJobsInfo() {
   /**
