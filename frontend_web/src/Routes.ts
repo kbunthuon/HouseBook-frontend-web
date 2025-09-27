@@ -11,3 +11,18 @@ export const ROUTES = {
 };
 
 export const DASHBOARD = "dashboard";
+
+export const ADMIN_ROUTES = {
+  dashboard: "/admin",
+  properties: {
+    list: "/admin/properties",
+    add: "/admin/properties/new",
+    pattern: "properties/:propertyId",
+    detail: (id: string) => `/admin/properties/${id}`,
+  },
+  reports: "/admin/reports",
+  adminTools: "/admin/admin-tools",
+};
+
+export const LOGIN = "/login";
+export const SIGNUP = "/signup";

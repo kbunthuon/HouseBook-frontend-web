@@ -26,7 +26,8 @@ import { MyProperties } from "./components/MyProperties";
 import { MyReports } from "./components/MyReports";
 import { OwnerRequests } from "./components/OwnerRequests";
 
-import { ROUTES, DASHBOARD } from "./Routes"
+import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
@@ -83,14 +84,14 @@ export default function App() {
             isAuthenticated ? (
               <Navigate to={userType === "admin" ? "/admin" : "/owner"} replace />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to={LOGIN} replace />
             )
           }
         />
 
         {/* Login route */}
         <Route
-          path="/login"
+          path={LOGIN}
           element={
             isAuthenticated ? (
               <Navigate to={userType === "admin" ? "/admin" : "/owner"} replace />
@@ -102,7 +103,7 @@ export default function App() {
 
         {/* ADMIN AREA */}
         <Route
-          path="/admin"
+          path={ADMIN_ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
@@ -118,11 +119,11 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="properties" element={<AdminPropertiesPage />} />
-          <Route path="properties/new" element={<AdminPropertyOnboarding />} />
-          <Route path="properties/:propertyId" element={<AdminPropertyDetailPage />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="admin-tools" element={<AdminFunctions />} />
+          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
+          <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
+          <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
         </Route>
 
         {/* OWNER AREA */}
@@ -166,7 +167,7 @@ function RequireAuth({
   isAuthenticated: boolean;
   children: React.ReactNode;
 }) {
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={LOGIN} replace />;
   return <>{children}</>;
 }
 
@@ -188,7 +189,7 @@ function AdminPropertiesPage() {
   const navigate = useNavigate();
   return (
     <PropertyManagement
-      onViewProperty={(id: string) => navigate(`/admin/properties/${id}`)}
+      onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
     />
   );
 }
@@ -199,7 +200,7 @@ function AdminPropertyDetailPage() {
   return (
     <PropertyDetail
       propertyId={propertyId!}
-      onBack={() => navigate("/admin/properties")}
+      onBack={() => navigate(ADMIN_ROUTES.properties.list)}
     />
   );
 }

@@ -18,7 +18,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
     { to: ROUTES.dashboard, label: "My Dashboard", icon: Home, end: true },
     { to: ROUTES.properties.list, label: "My Properties", icon: Building, },
     { to: ROUTES.properties.add, label: "Add Property", icon: Plus, end: true },
-    { to: ROUTES.reports, label: "Reports", icon: FileText, end: true },
+    { to: ROUTES.reports, label: "Reports", icon: FileText, end: false },
     { to: ROUTES.requests, label: "Requests", icon: UserPen, end: true },
   ];
 
@@ -41,7 +41,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
               to={to}
               end={end}
               className={() => {
-                // Custom highlight logic for "My Properties"
+                // Custom highlight logic for "My Properties": Highlight for all sub-routes EXCEPT "Add Property"
                 if (label === "My Properties") {
                   return location.pathname.startsWith(ROUTES.properties.list) &&
                     location.pathname !== ROUTES.properties.add
@@ -65,7 +65,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
         <div className="absolute bottom-4 left-4">
           <Button
             variant="ghost"
-            className="justify-start text-destructive hover:text-destructive"
+            className="justify-start text-destructive hover:text-destructive !important"
             onClick={onLogout}
           >
             <LogOut className="mr-3 h-4 w-4" />
