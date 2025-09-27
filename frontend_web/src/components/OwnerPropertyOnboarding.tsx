@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { ownerOnboardProperty, FormData, Space} from "../../../backend/OnboardPropertyService";
-import { ROUTES } from "./Routes";
+import { ROUTES } from "../Routes";
 
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
@@ -80,7 +80,7 @@ export function OwnerPropertyOnboarding() {
       const propertyId = await ownerOnboardProperty(formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerProperties(propertyId));
+      navigate(ROUTES.properties.detail(propertyId));
     }
   };
 

@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
-import { ROUTES } from "./Routes";
+import { ROUTES } from "../Routes";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
