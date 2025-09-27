@@ -26,6 +26,7 @@ import { MyProperties } from "./components/MyProperties";
 import { MyReports } from "./components/MyReports";
 import { OwnerRequests } from "./components/OwnerRequests";
 
+import { ROUTES, DASHBOARD } from "./Routes"
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
@@ -107,7 +108,7 @@ export default function App() {
               <RequireRole userType={userType} role="admin">
                 <Layout
                   onLogout={handleLogout}
-                  currentPage="dashboard"
+                  currentPage={DASHBOARD}
                   onPageChange={() => {}}
                 >
                   <Outlet />
@@ -126,14 +127,14 @@ export default function App() {
 
         {/* OWNER AREA */}
         <Route
-          path="/owner"
+          path={ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
                 <OwnerLayout
                   onLogout={handleLogout}
                   ownerName={getUserName()}
-                  currentPage="dashboard"
+                  currentPage={DASHBOARD}
                   onPageChange={() => {}}
                 >
                   <Outlet />
@@ -143,11 +144,11 @@ export default function App() {
           }
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
-          <Route path="properties" element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
-          <Route path="properties/new" element={<OwnerPropertyOnboarding />} />
-          <Route path="properties/:propertyId" element={<OwnerPropertyDetailPage />} />
-          <Route path="reports" element={<MyReports ownerEmail={userEmail} />} />
-          <Route path="requests" element={<OwnerRequests userId={userId}/>} />
+          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
+          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
+          <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
+          <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
+          <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
         </Route>
 
         {/* 404 */}
@@ -210,8 +211,8 @@ function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail:
   return (
     <MyProperties
       ownerEmail={userId /* or userEmail if that's correct */}
-      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
-      onAddProperty={() => navigate("/owner/properties/new")}
+      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ROUTES.properties.add)}
     />
   );
 }
@@ -222,7 +223,7 @@ function OwnerPropertyDetailPage() {
   return (
     <PropertyDetail
       propertyId={propertyId!}
-      onBack={() => navigate("/owner/properties")}
+      onBack={() => navigate(ROUTES.properties.list)}
     />
   );
 }
@@ -233,8 +234,8 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
   return (
     <OwnerDashboard
       userId={userId}
-      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
-      onAddProperty={() => navigate("/owner/properties/new")}
+      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ROUTES.properties.add)}
     />
   );
 }
