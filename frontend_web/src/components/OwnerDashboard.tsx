@@ -11,7 +11,7 @@ import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } fro
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
 import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
-import { Property } from "../types/propertyTypes.ts";
+import { Property } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 

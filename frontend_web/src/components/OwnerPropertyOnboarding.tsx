@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { ownerOnboardProperty} from "../../../backend/OnboardPropertyService";
-import { FormData, SpaceInt} from "../types/onboardingTypes";
+import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
 
 export function OwnerPropertyOnboarding() {

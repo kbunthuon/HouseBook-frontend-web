@@ -13,8 +13,8 @@ import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { generatePin } from "./utils/generatePin";
 import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-import { Property, Space } from "../types/propertyTypes";
-import { Owner } from "../types/userTypes";
+import { Property, Space } from "../types/serverTypes";
+import { Owner } from "../types/serverTypes";
 
 interface EditHistoryItem {
   id: number;

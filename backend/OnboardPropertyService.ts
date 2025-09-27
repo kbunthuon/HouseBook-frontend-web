@@ -2,7 +2,7 @@ import supabase from "../config/supabaseClient";
 import { getOwnerId, getUserInfoByEmail } from "./FetchData";
 
 // Setting what OwnerData looks like
-import { OwnerData, FormData, SpaceInt } from "../frontend_web/src/types/onboardingTypes";
+import { OwnerData, FormData, SpaceInt } from "@housebookgroup/shared-types";
 
 export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
   // Get the user id

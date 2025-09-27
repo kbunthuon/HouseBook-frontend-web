@@ -1,6 +1,5 @@
 import supabase from "../config/supabaseClient";
-import { Property, Space } from "../frontend_web/src/types/propertyTypes";
-import { Owner } from "../frontend_web/src/types/userTypes";
+import { Property, Space, Owner } from "@housebookgroup/shared-types";
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
 export const getOwnerId = async (userId: string) => {

@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
 import { getProperty } from "../../../backend/FetchData";
+import { Property } from "../types/serverTypes";
 
 interface MyPropertiesProps {
   ownerEmail: string;

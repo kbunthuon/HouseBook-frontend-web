@@ -1,7 +1,7 @@
 // src/services/authService.ts
 /// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
-import { SignupData } from "../frontend_web/src/types/authTypes";
+import { SignupData } from "@housebookgroup/shared-types";
 
 const MINPASSWORDLEN = 4;
 
