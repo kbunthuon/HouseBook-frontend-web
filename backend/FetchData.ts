@@ -228,5 +228,21 @@ export const getUserInfoByEmail = async (email: string) => {
     return null;
   }
 
-  return data || null;
+  return data?.user_id || null;
 };
+
+
+// export async function fetchAssetType(): Promise<Record<string, string[]>> {
+//   const { data, error } = await supabase
+//     .from("AssetTypes") 
+//     .select("name, discipline");
+
+//   if (error) throw error;
+
+//   // { "Painting": ["Interior Wall","Exterior Wall","Ceiling"], ... }
+//   const byDiscipline: Record<string, string[]> = {};
+//   (data as AssetType[]).forEach(({ name, discipline }) => {
+//     (byDiscipline[discipline] ||= []).push(name);
+//   });
+//   return byDiscipline;
+// }

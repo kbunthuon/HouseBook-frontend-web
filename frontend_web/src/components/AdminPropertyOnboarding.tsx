@@ -16,7 +16,7 @@ import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { adminOnboardProperty } from "../../../backend/OnboardPropertyService";
 import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
-import { ROUTES } from "../Routes";
+import { ADMIN_ROUTES } from "../Routes";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
@@ -88,7 +88,7 @@ export function AdminPropertyOnboarding() {
       const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.properties.detail(propertyId));
+      navigate(ADMIN_ROUTES.properties.detail(propertyId));
     }
   };
 
