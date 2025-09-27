@@ -15,7 +15,9 @@ import { generatePin } from "./utils/generatePin";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner@2.0.3";
-import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
+import { Property, Space } from "../types/serverTypes";
+import { Owner } from "../types/serverTypes";
 
 interface EditHistoryItem {
   id: number;

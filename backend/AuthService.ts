@@ -1,18 +1,10 @@
 // src/services/authService.ts
 /// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
-
+import { SignupData } from "@housebookgroup/shared-types";
 
 const MINPASSWORDLEN = 4;
 
-export interface SignupData {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  userType: "admin" | "owner";
-};
 
 export async function signupUser(signupData: SignupData) {
   // 1. Create auth user
