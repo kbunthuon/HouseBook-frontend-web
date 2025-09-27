@@ -10,7 +10,6 @@ import { useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-import { createPropertyPin } from "../../../backend/HandlePin";
 import { fetchAssetTypes, AssetType, fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
 import { insertJobsTable, Job, JobStatus } from "../../../backend/JobService";
 
