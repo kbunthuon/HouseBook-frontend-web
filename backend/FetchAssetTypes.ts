@@ -19,6 +19,7 @@ export async function fetchAssetTypes(): Promise<AssetType[]> {
 };
 
 // Calls the fetchAssetType function and then group the AssetTypes together by trade discipline
+// Outputs: {discipline : list of asset types}
 export async function fetchAssetTypesGroupedByDiscipline(): Promise<Record<string, string[]>> {
   const byDiscipline: Record<string, string[]> = {};
   fetchAssetTypes().then((flatArray) => {

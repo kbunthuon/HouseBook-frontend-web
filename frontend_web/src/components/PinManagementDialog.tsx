@@ -11,7 +11,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Property, Owner, getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 import { fetchAssetTypes, AssetType, fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
-import { insertJobsTable, Job, JobStatus } from "../../../backend/JobService";
+import { insertJobsInfo, Job, JobStatus } from "../../../backend/JobService";
 
 interface PinManagementDialogProps {
   open: boolean;
@@ -26,6 +26,7 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const [generatedPin, setGeneratedPin] = useState("");
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
+  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [assetTypeMap, setAssetTypeMap] = useState<Record<string, string[]>>({});
   const [jobData, setJobData] = useState<Job>({
     id: "",
@@ -57,10 +58,9 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const [owners, setOwners] = useState<Owner[] | null>(null);
   const [openSpaces, setOpenSpaces] = useState<Record<string, boolean>>({});
 
-  const toggleSpace = (name: string) =>
-    setOpenSpaces((prev) => ({ ...prev, [name]: !prev[name] }));
+  const toggleSpace = (name: string) => setOpenSpaces((prev) => ({ ...prev, [name]: !prev[name] }));
 
-  // fetching property details
+  // Fetching property details (What is this?)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -74,14 +74,6 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
           setError("Property not found");
         }
 
-        // console.log("Spaces data:", result?.spaces);
-
-        const ownerResult = await getPropertyOwners(propertyId);
-        if (ownerResult) {
-          setOwners(ownerResult);
-        } else {
-          setError("Owner not found");
-        }
       } catch (err: any) {
         setError(err.message ?? "Unexpected error");
       } finally {
@@ -92,31 +84,51 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
     fetchData();
   }, [propertyId]); // re-run if the propertyId changes
 
-  // console.log("PinManagementDialog propertyId:", propertyId);
-
-  // Fetch property details to check what the spaces are
-  type PropertySection = { name: string; assets: string[] };
+  // Check what the Spaces are for this property
+  type PropertySection = { name: string; assets: { id: string; type: string }[]; };
   const propertySections: PropertySection[] =
-    (property?.spaces ?? []).map(s => ({
-      name: s.name,
-      assets: (s.assets ?? []).map(a => a.type),
-    }));
+  (property?.spaces ?? []).map(s => ({
+    name: s.name,
+    assets: (s.assets ?? []).map(a => ({
+      id: a.asset_id, 
+      type: a.type,
+    })),
+  }));
+
+  // Mapping asset key to id
+  const assetKeyToId: Record<string, string> = {};
+  for (const section of propertySections) {
+    for (const asset of section.assets) {
+      const uiKey = `${section.name}: ${asset.type}`;
+      assetKeyToId[uiKey] = asset.id;
+    }
+  }
 
   const norm = (s: string) => s.trim().toLowerCase();
 
+  // Building a list of keys of string type
+  // Each element in the list is of the format "space_name : asset_type"
+  // ["space_name : asset_type", "space_name : asset_type", ...]
+  // map is in the format {"asset_type" : "space_name : asset_type", ...}
   const assetTypeToUIKeys = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const s of propertySections) {
-      for (const a of s.assets) {
-        const uiKey = `${s.name}: ${a}`;
-        const k = norm(a);
-        if (!map.has(k)) map.set(k, []);
-        map.get(k)!.push(uiKey);
+      const map = new Map<string, string[]>();
+      for (const s of propertySections) {
+        for (const a of s.assets) {
+          const uiKey = `${s.name}: ${a.type}`;
+          const k = norm(a.type);
+          if (!map.has(k)) map.set(k, []);
+          map.get(k)!.push(uiKey);
+        }
       }
-    }
-    return map;
+      return map;
   }, [propertySections]);
 
+  /**
+   * 
+   * @param disciplineName : string
+   * @returns 
+   * keys : string[]  =>  has the format of ["space_name : asset_type", ...]
+   */
   const uiKeysForDiscipline = (disciplineName: string) => {
     const types = assetTypeMap[disciplineName] ?? [];
     const keys: string[] = [];
@@ -124,24 +136,9 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
       const arr = assetTypeToUIKeys.get(norm(t)) ?? [];
       keys.push(...arr);
     });
+    // console.log("keys: ", keys);
     return keys;
   };
-
-
-  // const generatePin = () => {
-  //   const pin = Math.floor(100000 + Math.random() * 900000).toString();
-  //   setGeneratedPin(pin);
-  // };
-
-  // const reconcileParents = (keys: string[]) => {
-  //   const next = new Set(keys);
-  //   for (const s of propertySections) {
-  //     const allChild = s.assets.map(a => childKey(s.name, a));
-  //     const allPicked = allChild.every(k => next.has(k));
-  //     if (!allPicked) next.delete(s.name); // keep parent only if ALL children are picked
-  //   }
-  //   return [...next];
-  // };
 
   const handleDisciplineToggle = (disciplineName: string, checked: boolean) => {
     const thisKeys = new Set(uiKeysForDiscipline(disciplineName));
@@ -150,28 +147,33 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
       setSelectedDisciplines(prev => [...new Set([...prev, disciplineName])]);
       setSelectedSections(prev => {
         const next = new Set(prev);
-        thisKeys.forEach(k => next.add(k));           // add children
-        return syncParentsFromChildren(next);                       // <-- update parents
+        thisKeys.forEach(k => next.add(k));
+        return syncParentsFromChildren(next);
       });
+
+      thisKeys.forEach(k => updateSelectedAssets(k, true));
       return;
     }
-  
-    // deselect: remove keys from this discipline unless covered by another selected discipline
+
     setSelectedDisciplines(prev => prev.filter(d => d !== disciplineName));
     setSelectedSections(prev => {
       const next = new Set(prev);
       const keepByOthers = new Set<string>();
 
       selectedDisciplines
-      .filter(d => d !== disciplineName)
-      .forEach(d => uiKeysForDiscipline(d).forEach(k => keepByOthers.add(k)));
+        .filter(d => d !== disciplineName)
+        .forEach(d => uiKeysForDiscipline(d).forEach(k => keepByOthers.add(k)));
 
       thisKeys.forEach(k => {
-      if (!keepByOthers.has(k)) next.delete(k);                   // remove only if not kept
+        if (!keepByOthers.has(k)) {
+          next.delete(k);
+          updateSelectedAssets(k, false);
+        }
+      });
+
+      return syncParentsFromChildren(next);
     });
 
-    return syncParentsFromChildren(next);                         
-    });
   };
 
   // helpers
@@ -179,26 +181,60 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId }: 
   const childKey = (space: string, asset: string) => `${space}: ${asset}`;
 
   const childKeysForSpace = (spaceName: string) =>
-  getAssetsForSpace(spaceName).map(a => childKey(spaceName, a));
+  (propertySections.find(s => s.name === spaceName)?.assets ?? [])
+    .map(a => childKey(spaceName, a.type));
+
 
   const getAssetsForSpace = (spaceName: string) =>
     propertySections.find(s => s.name === spaceName)?.assets ?? [];
 
+  const updateSelectedAssets = (changedKey: string, checked: boolean) => {
+    setSelectedAssets(prev => {
+      const next = new Set(prev);
+
+      if (isChildKey(changedKey)) {
+        // child = asset
+        const assetId = assetKeyToId[changedKey];
+        if (!assetId) return [...next]; // safety
+
+        if (checked) next.add(assetId);
+        else next.delete(assetId);
+
+      } else {
+        // parent = space
+        const kids = childKeysForSpace(changedKey);
+        kids.forEach(k => {
+          const assetId = assetKeyToId[k];
+          if (!assetId) return;
+          if (checked) next.add(assetId);
+          else next.delete(assetId);
+        });
+      }
+
+      return [...next];
+    });
+  };
+
+
+
+
   /** Toggle a whole space exactly like clicking the parent checkbox */
-const applyParentToggle = (spaceName: string, checked: boolean) => {
-  const kids = childKeysForSpace(spaceName);
-  setSelectedSections(prev => {
-    const next = new Set(prev);
-    if (checked) {
-      next.add(spaceName);
-      kids.forEach(k => next.add(k));
-    } else {
-      next.delete(spaceName);
-      kids.forEach(k => next.delete(k));
-    }
-    return [...next];
-  });
-};
+  const applyParentToggle = (spaceName: string, checked: boolean) => {
+    const kids = childKeysForSpace(spaceName);
+    setSelectedSections(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(spaceName);
+        kids.forEach(k => next.add(k));
+      } else {
+        next.delete(spaceName);
+        kids.forEach(k => next.delete(k));
+      }
+      return [...next];
+    });
+    updateSelectedAssets(spaceName, checked);
+  };
+
 
 const syncParentsFromChildren = (keys: Set<string>) => {
   for (const s of propertySections) {
@@ -246,6 +282,8 @@ const handleSectionChange = (section: string, checked: boolean) => {
       next.delete(spaceName);
     }
 
+    updateSelectedAssets(section, checked);
+
     return [...next];
   });
 };
@@ -256,14 +294,6 @@ const handleSectionChange = (section: string, checked: boolean) => {
     return picked > 0 && picked < kids.length;
   };
 
-  // const handleSave = () => {
-  //   if (generatedPin && selectedSections.length > 0) {
-  //     onSave(generatedPin, selectedSections);
-  //     setGeneratedPin("");
-  //     setSelectedSections([]);
-  //     onOpenChange(false);
-  //   }
-  // };
   const [endAt, setEndAt] = useState<string>("");  // e.g. "2025-09-26T14:30"
 
   // for <input type="datetime-local"> min/default value in LOCAL time
@@ -283,28 +313,16 @@ const handleSectionChange = (section: string, checked: boolean) => {
       setSaving(true);
       setError(null);
   
-      // const row = {
-      //   property_id: propertyId,
-      //   tradie_id: null,
-      //   title: jobData.title,
-      //   status: "PENDING" as const,
-      //   created_at: new Date().toISOString(),
-      //   end_time: endAt           // if user picked a time
-      //   ? new Date(endAt).toISOString()
-      //   : oneHourFromNowISO(),  // fallback
-      // };
-  
       // console.log("[onCreate] inserting job:", jobData);
       
       // Setting the propertyId
       updateJobData("property_id", propertyId);
-
+      console.log("propertyId: ", propertyId);
       // Inserting the data to the Jobs table
-      console.log(jobData);
-      const insertedJobDataInstance = await insertJobsTable(jobData);
+      const insertedJobInfo = await insertJobsInfo(jobData, selectedAssets);
   
       console.log("[onCreate] insert OK");
-      onOpenChange(false);                       // close dialog
+      onOpenChange(false);                       // close dialogs
       navigate(`/owner/properties/${propertyId}#access-pins`);
     } catch (e: any) {
       // PostgREST returns rich fields — surface them:
@@ -317,74 +335,9 @@ const handleSectionChange = (section: string, checked: boolean) => {
       setError(e?.message ?? "Failed to create PIN");
     } finally {
       setSaving(false);
-      console.log("[onCreate] done"); 
+      console.log("[onCreate] done");
     }
   };
-  
-
-
-  // const onCreate = async () => {
-  //   console.log("[onCreate] start");
-  //   try {
-  //     setSaving(true);
-  //     setError(null);
-  
-  //     const now = new Date();
-  //     const t = formData.title.trim();
-  //     if (!t) {
-  //       setError("Please enter a title for this PIN.");
-  //       return;
-  //     }
-    
-  //     if (!endAt) {
-  //       setError("Please choose an expiry time.");
-  //       return;
-  //     }
-  //     const end = new Date(endAt);              // "YYYY-MM-DDTHH:mm" (local)
-  //     if (Number.isNaN(end.getTime())) {
-  //       setError("Expiry time is invalid.");
-  //       return;
-  //     }
-  //     if (end <= now) {
-  //       setError("Expiry time must be in the future.");
-  //       return;
-  //     }
-
-  //     const row = {
-  //       property_id: propertyId,
-  //       tradie_id: undefined,
-  //       title: t,
-  //       status: "Active",
-  //       created_at: now.toISOString(),
-  //       end_time: endAt           // if user picked a time
-  //       ? new Date(endAt).toISOString()
-  //       : oneHourFromNowISO(),  // fallback
-  //     };
-  //     console.log("[onCreate] inserting", row);
-  
-  //     await createPropertyPin({
-  //       property_id: propertyId,
-  //       tradie_id: undefined,
-  //       title: t,
-  //       status: "Active",
-  //       created_at: now.toISOString(),
-  //       end_time: endAt           // if user picked a time
-  //       ? new Date(endAt).toISOString()
-  //       : oneHourFromNowISO(),  // fallback
-  //     });
-  
-  //     console.log("[onCreate] success – closing dialog");
-  //     onOpenChange(false);
-  //     navigate(`/owner/properties/${propertyId}#access-pins`);
-  //     document.getElementById("access-pins")?.scrollIntoView({ behavior: "smooth" });
-  //   } catch (e: any) {
-  //     setError(e.message ?? "Failed to create PIN");
-  //   } finally {
-  //     setSaving(false);
-  //     console.log("[onCreate] done");
-  //   }
-  // };
-  
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -420,32 +373,9 @@ const handleSectionChange = (section: string, checked: boolean) => {
               className="mt-1 w-full rounded-md border px-3 py-2"
               min={localInputValue()}          // can’t pick a past time
               value={jobData.end_time || undefined}
-              onChange={(e) => updateJobData("end_time", new Date(e.target.value).toISOString())}
+              onChange={(e) => updateJobData("end_time", e.target.value)}
             />
           </div>
-          {/* PIN Generation Section
-          <div className="space-y-3">
-            <Label>Generated PIN</Label>
-            <div className="flex items-center space-x-2">
-              <Input 
-                value={generatedPin} 
-                readOnly 
-                placeholder="Click generate to create PIN"
-                className="font-mono"
-              />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={generatePin}
-                className="flex items-center space-x-1"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span>Generate</span>
-              </Button>
-            </div>
-          </div>
-
-          <Separator /> */}
 
           {/* Disciplines Section */}
           <div className="space-y-3">
@@ -516,7 +446,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
                   <div id={`children-${space.name}`}
                     className={expanded ? "mt-1 pl-6 space-y-1" : "hidden"}>
                     {space.assets.map((asset) => {
-                      const key = `${space.name}: ${asset}`;
+                      const key = `${space.name}: ${asset.type}`;
                       return (
                         <div key={key} className="flex items-center gap-2">
                           <Checkbox
@@ -527,7 +457,7 @@ const handleSectionChange = (section: string, checked: boolean) => {
                             }
                           />
                           <Label htmlFor={key} className="text-sm font-normal cursor-pointer">
-                            {asset}
+                            {asset.type}
                           </Label>
                         </div>
                       );

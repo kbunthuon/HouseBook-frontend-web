@@ -98,10 +98,22 @@ export async function fetchJobsInfo({ property_id, tradie_id = null, status = nu
 }
 
 
-export async function insertJobAssetsTable() {
-  /**
-   * 
-   */
+/**
+ * Insert a list of assets associated with a given job into the JobAssets table.
+ * @param jobId - The ID of the inserted job
+ * @param assetIds - Array of asset IDs to associate with this job
+ */
+export async function insertJobAssetsTable(jobId: string, assetIds: string[]) {
+  if (!jobId) throw new Error("Missing job ID for inserting JobAssets.");
+  if (!assetIds || assetIds.length === 0) return; // nothing to insert
+
+  const rows = assetIds.map(asset_id => ({ job_id: jobId, asset_id }));
+
+  const { data, error } = await supabase.from("JobAssets").insert(rows);
+
+  if (error) throw new Error(`Failed to insert JobAssets: ${error.message}`);
+
+  return data;
 }
 
 export async function insertJobsTable(job: Job): Promise<Job | null> {
@@ -156,8 +168,22 @@ function oneHourFromNowISO() {
   return new Date(Date.now() + 60 * 60 * 1000).toISOString();
 }
 
-export async function insertJobsInfo() {
-  /**
-   * 
-   */
+/**
+ * Frontend-friendly function to create a job AND its associated assets.
+ * @param job - Job data (title, property_id, end_time etc.)
+ * @param assetIds - Array of selected asset IDs
+ */
+export async function insertJobsInfo(job: Job, assetIds: string[]) {
+  // 1. Insert job
+  const insertedJob = await insertJobsTable(job);
+
+  if (!insertedJob || !insertedJob.id) {
+    throw new Error("Failed to insert job or job ID missing.");
+  }
+
+  // 2. Insert associated assets
+  await insertJobAssetsTable(insertedJob.id, assetIds);
+
+  // 3. Return the inserted job
+  return insertedJob;
 }
