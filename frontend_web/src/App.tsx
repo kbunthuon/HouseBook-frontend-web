@@ -26,6 +26,8 @@ import { MyProperties } from "./components/MyProperties";
 import { MyReports } from "./components/MyReports";
 import { OwnerRequests } from "./components/OwnerRequests";
 
+import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
@@ -82,14 +84,14 @@ export default function App() {
             isAuthenticated ? (
               <Navigate to={userType === "admin" ? "/admin" : "/owner"} replace />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to={LOGIN} replace />
             )
           }
         />
 
         {/* Login route */}
         <Route
-          path="/login"
+          path={LOGIN}
           element={
             isAuthenticated ? (
               <Navigate to={userType === "admin" ? "/admin" : "/owner"} replace />
@@ -101,13 +103,13 @@ export default function App() {
 
         {/* ADMIN AREA */}
         <Route
-          path="/admin"
+          path={ADMIN_ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
                 <Layout
                   onLogout={handleLogout}
-                  currentPage="dashboard"
+                  currentPage={DASHBOARD}
                   onPageChange={() => {}}
                 >
                   <Outlet />
@@ -117,23 +119,23 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="properties" element={<AdminPropertiesPage />} />
-          <Route path="properties/new" element={<AdminPropertyOnboarding />} />
-          <Route path="properties/:propertyId" element={<AdminPropertyDetailPage />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="admin-tools" element={<AdminFunctions />} />
+          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
+          <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
+          <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
         </Route>
 
         {/* OWNER AREA */}
         <Route
-          path="/owner"
+          path={ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
                 <OwnerLayout
                   onLogout={handleLogout}
                   ownerName={getUserName()}
-                  currentPage="dashboard"
+                  currentPage={DASHBOARD}
                   onPageChange={() => {}}
                 >
                   <Outlet />
@@ -143,11 +145,11 @@ export default function App() {
           }
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
-          <Route path="properties" element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
-          <Route path="properties/new" element={<OwnerPropertyOnboarding />} />
-          <Route path="properties/:propertyId" element={<OwnerPropertyDetailPage />} />
-          <Route path="reports" element={<MyReports ownerEmail={userEmail} />} />
-          <Route path="requests" element={<OwnerRequests userId={userId}/>} />
+          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
+          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
+          <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
+          <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
+          <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
         </Route>
 
         {/* 404 */}
@@ -165,7 +167,7 @@ function RequireAuth({
   isAuthenticated: boolean;
   children: React.ReactNode;
 }) {
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={LOGIN} replace />;
   return <>{children}</>;
 }
 
@@ -187,7 +189,7 @@ function AdminPropertiesPage() {
   const navigate = useNavigate();
   return (
     <PropertyManagement
-      onViewProperty={(id: string) => navigate(`/admin/properties/${id}`)}
+      onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
     />
   );
 }
@@ -198,7 +200,7 @@ function AdminPropertyDetailPage() {
   return (
     <PropertyDetail
       propertyId={propertyId!}
-      onBack={() => navigate("/admin/properties")}
+      onBack={() => navigate(ADMIN_ROUTES.properties.list)}
     />
   );
 }
@@ -210,8 +212,8 @@ function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail:
   return (
     <MyProperties
       ownerEmail={userId /* or userEmail if that's correct */}
-      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
-      onAddProperty={() => navigate("/owner/properties/new")}
+      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ROUTES.properties.add)}
     />
   );
 }
@@ -222,7 +224,7 @@ function OwnerPropertyDetailPage() {
   return (
     <PropertyDetail
       propertyId={propertyId!}
-      onBack={() => navigate("/owner/properties")}
+      onBack={() => navigate(ROUTES.properties.list)}
     />
   );
 }
@@ -233,8 +235,8 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
   return (
     <OwnerDashboard
       userId={userId}
-      onViewProperty={(id: string) => navigate(`/owner/properties/${id}`)}
-      onAddProperty={() => navigate("/owner/properties/new")}
+      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ROUTES.properties.add)}
     />
   );
 }
