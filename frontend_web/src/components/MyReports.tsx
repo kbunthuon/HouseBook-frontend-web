@@ -487,66 +487,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             fontFamily: "sans-serif",
           }}
         >
-          <style>
-            {`
-              :root, * {
-                --background: #fff !important;
-                --foreground: #000 !important;
-                --card: #fff !important;
-                --card-foreground: #000 !important;
-                --popover: #fff !important;
-                --popover-foreground: #000 !important;
-                --primary: #000 !important;
-                --primary-foreground: #fff !important;
-                --secondary: #eee !important;
-                --secondary-foreground: #000 !important;
-                --muted: #eee !important;
-                --muted-foreground: #888 !important;
-                --accent: #eee !important;
-                --accent-foreground: #000 !important;
-                --destructive: #d4183d !important;
-                --destructive-foreground: #fff !important;
-                --border: #ccc !important;
-                --input: #fff !important;
-                --input-background: #fff !important;
-                --ring: #000 !important;
-                --sidebar: #fff !important;
-                --sidebar-foreground: #000 !important;
-                --sidebar-primary: #000 !important;
-                --sidebar-primary-foreground: #fff !important;
-                --sidebar-accent: #eee !important;
-                --sidebar-accent-foreground: #000 !important;
-                --sidebar-border: #ccc !important;
-                --sidebar-ring: #000 !important;
-                color: #000 !important;
-                background: #fff !important;
-              }
-              .pdf-section {
-                border: 1px solid #ccc;
-                border-radius: 12px;
-                padding: 18px 24px;
-                margin-bottom: 18px;
-              }
-              .pdf-section-title {
-                font-size: 1.1rem;
-                font-weight: bold;
-                margin-bottom: 8px;
-              }
-              .pdf-label {
-                font-weight: bold;
-                margin-right: 6px;
-              }
-              .pdf-sub {
-                color: #444;
-                font-size: 0.98rem;
-                margin-bottom: 4px;
-              }
-              .pdf-divider {
-                border-bottom: 1px solid #eee;
-                margin: 18px 0;
-              }
-            `}
-          </style>
           <div style={{ marginBottom: 24 }}>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}>Review Your Submission</h2>
             <div className="pdf-divider" />
