@@ -88,7 +88,7 @@ export function AdminPropertyOnboarding() {
       const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerProperties(propertyId));
+      navigate(ROUTES.properties.detail(propertyId));
     }
   };
 
