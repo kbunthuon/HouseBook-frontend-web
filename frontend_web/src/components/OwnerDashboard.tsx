@@ -52,15 +52,27 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
         if (properties && properties.length > 0) {
-        const propertyIds = properties.map((p: any) => p.property_id);
-        const changes = await getChangeLogs(propertyIds);
+          const propertyIds = properties.map((p: any) => p.property_id);
+          const { data: changes, error: changesError } = await supabase
+            .from("changelog_property_view")
+            .select(`
+              changelog_id,
+              changelog_specifications,
+              changelog_description,
+              changelog_created_at,
+              changelog_status,
+              property_id,
+              user_first_name,
+              user_last_name
+            `)
+            .in("property_id", propertyIds)
+            .order("changelog_created_at", { ascending: false });
 
-          if (!changes) {
-          console.error("Error fetching change logs.");
-          setLoading(false);
-          return;
-        }
-
+          if (changesError) {
+            console.error("Error fetching change log:", changesError);
+            setLoading(false);
+            return;
+          }
           // Normalizing user from array so that it is a single object
           const normalizedChanges = (changes ?? []).map((c: any) => ({
             ...c,
@@ -111,7 +123,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
       color: "text-purple-600"
     },
     {
-      title: "Active Pins",
+      title: "Access Requests",
       value: "8",
       change: "+2 this week",
       icon: Key,
