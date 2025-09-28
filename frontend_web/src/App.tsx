@@ -28,6 +28,8 @@ import { OwnerRequests } from "./components/OwnerRequests";
 
 import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
+import { FormProvider, AdminFormProvider } from "./components/FormContext";
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
@@ -88,7 +90,6 @@ export default function App() {
             )
           }
         />
-
         {/* Login route */}
         <Route
           path={LOGIN}
@@ -100,20 +101,21 @@ export default function App() {
             )
           }
         />
-
         {/* ADMIN AREA */}
         <Route
           path={ADMIN_ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
-                <Layout
-                  onLogout={handleLogout}
-                  currentPage={DASHBOARD}
-                  onPageChange={() => {}}
-                >
-                  <Outlet />
-                </Layout>
+                <AdminFormProvider>
+                  <Layout
+                    onLogout={handleLogout}
+                    currentPage={DASHBOARD}
+                    onPageChange={() => {}}
+                  >
+                    <Outlet />
+                  </Layout>
+                </AdminFormProvider>
               </RequireRole>
             </RequireAuth>
           }
@@ -125,21 +127,22 @@ export default function App() {
           <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
         </Route>
-
         {/* OWNER AREA */}
         <Route
           path={ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
-                <OwnerLayout
-                  onLogout={handleLogout}
-                  ownerName={getUserName()}
-                  currentPage={DASHBOARD}
-                  onPageChange={() => {}}
-                >
-                  <Outlet />
-                </OwnerLayout>
+                <FormProvider>
+                  <OwnerLayout
+                    onLogout={handleLogout}
+                    ownerName={getUserName()}
+                    currentPage={DASHBOARD}
+                    onPageChange={() => {}}
+                  >
+                    <Outlet />
+                  </OwnerLayout>
+                </FormProvider>
               </RequireRole>
             </RequireAuth>
           }
@@ -151,7 +154,6 @@ export default function App() {
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
           <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
         </Route>
-
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
