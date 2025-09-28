@@ -17,36 +17,23 @@ import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { ownerOnboardProperty} from "../../../backend/OnboardPropertyService";
 import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
-
+import { useFormContext } from "./FormContext";
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<SpaceInt[]>([
-    {
-      type: "",
-      name: "",
-      assets: [
-        {
-          typeId: "",
-          name: "",
-          description: "",
-          features: [{ name: "" , value: ""}]
-        }
-      ]
-    }
-  ]);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    // General Information
-    propertyName: "",
-    propertyDescription: "",
-    address: "",
-    // Plans & Documents
-    floorPlans: [] as File[],
-    buildingPlans: [] as File[]
-  });
+  
 
   const navigate = useNavigate();
+
+  const {
+    formData,
+    setFormData,
+    spaces,
+    setSpaces,
+    currentStep,
+    setCurrentStep,
+    resetForm
+  } = useFormContext();
 
   useEffect(() => {
     const getEnums = async () => {
@@ -76,12 +63,18 @@ export function OwnerPropertyOnboarding() {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
-      // No longer Next button, this will be complete onboarding
-      // Let backend handle saving information in database
-      const propertyId = await ownerOnboardProperty(formData, spaces);
-      console.log(propertyId);
-      
-      navigate(ROUTES.properties.detail(propertyId));
+      try {
+        const propertyId = await ownerOnboardProperty(formData, spaces);
+        console.log(propertyId);
+        
+        // Reset the form data after successful submission
+        resetForm();
+        
+        navigate(ROUTES.properties.detail(propertyId));
+      } catch (error) {
+        console.error("Failed to onboard property:", error);
+        // Handle error (maybe show a toast or error message)
+      }
     }
   };
 
