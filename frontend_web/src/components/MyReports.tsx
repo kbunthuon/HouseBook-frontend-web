@@ -518,6 +518,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         }}
       >
         <div
+          className="pdf-preview"
           ref={previewRef}
           style={{
             width: 794,
@@ -529,6 +530,43 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             boxSizing: "border-box",
           }}
         >
+          <style>
+            {`
+              :root, pdf-preview {
+                --foreground: #242424 !important; /* oklch(0.145 0 0) */
+                --card-foreground: #242424 !important; /* oklch(0.145 0 0) */
+                --popover: #ffffff !important; /* oklch(1 0 0) */
+                --popover-foreground: #242424 !important; /* oklch(0.145 0 0) */
+                --primary-foreground: #ffffff !important; /* oklch(1 0 0) */
+                --secondary: #f0f1f2 !important; /* oklch(0.95 0.0058 264.53), a bit off */
+              }
+
+              .pdf-section {
+                border: 1px solid #ccc;
+                border-radius: 12px;
+                padding: 18px 24px;
+                margin-bottom: 18px;
+              }
+              .pdf-section-title {
+                font-size: 1.1rem;
+                font-weight: bold;
+                margin-bottom: 8px;
+              }
+              .pdf-label {
+                font-weight: bold;
+                margin-right: 6px;
+              }
+              .pdf-sub {
+                color: #444;
+                font-size: 0.98rem;
+                margin-bottom: 4px;
+              }
+              .pdf-divider {
+                border-bottom: 1px solid #eee;
+                margin: 18px 0;
+              }
+            `}
+          </style>
           <div style={{ marginBottom: 24 }}>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}>Review Your Submission</h2>
             <div className="pdf-divider" />
@@ -613,6 +651,5 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           </div> */}
         </div>
       </div>
-    </div>
   );
 }
