@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import { Auth } from "./components/Auth";
 import { Layout } from "./components/Layout";
@@ -78,6 +79,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+    <Toaster position="top-right" />
       <Routes>
         {/* Default: send to role home if logged in, else to login */}
         <Route
