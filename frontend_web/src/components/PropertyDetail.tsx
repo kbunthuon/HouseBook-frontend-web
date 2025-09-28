@@ -255,12 +255,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const handleSaveEdit = () => {
     // In real app, this would make an API call to save the edit
     const currentTime = new Date().toISOString();
-    console.log({
-      section: editingSection,
-      field: editingField,
-      description: editDescription,
-      timestamp: currentTime
-    });
+    // console.log({
+    //   section: editingSection,
+    //   field: editingField,
+    //   description: editDescription,
+    //   timestamp: currentTime
+    // });
     
     setIsEditDialogOpen(false);
     setEditDescription("");
@@ -417,15 +417,15 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       try {
         setLoading(true);
         setError(null);
-        console.log("Fetching details for property ID:", propertyId);
+        // console.log("Fetching details for property ID:", propertyId);
         const result = await getPropertyDetails(propertyId);
         if (result) {
           setProperty(result);
         } else {
           setError("Property not found");
         }
-        console.log("Property images:", result?.images);
-        console.log("Spaces data:", result?.spaces);
+        // console.log("Property images:", result?.images);
+        // console.log("Spaces data:", result?.spaces);
 
         const ownerResult = await getPropertyOwners(propertyId);
         if (ownerResult) {
@@ -490,7 +490,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </CardContent>
     </Card>
   );
-  console.log("Property in propertyDetail", propertyId);
+  // console.log("Property in propertyDetail", propertyId);
   const value = propertyId;
 
   // const length = 6;
@@ -543,23 +543,22 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         
 
         {/* Access Control Section */}
-        <div className="space-y-2 flex flex-col items-center">
-          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64 max-w-xs mx-auto">
+        <div className="space-y-2 flex flex-col items-end">
+          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64 max-w-xs">
             <QRCodeCanvas
               value={value}
               size={200}        // size in px
               level="H"         // error correction: L, M, Q, H
             />
-            
           </div>
           <Button 
-              onClick={() => setIsPinDialogOpen(true)}
-              className="w-64 max-w-xs mx-auto items-center justify-center"
-              size="sm"
-            >
-              Create a New Job
-            </Button>
-          </div>
+            onClick={() => setIsPinDialogOpen(true)}
+            className="w-64 max-w-xs"
+            size="sm"
+          >
+            Create a New Job
+          </Button>
+        </div>
       </div>
 
       

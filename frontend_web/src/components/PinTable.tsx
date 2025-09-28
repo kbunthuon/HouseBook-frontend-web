@@ -44,7 +44,7 @@ export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, prope
       try {
         setLoading(true);
         setError(null);
-        console.log("Fetching details for property ID:", propertyId);
+        // console.log("Fetching details for property ID:", propertyId);
         const result = await getPropertyDetails(propertyId);
         if (result) {
           setProperty(result);
@@ -52,7 +52,7 @@ export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, prope
           setError("Property not found");
         }
 
-        console.log("Spaces data:", result?.spaces);
+        // console.log("Spaces data:", result?.spaces);
 
         const ownerResult = await getPropertyOwners(propertyId);
         if (ownerResult) {
@@ -70,7 +70,7 @@ export function PinTable({ pins, onUpdatePin, onDeletePin, onToggleActive, prope
     fetchData();
   }, [propertyId]); // re-run if the propertyId changes
 
-  console.log("PinManagementDialog propertyId:", propertyId);
+  // console.log("PinManagementDialog propertyId:", propertyId);
 
   const propertySections =
     property?.spaces?.flatMap((space) =>

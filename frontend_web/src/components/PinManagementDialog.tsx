@@ -307,11 +307,14 @@ const handleSectionChange = (section: string, checked: boolean) => {
   
       // console.log("[onCreate] inserting job:", jobData);
       
+      
+
+    
       // Setting the propertyId
-      updateJobData("property_id", propertyId);
-      console.log("propertyId: ", propertyId);
+      const newJobData = { ...jobData, property_id: propertyId }; // merge property_id
+      console.log("newJobData propertyId: ", newJobData.property_id);
       // Inserting the data to the Jobs table
-      const insertedJobInfo = await insertJobsInfo(jobData, selectedAssets);
+      const insertedJobInfo = await insertJobsInfo(newJobData, selectedAssets);
   
       console.log("[onCreate] insert OK");
       onOpenChange(false);                       // close dialogs
