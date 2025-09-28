@@ -14,13 +14,27 @@ import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
-import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
-import { ROUTES } from "./Routes";
+import { adminOnboardProperty } from "../../../backend/OnboardPropertyService";
+import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
+import { ADMIN_ROUTES } from "../Routes";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [spaces, setSpaces] = useState<SpaceInt[]>([
+    {
+      type: "",
+      name: "",
+      assets: [
+        {
+          typeId: "",
+          name: "",
+          description: "",
+          features: [{ name: "" , value: ""}]
+        }
+      ]
+    }
+  ]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     // General Information
@@ -75,7 +89,7 @@ export function AdminPropertyOnboarding() {
       const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
       console.log(propertyId);
       
-      navigate(ROUTES.ownerPropertiesList);
+      navigate(ADMIN_ROUTES.properties.detail(propertyId));
     }
   };
 
@@ -96,12 +110,12 @@ export function AdminPropertyOnboarding() {
 
   // Add a new Space
   const addSpace = () => {
-    setSpaces((prev: Space[]) => [...prev, { type: "", name: "", assets: [] }]);
+    setSpaces((prev: SpaceInt[]) => [...prev, { type: "", name: "", assets: [] }]);
   };
 
   // Update Space Name
   const updateSpaceName = (index: number, name: string) => {
-    setSpaces((prev: Space[]) => {
+    setSpaces((prev: SpaceInt[]) => {
       const newSpaces = [...prev]
       newSpaces[index] = { ...newSpaces[index], name };
       return newSpaces;

@@ -1,5 +1,5 @@
 import supabase from "../config/supabaseClient";
-
+import { Property, Space, Owner } from "@housebookgroup/shared-types";
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
 export const getOwnerId = async (userId: string) => {
@@ -17,35 +17,6 @@ export const getOwnerId = async (userId: string) => {
   return data?.owner_id || null;
 };
 
-
-export type Property = { 
-  property_id: string;
-  address: string; 
-  description: string; 
-  pin: string; 
-  name: string; 
-  type: string; 
-  status: string; 
-  lastUpdated: string; 
-  completionStatus: number; 
-  totalFloorArea?: number;
-  spaces?: Space[];
-  images?: string[];
-  created_at: string;
-  splash_image?: string;
-};
-export type Space = {
-  space_id: string;
-  name: string;
-  type: string;
-  assets: Asset[];
-};
-
-export type Asset = {
-  asset_id: string;
-  type: string;
-  description: string;
-};
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
@@ -225,15 +196,6 @@ export const getPropertyImages = async (propertyId: string, imageName?: string) 
   return Array.from(imageSet);
 }
 
-
-
-export type Owner = {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-};
-
 export const getPropertyOwners = async (propertyId: string) => {
   const { data, error } = await supabase
     .from("owner_property_view")
@@ -270,3 +232,19 @@ export const getUserIdByEmail = async (email: string) => {
 
   return data?.user_id || null;
 };
+
+
+// export async function fetchAssetType(): Promise<Record<string, string[]>> {
+//   const { data, error } = await supabase
+//     .from("AssetTypes") 
+//     .select("name, discipline");
+
+//   if (error) throw error;
+
+//   // { "Painting": ["Interior Wall","Exterior Wall","Ceiling"], ... }
+//   const byDiscipline: Record<string, string[]> = {};
+//   (data as AssetType[]).forEach(({ name, discipline }) => {
+//     (byDiscipline[discipline] ||= []).push(name);
+//   });
+//   return byDiscipline;
+// }
