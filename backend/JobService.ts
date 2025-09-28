@@ -247,33 +247,63 @@ export async function updateJobTable(job: Job): Promise<Job> {
 
 /**
  * Updates the assets associated with a job by replacing all existing associations.
+ * Uses UPSERT to avoid primary key conflicts.
  * @param jobId - ID of the job
  * @param assetIds - Array of asset IDs to associate
- * @returns Array of inserted JobAsset rows
+ * @returns Array of JobAsset rows
  */
 export async function upsertJobAssets(jobId: string, assetIds: string[]): Promise<JobAsset[] | null> {
   if (!jobId) throw new Error("Job ID is required for upserting assets.");
 
-  // 1. Delete existing assets for this job
-  const { error: deleteError } = await supabase
-    .from("JobAssets")
-    .delete()
-    .eq("job_id", jobId);
+  try {
+    // First, let's try to delete existing assets for this job
+    console.log(`Deleting existing assets for job_id: ${jobId}`);
+    const { error: deleteError } = await supabase
+      .from("JobAssets")
+      .delete()
+      .eq("job_id", jobId);
 
-  if (deleteError) throw new Error(`Failed to delete old job assets: ${deleteError.message}`);
+    if (deleteError) {
+      console.error("Delete error:", deleteError);
+      throw new Error(`Failed to delete old job assets: ${deleteError.message}`);
+    }
 
-  // 2. Insert new asset links if any provided
-  if (!assetIds || assetIds.length === 0) return null;
+    // If no new assets to insert, return null
+    if (!assetIds || assetIds.length === 0) {
+      console.log("No assets to insert, returning null");
+      return null;
+    }
 
-  const rows = assetIds.map(asset_id => ({ job_id: jobId, asset_id }));
-  const { data, error: insertError } = await supabase
-    .from("JobAssets")
-    .insert(rows)
-    .select();
+    // Remove duplicates and prepare rows
+    const uniqueAssetIds = [...new Set(assetIds)];
+    console.log(`Inserting ${uniqueAssetIds.length} unique assets:`, uniqueAssetIds);
+    
+    const rows = uniqueAssetIds.map(asset_id => ({ 
+      job_id: jobId, 
+      asset_id: asset_id 
+    }));
 
-  if (insertError) throw new Error(`Failed to insert job assets: ${insertError.message}`);
+    // Use upsert to handle any potential conflicts
+    const { data, error: upsertError } = await supabase
+      .from("JobAssets")
+      .upsert(rows, { 
+        onConflict: 'job_id,asset_id',
+        ignoreDuplicates: false 
+      })
+      .select();
 
-  return data;
+    if (upsertError) {
+      console.error("Upsert error:", upsertError);
+      throw new Error(`Failed to upsert job assets: ${upsertError.message}`);
+    }
+
+    console.log("Successfully upserted job assets:", data);
+    return data || [];
+    
+  } catch (error) {
+    console.error("Error in upsertJobAssets:", error);
+    throw error;
+  }
 }
 
 /**
@@ -300,4 +330,29 @@ export async function updateJobInfo(job: Job, assetIds: string[]): Promise<[Job,
  */
 function oneHourFromNowISO(): string {
   return new Date(Date.now() + 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * Fetches job assets with their corresponding property space and asset information.
+ * Useful for populating edit forms with detailed asset information.
+ * @param jobId - The job ID to fetch assets for
+ * @returns Array of JobAsset objects with additional asset details
+ */
+export async function fetchJobAssetsWithDetails(jobId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("JobAssets")
+    .select(`
+      asset_id,
+      job_id,
+      Assets!inner(asset_id, type, description, space_id),
+      Assets!inner.Spaces!inner(space_id, name)
+    `)
+    .eq("job_id", jobId);
+
+  if (error) {
+    console.error("Error fetching job assets with details:", error);
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
 }

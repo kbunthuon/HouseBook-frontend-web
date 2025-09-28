@@ -378,6 +378,63 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           onSave={handleSavePin}
         />
       </section>
+
+      {/* Edit History Dialog */}
+      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+        <DialogContent className="w-full max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <History className="h-5 w-5 mr-2" />
+              Edit History - {selectedSectionForTimeline}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px] pr-4">
+            <div className="space-y-4">
+              {(() => {
+                const sectionKey = getSectionKey(selectedSectionForTimeline);
+                const history = editHistory[sectionKey] || [];
+                
+                if (history.length === 0) {
+                  return (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p>No edit history available for this section.</p>
+                    </div>
+                  );
+                }
+
+                return history.map((item) => (
+                  <div key={item.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">{item.section}</Badge>
+                        {item.field && (
+                          <Badge variant="secondary">{item.field}</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatDate(item.date)}
+                      </div>
+                    </div>
+                    <p className="text-sm">{item.description}</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Edited by: {item.editedBy}</span>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{new Date(item.date).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </ScrollArea>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsTimelineDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
