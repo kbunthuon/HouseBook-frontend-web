@@ -71,7 +71,6 @@ export const getProperty = async (userID: string) => {
     };
   });
 
-  console.log("Fetched properties:", properties);
   return properties;
 };
 
@@ -137,7 +136,6 @@ export const getPropertyDetails = async (propertyId: string) => {
   const spaceMap: Record<string, Space> = {};
 
   for (const row of data) {
-    console.log(row);
     if (!row.spaces_id) continue;
 
     if (!spaceMap[row.spaces_id]) {
@@ -182,8 +180,6 @@ export const getPropertyImages = async (propertyId: string, imageName?: string) 
     return [];
   }
 
-  console.log("Image row:", imagesData);
-  console.log(propertyId);
   const imageSet = new Set<string>();
 
   imagesData?.forEach((row) => {

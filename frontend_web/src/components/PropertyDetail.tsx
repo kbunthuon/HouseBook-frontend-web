@@ -490,8 +490,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </CardContent>
     </Card>
   );
-  
-  const value = "https://house-book-frontend-web.vercel.app/owner";
+  console.log("Property in propertyDetail", propertyId);
+  const value = propertyId;
 
   // const length = 6;
 
@@ -549,7 +549,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               value={value}
               size={200}        // size in px
               level="H"         // error correction: L, M, Q, H
-              includeMargin={true}
             />
             
           </div>
