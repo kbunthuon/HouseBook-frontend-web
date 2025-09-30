@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { ScrollArea } from "./ui/scroll-area";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
@@ -17,6 +17,33 @@ import { toast } from "sonner";
 import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 import { Property, Owner } from "../types/serverTypes";
 import { fetchJobsInfo, Job, JobAsset, JobStatus, deleteJob } from "../../../backend/JobService";
+import { updateProperty, updateSpace, updateAssetWithType, updateSpaceAssets, PropertyUpdate, SpaceUpdate, AssetUpdate } from "../../../backend/PropertyEditService";
+
+interface ChangeLogEntry {
+  id: string;
+  asset_id: string;
+  specifications: {
+    before?: Record<string, any>;
+    after?: Record<string, any>;
+    timestamp: string;
+  };
+  change_description: string;
+  changed_by_user_id?: string;
+  created_at: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  // Joined data from the query
+  Assets?: {
+    id: string;
+    AssetTypes?: {
+      name: string;
+    };
+    Spaces?: {
+      id: string;
+      name: string;
+      property_id: string;
+    };
+  };
+}
 
 interface EditHistoryItem {
   id: number;
@@ -32,14 +59,35 @@ interface PropertyDetailProps {
   onBack: () => void;
 }
 
+type EditMode = 'property' | 'space' | 'asset' | null;
+
+interface EditContext {
+  mode: EditMode;
+  spaceId?: string;
+  spaceName?: string;
+  assetId?: string;
+  assetType?: string;
+}
+
 export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false);
+  const [isAllHistoryDialogOpen, setIsAllHistoryDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<string>("");
   const [editingField, setEditingField] = useState<string>("");
   const [selectedSectionForTimeline, setSelectedSectionForTimeline] = useState<string>("");
   const [editDescription, setEditDescription] = useState("");
+
+  // New edit system state
+  const [editContext, setEditContext] = useState<EditContext>({ mode: null });
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+
+  // Historical data state
+  const [propertyHistory, setPropertyHistory] = useState<ChangeLogEntry[]>([]);
+  const [spaceHistory, setSpaceHistory] = useState<ChangeLogEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Editable fields per section
   const sectionFields = {
@@ -52,25 +100,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     "Kitchen Appliances": ["oven","cooktop","rangehood","dishwasher"],
     "Bathroom Fixtures": ["showerScreens","bathtub","tapware","toilets"],
     "Lighting & Electrical": ["lighting","powerPoints","heatingCooling","hotWater"]
-  };
-
-  // Mock edit history
-  const editHistory = {
-    generalDetails: [
-      {id: 1,date:"2024-01-15T10:30:00Z",section:"General Details",field:"bedrooms",description:"Updated bedroom count from 3 to 3 + study",editedBy:"John Smith"},
-      {id: 2,date:"2024-01-10T14:15:00Z",section:"General Details",field:"totalFloorArea",description:"Initial property setup with basic details",editedBy:"System"}
-    ],
-    wallsCeilings: [
-      {id:3,date:"2024-01-12T09:45:00Z",section:"Walls & Ceilings",field:"paintColour",description:"Changed paint color from Vivid White to Natural White",editedBy:"John Smith"},
-      {id:4,date:"2024-01-05T11:20:00Z",section:"Walls & Ceilings",field:"ceilingHeight",description:"Updated ceiling height specification",editedBy:"John Smith"}
-    ],
-    exteriorSpecs:[{id:5,date:"2024-01-08T16:20:00Z",section:"Exterior Specifications",field:"roof",description:"Updated roof color from Woodland Grey to Basalt",editedBy:"John Smith"}],
-    flooring:[{id:6,date:"2024-01-14T13:45:00Z",section:"Flooring",field:"bedrooms",description:"Changed carpet color from Charcoal to Storm Grey",editedBy:"John Smith"}],
-    cabinetryBenchtops:[{id:7,date:"2024-01-11T15:30:00Z",section:"Cabinetry & Bench Tops",field:"kitchenCabinets",description:"Updated kitchen cabinet finish",editedBy:"John Smith"}],
-    doorsHandles:[{id:8,date:"2024-01-09T10:15:00Z",section:"Doors & Handles",field:"handles",description:"Changed handle finish to matte black",editedBy:"John Smith"}],
-    kitchenAppliances:[{id:9,date:"2024-01-13T14:20:00Z",section:"Kitchen Appliances",field:"cooktop",description:"Upgraded cooktop from 600mm to 900mm induction",editedBy:"John Smith"}],
-    bathroomFixtures:[{id:10,date:"2024-01-07T12:30:00Z",section:"Bathroom Fixtures",field:"tapware",description:"Updated tapware finish to matte black",editedBy:"John Smith"}],
-    lightingElectrical:[{id:11,date:"2024-01-16T09:15:00Z",section:"Lighting & Electrical",field:"lighting",description:"Added pendant lighting specification",editedBy:"John Smith"}]
   };
 
   const [property, setProperty] = useState<Property | null>(null);
@@ -109,6 +138,35 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     fetchData();
   }, [propertyId]);
 
+  // New function to fetch historical data
+  const fetchPropertyHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { getPropertyHistory } = await import('../../../backend/ChangeLogService');
+      const history = await getPropertyHistory(propertyId);
+      setPropertyHistory(history);
+    } catch (error) {
+      console.error('Error fetching property history:', error);
+      toast.error('Failed to load property history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const fetchSpaceHistory = async (spaceId: string) => {
+    setLoadingHistory(true);
+    try {
+      const { getSpaceHistory } = await import('../../../backend/ChangeLogService');
+      const history = await getSpaceHistory(spaceId);
+      setSpaceHistory(history);
+    } catch (error) {
+      console.error('Error fetching space history:', error);
+      toast.error('Failed to load space history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const copyToClipboard = async (text: string) => {
     try { await navigator.clipboard.writeText(text); toast.success("PIN copied to clipboard"); } 
     catch { toast.error("Failed to copy PIN"); }
@@ -128,6 +186,120 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     toast.success("Job updated successfully");
   };
 
+  // New edit handlers
+  const handleEditProperty = () => {
+    setEditContext({ mode: 'property' });
+    setEditFormData({
+      name: property?.name || '',
+      description: property?.description || '',
+      address: property?.address || '',
+      type: property?.type || 'Townhouse',
+      total_floor_area: property?.totalFloorArea || 0
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSpace = (spaceId: string, spaceName: string) => {
+    const space = property?.spaces?.find(s => s.space_id === spaceId);
+    setEditContext({ mode: 'space', spaceId, spaceName });
+    setEditFormData({
+      name: space?.name || '',
+      type: space?.type || '',
+      assets: space?.assets?.map(asset => ({
+        id: asset.asset_id,
+        type: asset.type,
+        description: asset.description || ''
+      })) || []
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditAsset = (spaceId: string, spaceName: string, assetId: string, assetType: string) => {
+    const space = property?.spaces?.find(s => s.space_id === spaceId);
+    const asset = space?.assets?.find(a => a.asset_id === assetId);
+    setEditContext({ mode: 'asset', spaceId, spaceName, assetId, assetType });
+    setEditFormData({
+      type: asset?.type || '',
+      description: asset?.description || ''
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      if (editContext.mode === 'property') {
+        // Update property information in database
+        const updates: PropertyUpdate = {
+          name: editFormData.name,
+          description: editFormData.description,
+          address: editFormData.address,
+          type: editFormData.type,
+          total_floor_area: editFormData.total_floor_area
+        };
+
+        const updatedProperty = await updateProperty(propertyId, updates);
+        
+        // Update local state
+        setProperty(prev => prev ? { ...prev, ...updatedProperty } : null);
+        toast.success("Property updated successfully");
+
+      } else if (editContext.mode === 'space') {
+        // Update space information in database
+        const spaceUpdates: SpaceUpdate = {
+          name: editFormData.name,
+          type: editFormData.type
+        };
+
+        // Update the space itself
+        await updateSpace(editContext.spaceId!, spaceUpdates);
+
+        // Update all assets in the space with history tracking
+        if (editFormData.assets && editFormData.assets.length > 0) {
+          const { updateAssetWithHistory } = await import('../../../backend/ChangeLogService');
+          
+          for (const asset of editFormData.assets) {
+            await updateAssetWithHistory(
+              asset.id,
+              { type: asset.type, description: asset.description },
+              `Updated ${asset.type} in ${editContext.spaceName}`
+            );
+          }
+        }
+
+        // Refresh property data to reflect changes
+        const refreshedProperty = await getPropertyDetails(propertyId);
+        if (refreshedProperty) setProperty(refreshedProperty);
+
+        toast.success(`${editContext.spaceName} updated successfully`);
+
+      } else if (editContext.mode === 'asset') {
+        // Update single asset with history tracking
+        const { updateAssetWithHistory } = await import('../../../backend/ChangeLogService');
+        
+        await updateAssetWithHistory(
+          editContext.assetId!,
+          { type: editFormData.type, description: editFormData.description },
+          `Updated ${editContext.assetType}`
+        );
+
+        // Refresh property data to reflect changes
+        const refreshedProperty = await getPropertyDetails(propertyId);
+        if (refreshedProperty) setProperty(refreshedProperty);
+
+        toast.success(`${editContext.assetType} updated successfully`);
+      }
+
+      setIsEditDialogOpen(false);
+      setEditContext({ mode: null });
+    } catch (error: any) {
+      console.error("Error saving changes:", error);
+      toast.error(`Failed to save changes: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleEdit = (sectionTitle: string, specificField?: string) => {
     setEditingSection(sectionTitle);
     const fields = sectionFields[sectionTitle as keyof typeof sectionFields];
@@ -136,7 +308,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveOldEdit = () => {
     setIsEditDialogOpen(false);
     setEditDescription("");
     setEditingSection("");
@@ -151,29 +323,41 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     return fields.map(field => ({ value: field, label: field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) }));
   };
 
-  const handleShowTimeline = (sectionTitle: string) => {
+  // Updated handlers for showing history
+  const handleShowTimeline = async (sectionTitle: string) => {
     setSelectedSectionForTimeline(sectionTitle);
+    
+    // Find the space that matches this section title
+    const space = property?.spaces?.find(s => s.name === sectionTitle);
+    if (space) {
+      await fetchSpaceHistory(space.space_id);
+    }
+    
     setIsTimelineDialogOpen(true);
   };
 
-  const getSectionKey = (title: string): keyof typeof editHistory => {
-    const keyMap: Record<string, keyof typeof editHistory> = {
-      "General Details":"generalDetails",
-      "Walls & Ceilings":"wallsCeilings",
-      "Exterior Specifications":"exteriorSpecs",
-      "Flooring":"flooring",
-      "Cabinetry & Bench Tops":"cabinetryBenchtops",
-      "Doors & Handles":"doorsHandles",
-      "Kitchen Appliances":"kitchenAppliances",
-      "Bathroom Fixtures":"bathroomFixtures",
-      "Lighting & Electrical":"lightingElectrical"
-    };
-    return keyMap[title] || "generalDetails";
+  const handleShowAllPropertyHistory = async () => {
+    await fetchPropertyHistory();
+    setIsAllHistoryDialogOpen(true);
   };
 
-  // ------------------ PIN Management ------------------ 
+  // Helper function to format changelog entries for display
+  const formatChangeLogEntry = (entry: ChangeLogEntry) => {
+    const assetName = entry.Assets?.AssetTypes?.name || 'Unknown Asset';
+    const spaceName = entry.Assets?.Spaces?.name || 'Unknown Space';
+    
+    return {
+      id: entry.id,
+      date: entry.created_at,
+      section: spaceName,
+      field: assetName,
+      description: entry.change_description,
+      editedBy: entry.changed_by_user_id || 'System'
+    };
+  };
+
+  // PIN Management handlers
   const handleSavePin = async (job: Job, assetIds?: string[]) => {
-    // Refresh data after saving
     const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
     if (jobs) setAllJobs(jobs);
     if (jobAssets) setAllJobAssets(jobAssets);
@@ -181,13 +365,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   };
 
   const handleSaveJobEdits = async (updatedJob: Job) => {
-    // Update the job in local state
     setAllJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
-    
-    // Refresh job assets
     const [, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
     if (jobAssets) setAllJobAssets(jobAssets);
-    
     toast.success("Job updated successfully");
   };
 
@@ -207,9 +387,14 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     setAllJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: isActive ? JobStatus.ACCEPTED : JobStatus.REVOKED } : j));
     toast.success(`PIN ${isActive ? "activated" : "deactivated"} successfully`);
   };
-  // -------------------------------------------------------
 
-  const SpecificationSection = ({ title, items, children }: { title: string; items?: Record<string, string>; children?: React.ReactNode }) => (
+  const SpecificationSection = ({ title, items, children, spaceId, spaceName }: { 
+    title: string; 
+    items?: Record<string, string>; 
+    children?: React.ReactNode;
+    spaceId?: string;
+    spaceName?: string;
+  }) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle>{title}</CardTitle>
@@ -217,31 +402,140 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           <Button variant="ghost" size="sm" onClick={() => handleShowTimeline(title)} className="text-muted-foreground hover:text-foreground">
             <History className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleEdit(title)} className="text-muted-foreground hover:text-foreground">
-            <Edit className="h-4 w-4" />
-          </Button>
+          {spaceId && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleEditSpace(spaceId, spaceName || title)} 
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        {items && (
+        {items && spaceId && (
           <div className="space-y-2">
-            {Object.entries(items).map(([key,value]) => (
-              <div key={key} className="flex justify-between items-start group cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded" onClick={() => handleEdit(title,key)}>
-                <span className="font-medium capitalize text-muted-foreground">
-                  {key.replace(/([A-Z])/g,' $1').replace(/^./, str=>str.toUpperCase())}:
-                </span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-right max-w-2xl">{value}</span>
-                  <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"/>
+            {Object.entries(items).map(([assetType, description]) => {
+              const space = property?.spaces?.find(s => s.space_id === spaceId);
+              const asset = space?.assets?.find(a => a.type === assetType);
+              return (
+                <div 
+                  key={assetType} 
+                  className="flex justify-between items-start group cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded" 
+                  onClick={() => asset && handleEditAsset(spaceId, spaceName || title, asset.asset_id, assetType)}
+                >
+                  <span className="font-medium capitalize text-muted-foreground">
+                    {assetType.replace(/([A-Z])/g,' $1').replace(/^./, str=>str.toUpperCase())}:
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-right max-w-2xl">{description}</span>
+                    <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"/>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {children}
       </CardContent>
     </Card>
   );
+
+  const renderEditDialog = () => {
+    if (editContext.mode === 'space') {
+      return (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-7xl w-[90vw] h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Edit {editContext.spaceName}</DialogTitle>
+            </DialogHeader>
+            
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              {/* Space Details Section */}
+              <div className="py-4">
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-4">Space Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="spaceName">Space Name</Label>
+                      <Input
+                        id="spaceName"
+                        value={editFormData.name || ''}
+                        onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="spaceType">Space Type</Label>
+                      <Input
+                        id="spaceType"
+                        value={editFormData.type || ''}
+                        onChange={(e) => setEditFormData({...editFormData, type: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assets Section */}
+              <div className="pb-4">
+                <h3 className="text-lg font-semibold mb-4">Assets in this Space</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {editFormData.assets?.map((asset: any, index: number) => (
+                    <Card key={asset.id} className="border-2 border-muted hover:border-primary/50 transition-colors">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{asset.type || `Asset ${index + 1}`}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <Label htmlFor={`assetType-${index}`}>Asset Type</Label>
+                          <Input
+                            id={`assetType-${index}`}
+                            value={asset.type}
+                            onChange={(e) => {
+                              const updatedAssets = [...editFormData.assets];
+                              updatedAssets[index] = {...asset, type: e.target.value};
+                              setEditFormData({...editFormData, assets: updatedAssets});
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`assetDescription-${index}`}>Description</Label>
+                          <Textarea
+                            id={`assetDescription-${index}`}
+                            value={asset.description}
+                            rows={3}
+                            onChange={(e) => {
+                              const updatedAssets = [...editFormData.assets];
+                              updatedAssets[index] = {...asset, description: e.target.value};
+                              setEditFormData({...editFormData, assets: updatedAssets});
+                            }}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </ScrollArea>
+
+            {/* Footer - Always visible */}
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -256,9 +550,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="default">{property?.status ?? "0%"}</Badge>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleEditProperty}>
             <Edit className="h-4 w-4 mr-2" />
-            Edit
+            Edit Property
           </Button>
           <Button variant="outline" size="sm">
             <FileText className="h-4 w-4 mr-2" />
@@ -278,6 +572,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </span>
             <span>•</span>
             <span>Address: {property?.address ?? "Missing address"}</span>
+            <span>•</span>
+            <span>Floor Area: {property?.totalFloorArea ?? 0}m²</span>
+          </div>
+          <div className="pt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleShowAllPropertyHistory()}
+              className="text-xs"
+            >
+              <History className="h-3 w-3 mr-1" />
+              View All Property History
+            </Button>
           </div>
         </div>
 
@@ -339,7 +646,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         {property?.spaces?.map((space) => (
           <SpecificationSection
             key={space.space_id}
-            title={space.name} // e.g., "Bedroom", "Kitchen", "Living Area"
+            title={space.name}
+            spaceId={space.space_id}
+            spaceName={space.name}
             items={space.assets.reduce<Record<string, string>>((acc, asset) => {
               acc[asset.type] = asset.description || "No description available";
               return acc;
@@ -379,57 +688,167 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         />
       </section>
 
-      {/* Edit History Dialog */}
+      {/* Edit Dialogs */}
+      {renderEditDialog()}
+
+      {/* Edit History Dialog - Space History */}
       <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
-        <DialogContent className="w-full max-w-2xl">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <History className="h-5 w-5 mr-2" />
               Edit History - {selectedSectionForTimeline}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[400px] pr-4">
-            <div className="space-y-4">
-              {(() => {
-                const sectionKey = getSectionKey(selectedSectionForTimeline);
-                const history = editHistory[sectionKey] || [];
-                
-                if (history.length === 0) {
+          
+          <ScrollArea className="max-h-[75vh] pr-4">
+            <div className="grid grid-cols-2 gap-6">
+              {loadingHistory ? (
+                <div className="col-span-2 text-center text-muted-foreground py-8">
+                  <p>Loading history...</p>
+                </div>
+              ) : spaceHistory.length === 0 ? (
+                <div className="col-span-2 text-center text-muted-foreground py-8">
+                  <p>No edit history available for this section.</p>
+                </div>
+              ) : (
+                spaceHistory.map((entry, index) => {
+                  const formattedEntry = formatChangeLogEntry(entry);
+                  const isLeftColumn = index % 2 === 0;
+                  
                   return (
-                    <div className="text-center text-muted-foreground py-8">
-                      <p>No edit history available for this section.</p>
+                    <div key={entry.id} className={`${isLeftColumn ? 'col-start-1' : 'col-start-2'}`}>
+                      <Card className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline">{formattedEntry.section}</Badge>
+                            <Badge variant="secondary">{formattedEntry.field}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(formattedEntry.date)}
+                          </div>
+                        </div>
+                        <p className="text-sm">{formattedEntry.description}</p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Edited by: {formattedEntry.editedBy}</span>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{new Date(formattedEntry.date).toLocaleTimeString()}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Show before/after changes if available */}
+                        {entry.specifications?.before && entry.specifications?.after && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div>
+                                <span className="font-medium text-red-600">Before:</span>
+                                <div className="mt-1 p-2 bg-red-50 rounded">
+                                  {JSON.stringify(entry.specifications.before, null, 2)}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-green-600">After:</span>
+                                <div className="mt-1 p-2 bg-green-50 rounded">
+                                  {JSON.stringify(entry.specifications.after, null, 2)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
                     </div>
                   );
-                }
-
-                return history.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">{item.section}</Badge>
-                        {item.field && (
-                          <Badge variant="secondary">{item.field}</Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(item.date)}
-                      </div>
-                    </div>
-                    <p className="text-sm">{item.description}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Edited by: {item.editedBy}</span>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{new Date(item.date).toLocaleTimeString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ));
-              })()}
+                })
+              )}
             </div>
           </ScrollArea>
-          <div className="flex justify-end">
+          
+          <div className="flex justify-end pt-4 border-t">
             <Button variant="outline" onClick={() => setIsTimelineDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* All Property History Dialog */}
+      <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <History className="h-5 w-5 mr-2" />
+              Complete Property History - {property?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[75vh] pr-4">
+            <div className="grid grid-cols-2 gap-6">
+              {loadingHistory ? (
+                <div className="col-span-2 text-center text-muted-foreground py-8">
+                  <p>Loading property history...</p>
+                </div>
+              ) : propertyHistory.length === 0 ? (
+                <div className="col-span-2 text-center text-muted-foreground py-8">
+                  <p>No edit history available for this property.</p>
+                </div>
+              ) : (
+                propertyHistory.map((entry, index) => {
+                  const formattedEntry = formatChangeLogEntry(entry);
+                  const isLeftColumn = index % 2 === 0;
+                  
+                  return (
+                    <div key={entry.id} className={`${isLeftColumn ? 'col-start-1' : 'col-start-2'}`}>
+                      <Card className="border-l-4 border-l-primary/50">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline">{formattedEntry.section}</Badge>
+                              <Badge variant="secondary" className="text-xs">{formattedEntry.field}</Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatDate(formattedEntry.date)}
+                            </div>
+                          </div>
+                          <p className="text-sm mb-2">{formattedEntry.description}</p>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Edited by: {formattedEntry.editedBy}</span>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{new Date(formattedEntry.date).toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Show before/after changes if available */}
+                          {entry.specifications?.before && entry.specifications?.after && (
+                            <div className="mt-3 pt-3 border-t">
+                              <div className="space-y-2 text-xs">
+                                <div>
+                                  <span className="font-medium text-red-600">Before:</span>
+                                  <div className="mt-1 p-2 bg-red-50 rounded">
+                                    {JSON.stringify(entry.specifications.before, null, 2)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-green-600">After:</span>
+                                  <div className="mt-1 p-2 bg-green-50 rounded">
+                                    {JSON.stringify(entry.specifications.after, null, 2)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+          
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsAllHistoryDialogOpen(false)}>
               Close
             </Button>
           </div>
