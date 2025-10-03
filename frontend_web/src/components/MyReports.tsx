@@ -4,17 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
-import { getPropertyDetails, getProperty, getUserIdByEmail, getPropertyImages } from "../../../backend/FetchData";
-
-
+import {
+  getPropertyDetails,
+  getProperty,
+  getUserIdByEmail,
+  getPropertyImages,
+} from "../../../backend/FetchData";
 
 const html2pdfRef = { current: null as any };
-
 
 async function waitForImages(root: HTMLElement) {
   const imgs = Array.from(root.querySelectorAll("img"));
@@ -30,14 +38,11 @@ async function waitForImages(root: HTMLElement) {
   );
 }
 
-
-
 interface MyReportsProps {
   ownerEmail: string;
 }
 
 export function MyReports({ ownerEmail }: MyReportsProps) {
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     (async () => {
@@ -51,7 +56,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     })();
   }, []);
 
-
   const [reportConfig, setReportConfig] = useState({
     propertyId: "",
     reportType: "",
@@ -60,7 +64,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     includeUtilities: false,
     includeFittings: false,
     dateFrom: "",
-    dateTo: ""
+    dateTo: "",
   });
 
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -70,11 +74,15 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   const [property, setProperty] = useState<any>(null);
 
   // NEW: State for real properties
-  const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
+  const [myProperties, setMyProperties] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
 
   // State for property images and selected images
-  const [propertyImages, setPropertyImages] = useState<{ name: string; url: string }[]>([]);
+  const [propertyImages, setPropertyImages] = useState<
+    { name: string; url: string }[]
+  >([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   // State for section selection
@@ -92,7 +100,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     assets: {},
   });
 
-
   // NEW: Fetch properties for the logged-in owner
   useEffect(() => {
     const fetchProperties = async () => {
@@ -108,7 +115,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         // Fetch properties from backend
         const props = await getProperty(userId);
         if (props && Array.isArray(props)) {
-          setMyProperties(props.map((p) => ({ id: p.property_id, name: p.name })));
+          setMyProperties(
+            props.map((p) => ({ id: p.property_id, name: p.name }))
+          );
         } else {
           setMyProperties([]);
         }
@@ -120,12 +129,12 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     fetchProperties();
   }, [ownerEmail]);
 
-
   const reportTypes = [
     { value: "overview", label: "Property Overview" },
-    { value: "maintenance", label: "Maintenance History" }
+    { value: "maintenance", label: "Maintenance History" },
   ];
 
+  // GENERATE THE REPORT...
   const handleGenerateReport = async () => {
     setErrorMsg(null);
     console.log("[MyReports] click -> handleGenerateReport");
@@ -133,7 +142,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     console.log("[MyReports] html2pdfRef.current:", html2pdf);
     console.log("[MyReports] previewRef.current:", previewRef.current);
     if (!html2pdf) {
-      setErrorMsg("PDF generator is not ready yet. Please try again in a few seconds.");
+      setErrorMsg(
+        "PDF generator is not ready yet. Please try again in a few seconds."
+      );
       return;
     }
     if (!previewRef.current) {
@@ -159,8 +170,13 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           margin: 0.5,
           filename,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, allowTaint: false, logging: false },
-          jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+          },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
         })
         .from(previewRef.current)
         .save();
@@ -178,7 +194,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       setTimeout(() => setGeneratingReport(false), 250);
     }
   };
-
 
   const downloadReport = (reportId: number) => {
     console.log(`Downloading report ${reportId}`);
@@ -218,14 +233,21 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       // Support both string[] and {name, url}[]
       let imgObjs: { name: string; url: string }[] = [];
       if (imgs.length > 0 && typeof imgs[0] === "string") {
-        imgObjs = imgs.map((url: string, idx: number) => ({ name: `Image ${idx + 1}`, url }));
+        imgObjs = imgs.map((url: string, idx: number) => ({
+          name: `Image ${idx + 1}`,
+          url,
+        }));
       } else {
         imgObjs = imgs;
       }
       setPropertyImages(imgObjs);
       setSelectedImages(imgObjs.map((img) => img.url)); // default: select all
       // Sync to backend
-      syncSelectionToBackend(reportConfig.propertyId, imgObjs.map((img) => img.url), sectionSelection);
+      syncSelectionToBackend(
+        reportConfig.propertyId,
+        imgObjs.map((img) => img.url),
+        sectionSelection
+      );
     })();
     // eslint-disable-next-line
   }, [reportConfig.propertyId]);
@@ -233,17 +255,28 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   // Sync image/feature selection to backend whenever they change
   useEffect(() => {
     if (!reportConfig.propertyId) return;
-    syncSelectionToBackend(reportConfig.propertyId, selectedImages, sectionSelection);
+    syncSelectionToBackend(
+      reportConfig.propertyId,
+      selectedImages,
+      sectionSelection
+    );
     // eslint-disable-next-line
   }, [selectedImages, sectionSelection]);
 
   // Add this placeholder for backend sync (replace with real API call as needed)
-  async function syncSelectionToBackend(propertyId: string, selectedImages: string[], selectedFeatures: {spaces: any, assets: any}) {
+  async function syncSelectionToBackend(
+    propertyId: string,
+    selectedImages: string[],
+    selectedFeatures: { spaces: any; assets: any }
+  ) {
     // TODO: Implement backend sync logic here
     // For now, just log
-    console.log("Syncing selection to backend", { propertyId, selectedImages, selectedFeatures });
+    console.log("Syncing selection to backend", {
+      propertyId,
+      selectedImages,
+      selectedFeatures,
+    });
   }
-
   // Handle image selection toggle
   const handleImageSelect = (url: string) => {
     setSelectedImages((prev) =>
@@ -252,57 +285,137 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   };
 
   // Handle section/asset selection toggle
-  const handleSectionToggle = (type: "generalInfo" | "plans", checked: boolean) => {
+  const handleSectionToggle = (
+    type: "generalInfo" | "plans",
+    checked: boolean
+  ) => {
     setSectionSelection((prev) => ({ ...prev, [type]: checked }));
   };
+
   const handleSpaceToggle = (spaceId: string, checked: boolean) => {
-    setSectionSelection((prev) => ({
-      ...prev,
-      spaces: { ...prev.spaces, [spaceId]: checked },
-    }));
+    setSectionSelection((prev) => {
+      const newSelection = {
+        ...prev,
+        spaces: { ...prev.spaces, [spaceId]: checked },
+      };
+
+      // If unchecking a space, also uncheck all its assets
+      if (!checked && property?.spaces) {
+        const space = property.spaces.find((s: any) => s.space_id === spaceId);
+        if (space?.assets) {
+          const newAssets = { ...prev.assets };
+          space.assets.forEach((asset: any) => {
+            newAssets[asset.asset_id] = false;
+          });
+          newSelection.assets = newAssets;
+        }
+      }
+
+      return newSelection;
+    });
   };
+
   const handleAssetToggle = (assetId: string, checked: boolean) => {
-    setSectionSelection((prev) => ({
-      ...prev,
-      assets: { ...prev.assets, [assetId]: checked },
-    }));
+    setSectionSelection((prev) => {
+      const newAssets = { ...prev.assets, [assetId]: checked };
+      const newSpaces = { ...prev.spaces };
+
+      // Find which space this asset belongs to
+      if (property?.spaces) {
+        for (const space of property.spaces) {
+          if (space.assets?.some((asset: any) => asset.asset_id === assetId)) {
+            if (checked) {
+              // If checking an asset, automatically check its parent space
+              newSpaces[space.space_id] = true;
+            } else {
+              // If unchecking an asset, check if any other assets in this space are still selected
+              const otherAssetsSelected = space.assets.some(
+                (asset: any) =>
+                  asset.asset_id !== assetId && newAssets[asset.asset_id]
+              );
+              // Only uncheck the space if no other assets are selected
+              if (!otherAssetsSelected) {
+                newSpaces[space.space_id] = false;
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        spaces: newSpaces,
+        assets: newAssets,
+      };
+    });
   };
+
+  // *****************************************************************************************
 
   // Add select all logic for images and spaces/assets
-  const allImagesSelected = propertyImages.length > 0 && selectedImages.length === propertyImages.length;
+  const allImagesSelected =
+    propertyImages.length > 0 &&
+    selectedImages.length === propertyImages.length;
   const handleSelectAllImages = (checked: boolean) => {
-    setSelectedImages(checked ? propertyImages.map(img => img.url) : []);
+    setSelectedImages(checked ? propertyImages.map((img) => img.url) : []);
   };
 
-  const allSpacesSelected = property?.spaces && Object.values(sectionSelection.spaces).filter(Boolean).length === property.spaces.length;
+  const allSpacesSelected =
+    property?.spaces &&
+    Object.values(sectionSelection.spaces).filter(Boolean).length ===
+      property.spaces.length;
+
   const handleSelectAllSpaces = (checked: boolean) => {
     if (!property?.spaces) return;
     const newSpaces: { [spaceId: string]: boolean } = {};
+    const newAssets: { [assetId: string]: boolean } = {};
+
     property.spaces.forEach((space: any) => {
       newSpaces[space.space_id] = checked;
-    });
-    setSectionSelection(prev => ({
-      ...prev,
-      spaces: newSpaces,
-    }));
-  };
-
-  const allAssetsSelected = property?.spaces && property.spaces
-    .flatMap((space: any) => space.assets || [])
-    .every((asset: any) => sectionSelection.assets[asset.asset_id]);
-  const handleSelectAllAssets = (checked: boolean) => {
-    if (!property?.spaces) return;
-    const newAssets: { [assetId: string]: boolean } = {};
-    property.spaces.forEach((space: any) => {
+      // Also select/deselect all assets in each space
       (space.assets || []).forEach((asset: any) => {
         newAssets[asset.asset_id] = checked;
       });
     });
-    setSectionSelection(prev => ({
+
+    setSectionSelection((prev) => ({
       ...prev,
+      spaces: newSpaces,
       assets: newAssets,
     }));
   };
+
+  const allAssetsSelected =
+    property?.spaces &&
+    property.spaces
+      .flatMap((space: any) => space.assets || [])
+      .every((asset: any) => sectionSelection.assets[asset.asset_id]);
+
+  // selecting AllAssets
+  const handleSelectAllAssets = (checked: boolean) => {
+    if (!property?.spaces) return;
+    const newAssets: { [assetId: string]: boolean } = {};
+    const newSpaces: { [spaceId: string]: boolean } = {};
+
+    property.spaces.forEach((space: any) => {
+      let hasSelectedAsset = false;
+      (space.assets || []).forEach((asset: any) => {
+        newAssets[asset.asset_id] = checked;
+        if (checked) hasSelectedAsset = true;
+      });
+      // If any asset is selected, select the space too
+      newSpaces[space.space_id] = hasSelectedAsset;
+    });
+
+    setSectionSelection((prev) => ({
+      ...prev,
+      spaces: newSpaces,
+      assets: newAssets,
+    }));
+  };
+
+  // *****************************************************************************************
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
@@ -319,9 +432,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="property">Select Property</Label>
-              <Select onValueChange={(value: string) => setReportConfig({...reportConfig, propertyId: value})}>
+              <Select
+                onValueChange={(value: string) =>
+                  setReportConfig({ ...reportConfig, propertyId: value })
+                }
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingProperties ? "Loading..." : "Choose your property"} />
+                  <SelectValue
+                    placeholder={
+                      loadingProperties ? "Loading..." : "Choose your property"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {myProperties.map((property) => (
@@ -334,7 +455,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             </div>
             <div>
               <Label htmlFor="reportType">Report Type</Label>
-              <Select onValueChange={(value) => setReportConfig({...reportConfig, reportType: value})}>
+              <Select
+                onValueChange={(value) =>
+                  setReportConfig({ ...reportConfig, reportType: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
@@ -357,15 +482,21 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 <input
                   type="checkbox"
                   checked={sectionSelection.generalInfo}
-                  onChange={(e) => handleSectionToggle("generalInfo", e.target.checked)}
-                /> General Information
+                  onChange={(e) =>
+                    handleSectionToggle("generalInfo", e.target.checked)
+                  }
+                />{" "}
+                General Information
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={sectionSelection.plans}
-                  onChange={(e) => handleSectionToggle("plans", e.target.checked)}
-                /> Plans & Documents
+                  onChange={(e) =>
+                    handleSectionToggle("plans", e.target.checked)
+                  }
+                />{" "}
+                Plans & Documents
               </label>
             </div>
           </div>
@@ -378,10 +509,15 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 <input
                   type="checkbox"
                   checked={allImagesSelected}
-                  onChange={e => handleSelectAllImages(e.target.checked)}
+                  onChange={(e) => handleSelectAllImages(e.target.checked)}
                   id="selectAllImages"
                 />
-                <Label htmlFor="selectAllImages" className="ml-2 text-sm cursor-pointer">Select All Images</Label>
+                <Label
+                  htmlFor="selectAllImages"
+                  className="ml-2 text-sm cursor-pointer"
+                >
+                  Select All Images
+                </Label>
               </div>
               <div className="flex flex-wrap gap-3 bg-muted/50 rounded-lg p-3">
                 {propertyImages.map((img) => (
@@ -398,11 +534,15 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           ? "2px solid #0070f3"
                           : "1px solid #ccc",
                         cursor: "pointer",
-                        boxShadow: selectedImages.includes(img.url) ? "0 0 0 2px #0070f3" : undefined,
-                        transition: "box-shadow 0.2s"
+                        boxShadow: selectedImages.includes(img.url)
+                          ? "0 0 0 2px #0070f3"
+                          : undefined,
+                        transition: "box-shadow 0.2s",
                       }}
                       onClick={() => handleImageSelect(img.url)}
-                      title={selectedImages.includes(img.url) ? "Deselect" : "Select"}
+                      title={
+                        selectedImages.includes(img.url) ? "Deselect" : "Select"
+                      }
                     />
                     {selectedImages.includes(img.url) && (
                       <span
@@ -435,20 +575,45 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             <div className="space-y-2">
               <Label className="block mb-1">Spaces & Assets to include</Label>
               <div className="flex items-center gap-4 mb-2">
+                {/* Button 1: Select All SPACES (rooms) 
                 <input
                   type="checkbox"
                   checked={!!allSpacesSelected}
-                  onChange={e => handleSelectAllSpaces(e.target.checked)}
+                  onChange={(e) => handleSelectAllSpaces(e.target.checked)}
                   id="selectAllSpaces"
+                /> */}
+
+                <input
+                  type="checkbox"
+                  checked={allSpacesSelected && allAssetsSelected}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    handleSelectAllSpaces(checked); // Select all rooms
+                    handleSelectAllAssets(checked); // Select all features
+                  }}
+                  id="selectEverything"
                 />
-                <Label htmlFor="selectAllSpaces" className="text-sm cursor-pointer">Select All Spaces</Label>
+                <Label htmlFor="selectEverything">Select Everything</Label>
+
+                {/* <Label
+                  htmlFor="selectAllSpaces"
+                  className="text-sm cursor-pointer"
+                >
+                  Select All Spaces
+                </Label> */}
+                {/* Button 2: Select All Assets (features) 
                 <input
                   type="checkbox"
                   checked={!!allAssetsSelected}
-                  onChange={e => handleSelectAllAssets(e.target.checked)}
+                  onChange={(e) => handleSelectAllAssets(e.target.checked)}
                   id="selectAllAssets"
                 />
-                <Label htmlFor="selectAllAssets" className="text-sm cursor-pointer">Select All Assets</Label>
+                <Label
+                  htmlFor="selectAllAssets"
+                  className="text-sm cursor-pointer"
+                >
+                  Select All Assets
+                </Label> */}
               </div>
               <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
                 {property.spaces.map((space: any) => (
@@ -457,17 +622,27 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                       <input
                         type="checkbox"
                         checked={!!sectionSelection.spaces[space.space_id]}
-                        onChange={(e) => handleSpaceToggle(space.space_id, e.target.checked)}
+                        onChange={(e) =>
+                          handleSpaceToggle(space.space_id, e.target.checked)
+                        }
                       />
                       {space.name}
                     </label>
                     <div className="ml-6 flex flex-col gap-1">
                       {(space.assets || []).map((asset: any) => (
-                        <label key={asset.asset_id} className="flex items-center gap-2 text-sm">
+                        <label
+                          key={asset.asset_id}
+                          className="flex items-center gap-2 text-sm"
+                        >
                           <input
                             type="checkbox"
                             checked={!!sectionSelection.assets[asset.asset_id]}
-                            onChange={(e) => handleAssetToggle(asset.asset_id, e.target.checked)}
+                            onChange={(e) =>
+                              handleAssetToggle(
+                                asset.asset_id,
+                                e.target.checked
+                              )
+                            }
                           />
                           {asset.type}
                         </label>
@@ -492,7 +667,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           <Button
             onClick={handleGenerateReport}
             className="w-full"
-            disabled={generatingReport || !reportConfig.propertyId || !reportConfig.reportType}
+            disabled={
+              generatingReport ||
+              !reportConfig.propertyId ||
+              !reportConfig.reportType
+            }
           >
             {generatingReport ? "Generating..." : "Generate Report"}
           </Button>
@@ -526,7 +705,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             background: "#f7f8fa",
             padding: 0,
             color: "#222",
-            fontFamily: "'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif",
+            fontFamily:
+              "'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif",
             boxSizing: "border-box",
           }}
         >
@@ -568,88 +748,94 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             `}
           </style>
           <div style={{ marginBottom: 24 }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}>Review Your Submission</h2>
+            <h2
+              style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}
+            >
+              Review Your Submission
+            </h2>
             <div className="pdf-divider" />
           </div>
 
-            {/* General Information */}
-            {sectionSelection.generalInfo && (
-              <div className="pdf-section">
-                <div className="pdf-section-title">General Information</div>
-                <div className="pdf-sub">
-                  <span className="pdf-label">Property Name:</span>
-                  {property?.name || ""}
-                </div>
-                <div className="pdf-sub">
-                  <span className="pdf-label">Description:</span>
-                  {property?.description || ""}
-                </div>
-                <div className="pdf-sub">
-                  <span className="pdf-label">Address:</span>
-                  {property?.address || ""}
-                </div>
+          {/* General Information */}
+          {sectionSelection.generalInfo && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">General Information</div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Property Name:</span>
+                {property?.name || ""}
               </div>
-            )}
-
-            {/* Plans & Documents */}
-            {sectionSelection.plans && (
-              <div className="pdf-section">
-                <div className="pdf-section-title">Plans & Documents</div>
-                <div className="pdf-sub">
-                  <span className="pdf-label">Floor Plans:</span>
-                  No floor plans uploaded
-                </div>
-                <div className="pdf-sub">
-                  <span className="pdf-label">Building Plans:</span>
-                  No building plans uploaded
-                </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Description:</span>
+                {property?.description || ""}
               </div>
-            )}
-
-            {/* Property Images */}
-            {selectedImages.length > 0 && (
-              <div className="pdf-section">
-                <div className="pdf-section-title">Property Images</div>
-                <div className="pdf-images-row">
-                  {selectedImages.map((url, idx) => (
-                    <div className="pdf-image-container" key={url + idx}>
-                      <img
-                        src={url}
-                        alt={`Property ${idx + 1}`}
-                        className="pdf-image"
-                      />
-                    </div>
-                  ))}
-                </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Address:</span>
+                {property?.address || ""}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Dynamically render all spaces and their assets */}
-            {property?.spaces?.map((space: any) =>
-              sectionSelection.spaces[space.space_id] ? (
-                <div className="pdf-section" key={space.space_id}>
-                  <div className="pdf-section-title">{space.name}</div>
-                  {space.assets && space.assets.length > 0 ? (
-                    space.assets
-                      .filter((asset: any) => sectionSelection.assets[asset.asset_id])
-                      .map((asset: any) => (
-                        <div className="pdf-sub" key={asset.asset_id}>
-                          <span className="pdf-label">{asset.type}:</span>
-                          {asset.description || "No description available"}
-                        </div>
-                      ))
-                  ) : (
-                    <div className="pdf-sub">No details available</div>
-                  )}
-                </div>
-              ) : null
-            )}
-          </div>
-          {/* PDF Footer */}
-          {/* <div className="pdf-footer">
+          {/* Plans & Documents */}
+          {sectionSelection.plans && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Plans & Documents</div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Floor Plans:</span>
+                No floor plans uploaded
+              </div>
+              <div className="pdf-sub">
+                <span className="pdf-label">Building Plans:</span>
+                No building plans uploaded
+              </div>
+            </div>
+          )}
+
+          {/* Property Images */}
+          {selectedImages.length > 0 && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Property Images</div>
+              <div className="pdf-images-row">
+                {selectedImages.map((url, idx) => (
+                  <div className="pdf-image-container" key={url + idx}>
+                    <img
+                      src={url}
+                      alt={`Property ${idx + 1}`}
+                      className="pdf-image"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dynamically render all spaces and their assets */}
+          {property?.spaces?.map((space: any) =>
+            sectionSelection.spaces[space.space_id] ? (
+              <div className="pdf-section" key={space.space_id}>
+                <div className="pdf-section-title">{space.name}</div>
+                {space.assets && space.assets.length > 0 ? (
+                  space.assets
+                    .filter(
+                      (asset: any) => sectionSelection.assets[asset.asset_id]
+                    )
+                    .map((asset: any) => (
+                      <div className="pdf-sub" key={asset.asset_id}>
+                        <span className="pdf-label">{asset.type}:</span>
+                        {asset.description || "No description available"}
+                      </div>
+                    ))
+                ) : (
+                  <div className="pdf-sub">No details available</div>
+                )}
+              </div>
+            ) : null
+          )}
+        </div>
+        {/* PDF Footer */}
+        {/* <div className="pdf-footer">
             Generated by HouseBook &mdash; {new Date().toLocaleDateString()}
           </div> */}
-        </div>
       </div>
+    </div>
   );
 }
