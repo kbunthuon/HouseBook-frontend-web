@@ -22,8 +22,11 @@ import {
   getPropertyImages,
 } from "../../../backend/FetchData";
 
+// Reference to hold the html2pdf library once loaded dynamically
 const html2pdfRef = { current: null as any };
 
+// Helper function to wait for all images to load before generating PDF
+// This prevents broken images in the final PDF output
 async function waitForImages(root: HTMLElement) {
   const imgs = Array.from(root.querySelectorAll("img"));
   await Promise.all(
@@ -43,6 +46,8 @@ interface MyReportsProps {
 }
 
 export function MyReports({ ownerEmail }: MyReportsProps) {
+  // Dynamically load html2pdf.js library when component mounts
+  // This avoids SSR issues since html2pdf requires browser environment
   useEffect(() => {
     if (typeof window === "undefined") return;
     (async () => {
@@ -56,6 +61,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     })();
   }, []);
 
+  // Report configuration state - stores user selections for PDF generation
   const [reportConfig, setReportConfig] = useState({
     propertyId: "",
     reportType: "",
@@ -67,31 +73,37 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     dateTo: "",
   });
 
+  // PDF generation state management
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Reference to the hidden preview div that gets converted to PDF
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  // Currently selected property data from backend
   const [property, setProperty] = useState<any>(null);
 
-  // NEW: State for real properties
+  // User's properties list for dropdown selection
   const [myProperties, setMyProperties] = useState<
     { id: string; name: string }[]
   >([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
 
-  // State for property images and selected images
+  // Property images state - supports both string URLs and {name, url} objects
   const [propertyImages, setPropertyImages] = useState<
     { name: string; url: string }[]
   >([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
-  // State for section selection
+  // Section selection state - controls what appears in the final PDF
+  // Implements hierarchical selection where spaces contain assets
   const [sectionSelection, setSectionSelection] = useState<{
     generalInfo: boolean;
     plans: boolean;
     images: boolean;
-    spaces: { [spaceId: string]: boolean };
-    assets: { [assetId: string]: boolean };
+    spaces: { [spaceId: string]: boolean }; // Parent level - rooms/areas
+    assets: { [assetId: string]: boolean }; // Child level - features within spaces
   }>({
     generalInfo: true,
     plans: true,
@@ -100,19 +112,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     assets: {},
   });
 
-  // NEW: Fetch properties for the logged-in owner
+  // Fetch user's properties on component mount
+  // Gets userId from email, then fetches all properties owned by that user
   useEffect(() => {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        // Get userId from email
         const userId = await getUserIdByEmail(ownerEmail);
         if (!userId) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
-        // Fetch properties from backend
         const props = await getProperty(userId);
         if (props && Array.isArray(props)) {
           setMyProperties(
@@ -129,18 +140,20 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     fetchProperties();
   }, [ownerEmail]);
 
+  // Available report types for the dropdown
   const reportTypes = [
     { value: "overview", label: "Property Overview" },
     { value: "maintenance", label: "Maintenance History" },
   ];
 
-  // GENERATE THE REPORT...
+  // Main PDF generation function
+  // Converts the hidden preview div to PDF and downloads it
   const handleGenerateReport = async () => {
     setErrorMsg(null);
     console.log("[MyReports] click -> handleGenerateReport");
     const html2pdf = html2pdfRef.current;
-    console.log("[MyReports] html2pdfRef.current:", html2pdf);
-    console.log("[MyReports] previewRef.current:", previewRef.current);
+
+    // Validation checks
     if (!html2pdf) {
       setErrorMsg(
         "PDF generator is not ready yet. Please try again in a few seconds."
@@ -160,21 +173,23 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       setGeneratingReport(true);
       setReportProgress(10);
 
+      // Wait for all images to load to prevent broken images in PDF
       await waitForImages(previewRef.current);
       setReportProgress(70);
 
       const filename = `property_${reportConfig.propertyId}_${reportConfig.reportType}.pdf`;
 
+      // Configure html2pdf with optimal settings for property reports
       await html2pdf()
         .set({
           margin: 0.5,
           filename,
           image: { type: "jpeg", quality: 0.95 },
           html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            logging: false,
+            scale: 2, // High resolution for crisp text
+            useCORS: true, // Handle cross-origin images
+            allowTaint: false, // Security setting
+            logging: false, // Reduce console noise
           },
           jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
         })
@@ -212,6 +227,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }
   };
 
+  // Fetch detailed property data when property selection changes
   useEffect(() => {
     if (!reportConfig.propertyId) return;
     (async () => {
@@ -221,6 +237,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   }, [reportConfig.propertyId]);
 
   // Fetch property images when property changes
+  // Supports both string array and object array formats from backend
   useEffect(() => {
     if (!reportConfig.propertyId) {
       setPropertyImages([]);
@@ -228,9 +245,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       return;
     }
     (async () => {
-      // getPropertyImages returns array of URLs or {name, url}
       const imgs = await getPropertyImages(reportConfig.propertyId);
-      // Support both string[] and {name, url}[]
+      // Normalize to {name, url} format regardless of backend response
       let imgObjs: { name: string; url: string }[] = [];
       if (imgs.length > 0 && typeof imgs[0] === "string") {
         imgObjs = imgs.map((url: string, idx: number) => ({
@@ -241,18 +257,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         imgObjs = imgs;
       }
       setPropertyImages(imgObjs);
-      setSelectedImages(imgObjs.map((img) => img.url)); // default: select all
-      // Sync to backend
+      setSelectedImages(imgObjs.map((img) => img.url)); // Default: select all images
+
+      // Sync initial selection to backend (placeholder for future implementation)
       syncSelectionToBackend(
         reportConfig.propertyId,
         imgObjs.map((img) => img.url),
         sectionSelection
       );
     })();
-    // eslint-disable-next-line
   }, [reportConfig.propertyId]);
 
-  // Sync image/feature selection to backend whenever they change
+  // Sync selection changes to backend whenever user modifies selections
   useEffect(() => {
     if (!reportConfig.propertyId) return;
     syncSelectionToBackend(
@@ -260,31 +276,30 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       selectedImages,
       sectionSelection
     );
-    // eslint-disable-next-line
   }, [selectedImages, sectionSelection]);
 
-  // Add this placeholder for backend sync (replace with real API call as needed)
+  // Placeholder for backend synchronization
+  // TODO: Replace with actual API call to save user preferences
   async function syncSelectionToBackend(
     propertyId: string,
     selectedImages: string[],
     selectedFeatures: { spaces: any; assets: any }
   ) {
-    // TODO: Implement backend sync logic here
-    // For now, just log
     console.log("Syncing selection to backend", {
       propertyId,
       selectedImages,
       selectedFeatures,
     });
   }
-  // Handle image selection toggle
+
+  // Toggle individual image selection
   const handleImageSelect = (url: string) => {
     setSelectedImages((prev) =>
       prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url]
     );
   };
 
-  // Handle section/asset selection toggle
+  // Handle basic section toggles (General Info, Plans & Documents)
   const handleSectionToggle = (
     type: "generalInfo" | "plans",
     checked: boolean
@@ -292,6 +307,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     setSectionSelection((prev) => ({ ...prev, [type]: checked }));
   };
 
+  // Handle space (room/area) selection with cascading logic
+  // When unchecking a space, automatically uncheck all its child assets
   const handleSpaceToggle = (spaceId: string, checked: boolean) => {
     setSectionSelection((prev) => {
       const newSelection = {
@@ -299,7 +316,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         spaces: { ...prev.spaces, [spaceId]: checked },
       };
 
-      // If unchecking a space, also uncheck all its assets
+      // Cascade: If unchecking a space, also uncheck all its assets
       if (!checked && property?.spaces) {
         const space = property.spaces.find((s: any) => s.space_id === spaceId);
         if (space?.assets) {
@@ -315,25 +332,26 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     });
   };
 
+  // Handle asset (feature) selection with intelligent parent-child relationships
+  // Automatically manages parent space selection based on child asset states
   const handleAssetToggle = (assetId: string, checked: boolean) => {
     setSectionSelection((prev) => {
       const newAssets = { ...prev.assets, [assetId]: checked };
       const newSpaces = { ...prev.spaces };
 
-      // Find which space this asset belongs to
+      // Find which space this asset belongs to and manage parent relationship
       if (property?.spaces) {
         for (const space of property.spaces) {
           if (space.assets?.some((asset: any) => asset.asset_id === assetId)) {
             if (checked) {
-              // If checking an asset, automatically check its parent space
+              // Auto-select parent space when selecting any child asset
               newSpaces[space.space_id] = true;
             } else {
-              // If unchecking an asset, check if any other assets in this space are still selected
+              // Only unselect parent space if no other child assets are selected
               const otherAssetsSelected = space.assets.some(
                 (asset: any) =>
                   asset.asset_id !== assetId && newAssets[asset.asset_id]
               );
-              // Only uncheck the space if no other assets are selected
               if (!otherAssetsSelected) {
                 newSpaces[space.space_id] = false;
               }
@@ -351,21 +369,23 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     });
   };
 
-  // *****************************************************************************************
-
-  // Add select all logic for images and spaces/assets
+  // Bulk selection logic for images
   const allImagesSelected =
     propertyImages.length > 0 &&
     selectedImages.length === propertyImages.length;
+
   const handleSelectAllImages = (checked: boolean) => {
     setSelectedImages(checked ? propertyImages.map((img) => img.url) : []);
   };
 
+  // Check if all spaces are currently selected
   const allSpacesSelected =
     property?.spaces &&
     Object.values(sectionSelection.spaces).filter(Boolean).length ===
       property.spaces.length;
 
+  // Bulk select/deselect all spaces and their assets
+  // Maintains parent-child relationships during bulk operations
   const handleSelectAllSpaces = (checked: boolean) => {
     if (!property?.spaces) return;
     const newSpaces: { [spaceId: string]: boolean } = {};
@@ -386,13 +406,15 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }));
   };
 
+  // Check if all assets across all spaces are selected
   const allAssetsSelected =
     property?.spaces &&
     property.spaces
       .flatMap((space: any) => space.assets || [])
       .every((asset: any) => sectionSelection.assets[asset.asset_id]);
 
-  // selecting AllAssets
+  // Bulk select/deselect all assets with intelligent space management
+  // When selecting assets, auto-select their parent spaces
   const handleSelectAllAssets = (checked: boolean) => {
     if (!property?.spaces) return;
     const newAssets: { [assetId: string]: boolean } = {};
@@ -404,7 +426,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         newAssets[asset.asset_id] = checked;
         if (checked) hasSelectedAsset = true;
       });
-      // If any asset is selected, select the space too
+      // Auto-select space if any of its assets are selected
       newSpaces[space.space_id] = hasSelectedAsset;
     });
 
@@ -712,21 +734,40 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         >
           <style>
             {`
+              /* CSS Custom Properties for consistent theming */
               :root, pdf-preview {
-                --foreground: #242424 !important; /* oklch(0.145 0 0) */
-                --card-foreground: #242424 !important; /* oklch(0.145 0 0) */
-                --popover: #ffffff !important; /* oklch(1 0 0) */
-                --popover-foreground: #242424 !important; /* oklch(0.145 0 0) */
-                --primary-foreground: #ffffff !important; /* oklch(1 0 0) */
-                --secondary: #f0f1f2 !important; /* oklch(0.95 0.0058 264.53), a bit off */
+                --foreground: #242424 !important;
+                --card-foreground: #242424 !important;
+                --popover: #ffffff !important;
+                --popover-foreground: #242424 !important;
+                --primary-foreground: #ffffff !important;
+                --secondary: #f0f1f2 !important;
               }
 
+              /* Standard PDF section styling */
               .pdf-section {
                 border: 1px solid #ccc;
                 border-radius: 12px;
                 padding: 18px 24px;
                 margin-bottom: 18px;
+                /* CRITICAL: Prevent sections from being split across PDF pages */
+                page-break-inside: avoid;
+                break-inside: avoid;
               }
+
+              /* Special styling for space sections with enhanced page-break protection */
+              .pdf-space-section {
+                border: 1px solid #ccc;
+                border-radius: 12px;
+                padding: 18px 24px;
+                margin-bottom: 18px;
+                /* Prevent space content from being cut between pages */
+                page-break-inside: avoid;
+                break-inside: avoid;
+                page-break-before: auto;  /* Allow natural page breaks before, but not inside */
+              }
+
+              /* Typography styles for PDF content */
               .pdf-section-title {
                 font-size: 1.1rem;
                 font-weight: bold;
@@ -745,13 +786,25 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 border-bottom: 1px solid #eee;
                 margin: 18px 0;
               }
+
+              /* Ensure image galleries don't break across pages */
+              .pdf-images-row {
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+
+              /* Keep space content together as a cohesive unit */
+              .pdf-space-content {
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
             `}
           </style>
           <div style={{ marginBottom: 24 }}>
             <h2
               style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}
             >
-              Review Your Submission
+              {/* REPORT */}
             </h2>
             <div className="pdf-divider" />
           </div>
@@ -808,28 +861,35 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             </div>
           )}
 
-          {/* Dynamically render all spaces and their assets */}
-          {property?.spaces?.map((space: any) =>
-            sectionSelection.spaces[space.space_id] ? (
-              <div className="pdf-section" key={space.space_id}>
-                <div className="pdf-section-title">{space.name}</div>
-                {space.assets && space.assets.length > 0 ? (
-                  space.assets
-                    .filter(
-                      (asset: any) => sectionSelection.assets[asset.asset_id]
-                    )
-                    .map((asset: any) => (
-                      <div className="pdf-sub" key={asset.asset_id}>
-                        <span className="pdf-label">{asset.type}:</span>
-                        {asset.description || "No description available"}
-                      </div>
-                    ))
-                ) : (
-                  <div className="pdf-sub">No details available</div>
-                )}
-              </div>
-            ) : null
-          )}
+          {/* Dynamically render selected spaces and their assets */}
+          {
+            /* Each space is wrapped in pdf-space-section for page-break protection */
+            property?.spaces?.map((space: any) =>
+              sectionSelection.spaces[space.space_id] ? (
+                <div className="pdf-space-section" key={space.space_id}>
+                  <div className="pdf-space-content">
+                    <div className="pdf-section-title">{space.name}</div>
+                    {space.assets && space.assets.length > 0 ? (
+                      // Only render assets that are specifically selected
+                      space.assets
+                        .filter(
+                          (asset: any) =>
+                            sectionSelection.assets[asset.asset_id]
+                        )
+                        .map((asset: any) => (
+                          <div className="pdf-sub" key={asset.asset_id}>
+                            <span className="pdf-label">{asset.type}:</span>
+                            {asset.description || "No description available"}
+                          </div>
+                        ))
+                    ) : (
+                      <div className="pdf-sub">No details available</div>
+                    )}
+                  </div>
+                </div>
+              ) : null
+            )
+          }
         </div>
         {/* PDF Footer */}
         {/* <div className="pdf-footer">
