@@ -10,13 +10,17 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, Property, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { getOwnerId, getProperty, getAdminProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
+import { Property } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 
 interface DashboardProps {
   userId: string;
+  userType: string;
+  onAddProperty?: () => void;
+  onViewProperty?: (propertyId: string) => void;
 }
 
 
@@ -31,7 +35,7 @@ interface ChangeLog {
   user_last_name: string | null;
 }
 
-export function Dashboard({ userId }: DashboardProps) {
+export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
@@ -40,15 +44,16 @@ export function Dashboard({ userId }: DashboardProps) {
       const getOwnerProps = async () => {
         try {
           // Get owner id
-          const ownerId = await getOwnerId(userId);
-          if (!ownerId) throw Error("Owner ID not found");
+          // const ownerId = await getOwnerId(userId);
+          // if (!ownerId) throw Error("Owner ID not found");
           
-          const properties = await getProperty(userId);
+          const properties = await getAdminProperty(userId, userType);
           setOwnerProperties(properties ?? []);
-  
+          
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
+          console.log("property", propertyIds);
           const changes = await getChangeLogs(propertyIds);
   
             if (!changes) {
@@ -78,76 +83,110 @@ export function Dashboard({ userId }: DashboardProps) {
       };
   
       getOwnerProps();
-  
     },[userId])
 
 
   const metrics = [
     {
-      title: "Active Properties",
-      value: "24",
-      change: "+12%",
+      title: "All Properties",
+      value: myProperties.length.toString(),
+      change: "+1 this month",
       icon: Building,
       color: "text-blue-600"
     },
     {
-      title: "Property Owners",
-      value: "18",
-      change: "+8%",
-      icon: Users,
+      title: "Active Properties",
+      value: myProperties.length.toString(),
+      change: "All operational",
+      icon: TrendingUp,
       color: "text-green-600"
     },
     {
       title: "Reports Generated",
-      value: "156",
-      change: "+23%",
+      value: "12",
+      change: "+3 this month",
       icon: FileText,
       color: "text-purple-600"
     },
     {
-      title: "Access Tokens",
-      value: "47",
-      change: "+15%",
+      title: "Access Requests",
+      value: "8",
+      change: "+2 this week",
       icon: Key,
       color: "text-orange-600"
     }
   ];
 
-  // const recentActivity = [
-  //   {
-  //     id: 1,
-  //     action: "Property onboarded",
-  //     property: "Maple Heights Development",
-  //     user: "John Smith",
-  //     time: "2 hours ago",
-  //     status: "completed"
-  //   },
-  //   {
-  //     id: 2,
-  //     action: "Access token updated",
-  //     property: "Riverside Apartments",
-  //     user: "Sarah Johnson",
-  //     time: "4 hours ago",
-  //     status: "completed"
-  //   },
-  //   {
-  //     id: 3,
-  //     action: "Report generated",
-  //     property: "Oak Grove Complex",
-  //     user: "Mike Wilson",
-  //     time: "6 hours ago",
-  //     status: "completed"
-  //   },
-  //   {
-  //     id: 4,
-  //     action: "Property transfer initiated",
-  //     property: "Pine Valley Homes",
-  //     user: "Admin",
-  //     time: "1 day ago",
-  //     status: "pending"
-  //   }
-  // ];
+  const approveEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "ACCEPTED" })
+      .eq("id", id);
 
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Approved edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+      )
+      );
+
+    }
+  };
+
+const rejectEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "DECLINED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Declined edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+      )
+      );
+    }
+  }
+
+  const getEditStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "default";
+      case "ACCEPTED":
+        return "secondary";
+      case "DECLINED":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+};
+
+function formatDate(timestamp: string | number | Date) {
+  const dateObject = new Date(timestamp);
+  return dateObject.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function formatDateTime(timestamp: string | number | Date) {
+  const dateObject = new Date(timestamp);
+  return dateObject.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
   return (
     <div className="space-y-8">
       <div>
@@ -182,11 +221,11 @@ export function Dashboard({ userId }: DashboardProps) {
       {/* Properties Preview */}
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Recently Onboarded Properties</CardTitle>
-        {/* <Button size="sm" variant="outline" onClick={onAddProperty}>
+        <CardTitle>My Properties</CardTitle>
+        <Button size="sm" variant="outline" onClick={onAddProperty}>
           <Plus className="h-4 w-4 mr-2" />
           Add Property
-        </Button> */}
+        </Button>
       </CardHeader>
 
       <CardContent>
@@ -198,7 +237,7 @@ export function Dashboard({ userId }: DashboardProps) {
                   key={property.property_id} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  // onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
@@ -233,10 +272,10 @@ export function Dashboard({ userId }: DashboardProps) {
             <p className="text-muted-foreground">
               Add your first property to get started
             </p>
-            {/* <Button className="mt-4" onClick={onAddProperty}>
+            <Button className="mt-4" onClick={onAddProperty}>
               <Plus className="h-4 w-4 mr-2" />
               Add Property
-            </Button> */}
+            </Button>
           </div>
         )}
       </CardContent>
@@ -266,31 +305,98 @@ export function Dashboard({ userId }: DashboardProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Action</TableHead>
                     <TableHead>Property</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
+                    <TableHead>Requested By</TableHead>
+                    <TableHead>Change Description</TableHead>
+                    <TableHead>Request Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Inspect</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {/* {auditLog.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-mono text-sm">{entry.timestamp}</TableCell>
-                      <TableCell>{entry.user}</TableCell>
-                      <TableCell>{entry.action}</TableCell>
-                      <TableCell>{entry.property}</TableCell>
+                <TableBody className="overflow-y:auto height:200px">
+                  {requests.map((request) => (
+                    <TableRow key={request.changelog_id}>
+                      <TableCell className="font-medium">
+                        {myProperties.find(
+                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={getActionTypeColor(entry.type)}>
-                          {entry.type}
+                        {request.user_first_name || request.user_last_name
+                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                          : "Unknown User"}
+                      </TableCell>
+                      <TableCell>{request.changelog_description}</TableCell>
+                      <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                      <TableCell>
+                        <Badge variant={getEditStatusColor(request.changelog_status)}>
+                          {request.changelog_status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {entry.details}
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Request Details</DialogTitle>
+                                <DialogDescription>Make edits to pending requests and approve changes.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-6">
+                                <div>
+                                  <Label>Property</Label>
+                                  <Input value={myProperties.find(
+                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-1">
+                                  <div>
+                                    <Label>Requested By</Label>
+                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
+                                  </div>
+                                  <div>
+                                    <Label>Request Time</Label>
+                                    <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                  </div>
+                                </div>
+                                <div>
+                                    <Label>Change Description</Label>
+                                    <Input value={request.changelog_description} readOnly />
+                                  </div>
+                                <div>
+                                  <Label>Field Specification</Label>
+                                  <td className="px-4 py-2">
+                                    <ul className="text-xs space-y-1">
+                                      {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                        <li key={key}>
+                                          <strong>{key}:</strong> {String(value)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </td>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => rejectEdit(request.changelog_id)}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </Button>
+                                  <Button onClick={() => approveEdit(request.changelog_id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))} */}
+                  ))}
                 </TableBody>
               </Table>
               <h3 className="mt-4 text-lg font-medium"></h3>
