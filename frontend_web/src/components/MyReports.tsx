@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
   Select,
@@ -501,21 +500,19 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             <Label className="block mb-1">Sections to include</Label>
             <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
               <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={sectionSelection.generalInfo}
-                  onChange={(e) =>
-                    handleSectionToggle("generalInfo", e.target.checked)
+                  onCheckedChange={(e: boolean) =>
+                    handleSectionToggle("generalInfo", e)
                   }
                 />{" "}
                 General Information
               </label>
               <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={sectionSelection.plans}
-                  onChange={(e) =>
-                    handleSectionToggle("plans", e.target.checked)
+                  onCheckedChange={(e: boolean) =>
+                    handleSectionToggle("plans", e)
                   }
                 />{" "}
                 Plans & Documents
@@ -528,10 +525,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             <div className="space-y-2">
               <Label className="block mb-1">Property Images</Label>
               <div className="flex items-center mb-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={allImagesSelected}
-                  onChange={(e) => handleSelectAllImages(e.target.checked)}
+                  onCheckedChange={(e:boolean) => handleSelectAllImages(e)}
                   id="selectAllImages"
                 />
                 <Label
@@ -605,13 +601,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                   id="selectAllSpaces"
                 /> */}
 
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={allSpacesSelected && allAssetsSelected}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    handleSelectAllSpaces(checked); // Select all rooms
-                    handleSelectAllAssets(checked); // Select all features
+                  onCheckedChange={(e : boolean) => {
+                    handleSelectAllSpaces(e); // Select all rooms
+                    handleSelectAllAssets(e); // Select all features
                   }}
                   id="selectEverything"
                 />
@@ -641,11 +635,10 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 {property.spaces.map((space: any) => (
                   <div key={space.space_id} className="mb-1">
                     <label className="flex items-center gap-2 font-medium">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={!!sectionSelection.spaces[space.space_id]}
-                        onChange={(e) =>
-                          handleSpaceToggle(space.space_id, e.target.checked)
+                        onCheckedChange={(e: boolean) =>
+                          handleSpaceToggle(space.space_id, e)
                         }
                       />
                       {space.name}
@@ -656,13 +649,12 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           key={asset.asset_id}
                           className="flex items-center gap-2 text-sm"
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={!!sectionSelection.assets[asset.asset_id]}
-                            onChange={(e) =>
+                            onCheckedChange={(e: boolean) =>
                               handleAssetToggle(
                                 asset.asset_id,
-                                e.target.checked
+                                e
                               )
                             }
                           />
