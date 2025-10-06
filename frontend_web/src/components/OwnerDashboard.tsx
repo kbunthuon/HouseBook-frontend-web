@@ -50,6 +50,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
         const properties = await getProperty(userId);
         setOwnerProperties(properties ?? []);
 
+
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
           const changes = await getChangeLogs(propertyIds);
