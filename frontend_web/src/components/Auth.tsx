@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
 import { signupUser, loginUser, validateLogin, validateSignup } from "../../../backend/AuthService";
-
+import { SignupData } from "../types/serverTypes";
 interface AuthProps {
   onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
 }
@@ -32,10 +32,7 @@ export function Auth({ onLogin }: AuthProps) {
     // Validate input
     const newErrors = await validateSignup(signupData);
     setSignupErrors(newErrors);
-    console.log(newErrors);
-    const hasErrors = Object.values(newErrors).some(arr => arr.length > 0);
-    if (hasErrors) return;
-    console.log("Error passed")
+    if (Object.keys(newErrors).length > 0) return;
 
     // Validation passes, check if backend is able to sign up
     try {
@@ -55,8 +52,6 @@ export function Auth({ onLogin }: AuthProps) {
     // Validate input
     const newErrors = await validateLogin(loginEmail, loginPassword);
     setLoginErrors(newErrors);
-    console.log("handleLogin");
-    console.log(newErrors);
     
     if (Object.keys(newErrors).length > 0) return;
 

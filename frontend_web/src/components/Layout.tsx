@@ -2,7 +2,7 @@ import { Sidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
 import { Home, Building, Users, FileText, Settings, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
-
+import { ADMIN_ROUTES } from "../Routes";
 interface LayoutProps {
   children: React.ReactNode;
   currentPage: string;
@@ -12,11 +12,11 @@ interface LayoutProps {
 
 export function Layout({ children, currentPage, onPageChange, onLogout }: LayoutProps) {
   const menuItems = [
-    { to: "/admin", label: "Dashboard", icon: Home, end: true },
-    { to: "/admin/properties", label: "Properties", icon: Building },
-    { to: "/admin/properties/new", label: "Onboarding", icon: Users },
-    { to: "/admin/reports", label: "Reports", icon: FileText },
-    { to: "/admin/admin-tools", label: "Admin", icon: Settings }
+    { to: ADMIN_ROUTES.dashboard, label: "Dashboard", icon: Home, end: true },
+    { to: ADMIN_ROUTES.properties.list, label: "Properties", icon: Building, end: true },
+    { to: ADMIN_ROUTES.properties.add, label: "Onboarding", icon: Users },
+    { to: ADMIN_ROUTES.reports, label: "Reports", icon: FileText },
+    { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings }
   ];
 
 
@@ -49,7 +49,7 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
         <div className="absolute bottom-4 left-4">
           <Button
             variant="ghost"
-            className="justify-start text-destructive hover:text-destructive"
+            className="justify-start text-destructive hover:text-destructive !important"
             onClick={onLogout}
           >
             <LogOut className="mr-3 h-4 w-4" />

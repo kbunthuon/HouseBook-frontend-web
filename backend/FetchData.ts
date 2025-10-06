@@ -1,5 +1,5 @@
 import supabase from "../config/supabaseClient";
-
+import { Property, Space, Owner } from "@housebookgroup/shared-types";
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
 export const getOwnerId = async (userId: string) => {
@@ -17,35 +17,6 @@ export const getOwnerId = async (userId: string) => {
   return data?.owner_id || null;
 };
 
-
-export type Property = { 
-  property_id: string;
-  address: string; 
-  description: string; 
-  pin: string; 
-  name: string; 
-  type: string; 
-  status: string; 
-  lastUpdated: string; 
-  completionStatus: number; 
-  totalFloorArea?: number;
-  spaces?: Space[];
-  images?: string[];
-  created_at: string;
-  splash_image?: string;
-};
-export type Space = {
-  space_id: string;
-  name: string;
-  type: string;
-  assets: Asset[];
-};
-
-export type Asset = {
-  asset_id: string;
-  type: string;
-  description: string;
-};
 // Takes in userId
 // Returns property objects that the user owns
 export const getProperty = async (userID: string) => {
@@ -100,7 +71,6 @@ export const getProperty = async (userID: string) => {
     };
   });
 
-  console.log("Fetched properties:", properties);
   return properties;
 };
 
@@ -113,9 +83,8 @@ export const getChangeLogs = async (propertyIds: string[]) => {
       changelog_description,
       changelog_created_at,
       changelog_status,
-      property_id,
-      user_first_name,
-      user_last_name
+      user: User ( first_name, last_name ),
+      property_id
     `)
     .in("property_id", propertyIds)
     .order("changelog_created_at", { ascending: false });
@@ -166,7 +135,6 @@ export const getPropertyDetails = async (propertyId: string) => {
   const spaceMap: Record<string, Space> = {};
 
   for (const row of data) {
-    console.log(row);
     if (!row.spaces_id) continue;
 
     if (!spaceMap[row.spaces_id]) {
@@ -211,8 +179,6 @@ export const getPropertyImages = async (propertyId: string, imageName?: string) 
     return [];
   }
 
-  console.log("Image row:", imagesData);
-  console.log(propertyId);
   const imageSet = new Set<string>();
 
   imagesData?.forEach((row) => {
@@ -225,15 +191,6 @@ export const getPropertyImages = async (propertyId: string, imageName?: string) 
 
   return Array.from(imageSet);
 }
-
-
-
-export type Owner = {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-};
 
 export const getPropertyOwners = async (propertyId: string) => {
   const { data, error } = await supabase
@@ -253,18 +210,37 @@ export const getPropertyOwners = async (propertyId: string) => {
   return owners || null;
 }
 
-export const getUserInfoByEmail = async (email: string) => {
+export const getUserIdByEmail = async (email: string) => {
   // Query the "users" table for the row with the matching email
   const { data, error } = await supabase
     .from("User")
-    .select("user_id, first_name, last_name, phone")
+    .select("user_id")
     .eq("email", email.trim())
     .maybeSingle();
 
+  console.log("data");
+  console.log(data);
+
   if (error) {
-    console.error("Error fetching User Infor by Email:", error);
+    console.error("Error fetching user ID:", error);
     return null;
   }
 
-  return data || null;
+  return data?.user_id || null;
 };
+
+
+// export async function fetchAssetType(): Promise<Record<string, string[]>> {
+//   const { data, error } = await supabase
+//     .from("AssetTypes") 
+//     .select("name, discipline");
+
+//   if (error) throw error;
+
+//   // { "Painting": ["Interior Wall","Exterior Wall","Ceiling"], ... }
+//   const byDiscipline: Record<string, string[]> = {};
+//   (data as AssetType[]).forEach(({ name, discipline }) => {
+//     (byDiscipline[discipline] ||= []).push(name);
+//   });
+//   return byDiscipline;
+// }

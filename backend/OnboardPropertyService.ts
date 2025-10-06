@@ -1,45 +1,10 @@
 import supabase from "../config/supabaseClient";
-import { getOwnerId, getUserInfoByEmail } from "./FetchData";
+import { getOwnerId, getUserIdByEmail } from "./FetchData";
 
 // Setting what OwnerData looks like
-export interface OwnerData {
-  firstName: string,
-  lastName: string,
-  email: string,
-  phone: string
-}
+import { OwnerData, FormData, SpaceInt } from "@housebookgroup/shared-types";
 
-// Setting what FormData looks like
-export interface FormData {
-    // Basic Information
-    propertyName: string,
-    propertyDescription: string,
-    address: string,
-    // Plans & Documents
-    floorPlans: File[],
-    buildingPlans: File[]
-}
-
-// Setting what an Asset or Space looks like
-export interface AssetFeature {
-  name: string;
-  value: string;
-}
-
-export interface Asset {
-  typeId: string;
-  name: string;  // Only to display in the frontend, name is not stored in database
-  description: string; // description is stored in database
-  features: AssetFeature[];
-}
-
-export interface Space {
-  type: string;
-  name: string;
-  assets: Asset[];
-}
-
-export async function ownerOnboardProperty(formData: FormData, spaces: Space[]) {
+export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
   // Get the user id
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw new Error("User ID not returned from signup");
@@ -59,7 +24,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: Space[]) 
 
 }
 
-export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: Space[]) {
+export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: SpaceInt[]) {
   // Check if this user account exists
   // const exists = await checkOwnerExists(ownerData);
   // if (!exists) {
@@ -68,36 +33,20 @@ export async function adminOnboardProperty(ownerData: OwnerData, formData: FormD
   // }
 
   // Get the user id using the owner's email
-  const userData = await getUserInfoByEmail(ownerData.email);
-  if (!userData) throw new Error("User data not returned from signup. Email not found.");
-  console.log("userData:", userData);
-
-  // Check details: first name, last name and phone
-  let errorFound = false;
-  if (ownerData.firstName != userData.first_name) {
-    console.error("First name is not correct");
-    errorFound = true;
-  }
-  if (ownerData.lastName != userData.last_name) {
-    console.error("Last name is not correct");
-    errorFound = true;
-  }
-  if (ownerData.phone != userData.phone) {
-    console.error("Phone number is not correct");
-    errorFound = true;
-  }
-  if (errorFound) console.error("Invalid inputs");
-
-
+  const userId = await getUserIdByEmail(ownerData.email);
+  if (!userId) throw new Error("User ID not returned from signup");
+  console.log("userId:");
+  console.log(userId);
+  
   // Get the owner id
-  const ownerId = await getOwnerId(userData.user_id);
+  const ownerId = await getOwnerId(userId);
 
   // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);
 
   // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
   // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
-  await saveDetails(spaces, propertyId, userData.user_id);
+  await saveDetails(spaces, propertyId, userId);
 
   return propertyId || null;
 
@@ -160,7 +109,7 @@ const saveProperty = async (formData: FormData, ownerId: string) => {
   }
 };
 
-const saveDetails = async (spaces: Space[], propertyId: string, userId: string) => {
+const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: string) => {
   try {
     for (const space of spaces) {
       // 1. Insert Space

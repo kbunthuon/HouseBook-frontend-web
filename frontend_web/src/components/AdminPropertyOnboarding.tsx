@@ -14,42 +14,27 @@ import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
-import { adminOnboardProperty, FormData, Space, OwnerData } from "../../../backend/OnboardPropertyService";
-import { ROUTES } from "./Routes";
+import { adminOnboardProperty } from "../../../backend/OnboardPropertyService";
+import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
+import { ADMIN_ROUTES } from "../Routes";
+import { useAdminFormContext } from "./FormContext";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([
-    {
-      type: "",
-      name: "",
-      assets: [
-        {
-          typeId: "",
-          name: "",
-          description: "",
-          features: [{ name: "" , value: ""}]
-        }
-      ]
-    }
-  ]);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    // General Information
-    propertyName: "",
-    propertyDescription: "",
-    address: "",
-    // Plans & Documents
-    floorPlans: [] as File[],
-    buildingPlans: [] as File[]
-  });
-  const [ownerData, setOwnerData] = useState<OwnerData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: ""
-  });
+  
+
+  const {
+      formData,
+      setFormData,
+      spaces,
+      setSpaces,
+      currentStep,
+      setCurrentStep,
+      resetForm,
+      ownerData,
+      setOwnerData
+    } = useAdminFormContext();
 
   const navigate = useNavigate();
 
@@ -82,12 +67,18 @@ export function AdminPropertyOnboarding() {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
-      // No longer Next button, this will be complete onboarding
-      // Let backend handle saving information in database
-      const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
-      console.log(propertyId);
-      
-      navigate(ROUTES.ownerProperties(propertyId));
+      try {
+        const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
+        console.log(propertyId);
+        
+        // Reset the form data after successful submission
+        resetForm();
+        
+        navigate(ADMIN_ROUTES.properties.detail(propertyId));
+      } catch (error) {
+        console.error("Failed to onboard property:", error);
+        // Handle error (maybe show a toast or error message)
+      }
     }
   };
 
@@ -108,12 +99,12 @@ export function AdminPropertyOnboarding() {
 
   // Add a new Space
   const addSpace = () => {
-    setSpaces((prev: Space[]) => [...prev, { type: "", name: "", assets: [] }]);
+    setSpaces((prev: SpaceInt[]) => [...prev, { type: "", name: "", assets: [] }]);
   };
 
   // Update Space Name
   const updateSpaceName = (index: number, name: string) => {
-    setSpaces((prev: Space[]) => {
+    setSpaces((prev: SpaceInt[]) => {
       const newSpaces = [...prev]
       newSpaces[index] = { ...newSpaces[index], name };
       return newSpaces;
