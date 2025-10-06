@@ -122,7 +122,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route index element={<DashboardPage userId={userId} userType={userType} />} />
           <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
           <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
@@ -189,6 +189,19 @@ function RequireRole({
 }
 
 /** ---------- Admin nested helpers ---------- */
+function DashboardPage({ userId, userType}: { userId: string, userType: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <Dashboard
+      userId={userId}
+      userType={userType}
+      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ADMIN_ROUTES.properties.add)}
+    />
+  );
+}
+
 function AdminPropertiesPage() {
   const navigate = useNavigate();
   return (
