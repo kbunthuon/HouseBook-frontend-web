@@ -915,6 +915,10 @@
   .max-h-\[300px\] {
     max-height: 300px;
   }
+  
+  .max-h-\[95vh\] {
+    max-height: 95vh;
+  }
 
   .max-h-\[90vh\] {
     max-height: 90vh;
@@ -923,6 +927,11 @@
   .max-h-\[35vh\] {
     max-height:35vh;
   }
+
+  .max-h-\[50vh\] {
+    max-height:50vh;
+  }
+
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
   }
@@ -1025,6 +1034,10 @@
 
   .max-w-\(--skeleton-width\) {
     max-width: var(--skeleton-width);
+  }
+
+  .max-w-\[95vh\] {
+    max-width: 95vh;
   }
 
   .max-w-2xl {
@@ -1330,6 +1343,23 @@
   .gap-6 {
     gap: calc(var(--spacing) * 6);
   }
+
+  .border-l-destructive {
+    border-left: 8px solid #F87171; /* red */
+  }
+
+  .border-l-primary {
+    border-left: 8px solid #3B82F6; /* blue */
+  }
+
+  .border-l-secondary {
+    border-left: 8px solid #A3A3A3; /* gray */
+  }
+
+  .border-none {
+    border: 0;
+  }
+
 
   :where(.space-y-0 > :not(:last-child)) {
     --tw-space-y-reverse: 0;

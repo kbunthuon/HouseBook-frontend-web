@@ -1,67 +1,40 @@
-// src/services/ChangeLogService.ts
+// backend/ChangeLogService.ts
 import supabase from "../config/supabaseClient";
+import { ChangeLog } from "@housebookgroup/shared-types";
 
 export enum ChangeLogStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED'
+  REJECTED = 'REJECTED',
+  ACCEPTED = 'ACCEPTED'
 }
 
-export interface ChangeLogEntry {
-  id: string;
-  asset_id: string;
-  specifications: {
-    before?: Record<string, any>;
-    after?: Record<string, any>;
-    timestamp: string;
-  };
-  change_description: string;
-  changed_by_user_id?: string;
-  created_at: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  // Joined data from the query
-  Assets?: {
-    id: string;
-    AssetTypes?: {
-      name: string;
-    };
-    Spaces?: {
-      id: string;
-      name: string;
-      property_id: string;
-    };
-  };
+export enum ChangeLogAction {
+  CREATED = 'CREATED',
+  UPDATED = 'UPDATED',
+  DELETED = 'DELETED'
 }
 
 /**
  * Creates a changelog entry when an asset is modified
- * @param assetId - ID of the modified asset
- * @param changeDescription - Description of what was changed
- * @param oldSpecs - Previous specifications
- * @param newSpecs - New specifications
- * @returns Created changelog entry
+ * Stores a full snapshot of the asset's current_specifications after the action
  */
 export async function createChangeLogEntry(
   assetId: string,
   changeDescription: string,
-  oldSpecs: Record<string, any> = {},
-  newSpecs: Record<string, any> = {}
-): Promise<ChangeLogEntry> {
+  action: ChangeLogAction = ChangeLogAction.UPDATED,
+  currentSpecifications: Record<string, any> = {}
+): Promise<ChangeLog> {
   try {
-    const specifications = {
-      before: oldSpecs,
-      after: newSpecs,
-      timestamp: new Date().toISOString()
-    };
-
     const { data, error } = await supabase
       .from("ChangeLog")
       .insert({
         asset_id: assetId,
-        specifications,
+        specifications: currentSpecifications, // Full snapshot after action
         change_description: changeDescription,
         changed_by_user_id: (await supabase.auth.getUser()).data.user?.id || null,
-        status: ChangeLogStatus.APPROVED
+        status: ChangeLogStatus.ACCEPTED,
+        actions: action
       })
       .select()
       .single();
@@ -79,18 +52,19 @@ export async function createChangeLogEntry(
 }
 
 /**
- * Gets changelog entries for a specific asset
- * @param assetId - ID of the asset
- * @returns Array of changelog entries for the asset
+ * Gets changelog entries for a specific asset (only ACCEPTED status)
+ * Includes soft-deleted assets in history
  */
-export async function getAssetHistory(assetId: string): Promise<ChangeLogEntry[]> {
+export async function getAssetHistory(assetId: string): Promise<ChangeLog[]> {
   try {
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
         *,
-        Assets!inner(
+        Assets(
           id,
+          description,
+          deleted,
           AssetTypes!inner(name),
           Spaces!inner(
             id,
@@ -100,6 +74,7 @@ export async function getAssetHistory(assetId: string): Promise<ChangeLogEntry[]
         )
       `)
       .eq("asset_id", assetId)
+      .eq("status", ChangeLogStatus.ACCEPTED)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -115,66 +90,75 @@ export async function getAssetHistory(assetId: string): Promise<ChangeLogEntry[]
 }
 
 /**
- * Gets changelog entries for all assets in a specific space
- * @param spaceId - ID of the space
- * @returns Array of changelog entries for all assets in the space
+ * Gets changelog entries for all assets in a specific space (including deleted assets)
  */
-export async function getSpaceHistory(spaceId: string): Promise<ChangeLogEntry[]> {
+export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
   try {
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
         *,
-        Assets!inner(
+        Assets(
           id,
-          space_id,
-          AssetTypes!inner(name),
-          Spaces!inner(
+          description,
+          deleted,
+          AssetTypes(name),
+          Spaces(
             id,
             name,
-            property_id
+            property_id,
+            deleted
           )
         )
       `)
-      .eq("Assets.space_id", spaceId)
+      .eq("Assets.Spaces.id", spaceId)
+      .eq("status", ChangeLogStatus.ACCEPTED)
       .order("created_at", { ascending: false });
+
+    console.log("getSpaceHistory: ", data, spaceId);
 
     if (error) {
       console.error("Error fetching space history:", error);
       throw new Error(`Failed to fetch space history: ${error.message}`);
     }
 
-    return data || [];
+    // Filter out entries where Assets is null (asset was hard-deleted)
+    // This can happen if an asset's changelog entries remain after the asset is deleted
+    return (data || []).filter(entry => entry.Assets !== null);
   } catch (error) {
     console.error("Error in getSpaceHistory:", error);
     throw error;
   }
 }
 
+
 /**
- * Gets changelog entries for all assets in a specific property
- * @param propertyId - ID of the property
- * @returns Array of changelog entries for all assets in the property
+ * Gets changelog entries for all assets in a specific property (including deleted)
  */
-export async function getPropertyHistory(propertyId: string): Promise<ChangeLogEntry[]> {
+export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[]> {
   try {
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
         *,
-        Assets!inner(
+        Assets(
           id,
+          description,
+          deleted,
           AssetTypes!inner(name),
           Spaces!inner(
             id,
             name,
-            property_id
+            property_id,
+            deleted
           )
         )
       `)
       .eq("Assets.Spaces.property_id", propertyId)
+      .eq("status", ChangeLogStatus.ACCEPTED)
       .order("created_at", { ascending: false });
-
+      
+      console.log("getPropertyHistory: ", data, propertyId);
     if (error) {
       console.error("Error fetching property history:", error);
       throw new Error(`Failed to fetch property history: ${error.message}`);
@@ -183,57 +167,6 @@ export async function getPropertyHistory(propertyId: string): Promise<ChangeLogE
     return data || [];
   } catch (error) {
     console.error("Error in getPropertyHistory:", error);
-    throw error;
-  }
-}
-
-/**
- * Updates the PropertyEditService functions to automatically create changelog entries
- */
-export async function updateAssetWithHistory(
-  assetId: string,
-  updates: { type?: string; description?: string },
-  changeDescription?: string
-): Promise<any> {
-  try {
-    // First, get the current asset data for changelog
-    const { data: currentAsset, error: fetchError } = await supabase
-      .from("Assets")
-      .select(`
-        *,
-        AssetTypes!inner(name),
-        Spaces!inner(name)
-      `)
-      .eq("id", assetId)
-      .single();
-
-    if (fetchError) {
-      throw new Error(`Failed to fetch current asset: ${fetchError.message}`);
-    }
-
-    const oldSpecs = {
-      type: currentAsset.AssetTypes.name,
-      description: currentAsset.description
-    };
-
-    // Update the asset (reuse existing updateAsset function)
-    const { updateAsset } = await import('./PropertyEditService');
-    const updatedAsset = await updateAsset(assetId, updates);
-
-    const newSpecs = {
-      type: updates.type || currentAsset.AssetTypes.name,
-      description: updates.description || currentAsset.description
-    };
-
-    // Create changelog entry
-    const description = changeDescription || 
-      `Updated ${updates.type ? 'type' : ''}${updates.type && updates.description ? ' and ' : ''}${updates.description ? 'description' : ''} for ${currentAsset.AssetTypes.name} in ${currentAsset.Spaces.name}`;
-
-    await createChangeLogEntry(assetId, description, oldSpecs, newSpecs);
-
-    return updatedAsset;
-  } catch (error) {
-    console.error("Error in updateAssetWithHistory:", error);
     throw error;
   }
 }
