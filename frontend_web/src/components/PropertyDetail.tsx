@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
@@ -44,7 +44,7 @@ interface BackendProperty {
   Spaces?: BackendSpace[];
 }
 import { fetchJobsInfo, Job, JobAsset, JobStatus, deleteJob } from "../../../backend/JobService";
-import { cn } from "./ui/utils";
+
 import { 
   updateProperty, 
   updateSpace, 
@@ -62,6 +62,7 @@ import {
   AssetUpdate 
 } from "../../../backend/PropertyEditService";
 import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
+import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -99,6 +100,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [changelogHistory, setChangelogHistory] = useState<ChangeLog[]>([]);
   const [spaceChangelogHistory, setSpaceChangelogHistory] = useState<ChangeLog[]>([]);
   const [assetTypes, setAssetTypes] = useState<any[]>([]);
+  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -162,6 +164,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   useEffect(() => {
     fetchData();
     loadAssetTypes();
+    loadSpaceTypes();
   }, [propertyId]);
 
   const fetchData = async () => {
@@ -230,6 +233,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       setAssetTypes(types);
     } catch (error) {
       console.error("Failed to load asset types:", error);
+    }
+  };
+
+  const loadSpaceTypes = async () => {
+    try {
+      const types = await fetchSpaceEnum();
+      setSpaceTypes(types || []);
+      // if creating a space and no type set, default to first enum
+      if (!formData.type && types && types.length > 0) {
+        setFormData((f: any) => ({ ...f, type: types[0] }));
+      }
+    } catch (err) {
+      console.error("Failed to load space types:", err);
     }
   };
 
@@ -422,6 +438,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         setSpaceChangelogHistory([]);
       }
     }
+
+    console.log(spaceId, spaceName, spaceChangelogHistory);
     setIsTimelineDialogOpen(true);
   };
 
@@ -545,7 +563,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
                         onClick={() => handleDeleteFeature(asset.id, key)}
                       >
-                        <X className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -608,8 +626,17 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                 <Input value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
               <div>
-                <Label>Space Type</Label>
-                <Input value={formData.type || ''} onChange={(e) => setFormData({...formData, type: e.target.value})} />
+                  <Label>Space Type</Label>
+                <Select value={formData.type} onValueChange={(value: string) => setFormData({...formData, type: e.target.value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spaceTypes.map((st) => (
+                      <SelectItem key={st} value={st}>{st}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
@@ -729,11 +756,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="LIVING">Living</SelectItem>
-                      <SelectItem value="BEDROOM">Bedroom</SelectItem>
-                      <SelectItem value="BATHROOM">Bathroom</SelectItem>
-                      <SelectItem value="KITCHEN">Kitchen</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
+                      {spaceTypes.map((st) => (
+                        <SelectItem key={st} value={st}>{st}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1173,7 +1198,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
       <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
+            <DialogTitle className="flex items-center mb-4">
               <History className="h-5 w-5 mr-2" />Space Edit History
             </DialogTitle>
           </DialogHeader>
@@ -1211,10 +1236,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Dialog>
 
       {/* All Property History Dialog */}
-    <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
-  <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
+      <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
+        <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
+            <DialogTitle className="flex items-center mb-4">
               <History className="h-5 w-5 mr-2" />Complete Property History
             </DialogTitle>
           </DialogHeader>

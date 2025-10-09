@@ -94,6 +94,24 @@ export async function getAssetHistory(assetId: string): Promise<ChangeLog[]> {
  */
 export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
   try {
+    // 1) fetch asset IDs for the space (including soft-deleted assets)
+    const { data: assets, error: assetsErr } = await supabase
+      .from("Assets")
+      .select("id")
+      .eq("space_id", spaceId);
+
+    if (assetsErr) {
+      console.error("Error fetching assets for space:", assetsErr);
+      throw new Error(`Failed to fetch assets for space: ${assetsErr.message}`);
+    }
+
+    const assetIds = (assets || []).map((a: any) => a.id).filter(Boolean);
+
+    if (assetIds.length === 0) {
+      return [];
+    }
+
+    // 2) fetch changelog entries for those assets
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
@@ -103,28 +121,20 @@ export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
           description,
           deleted,
           AssetTypes(name),
-          Spaces(
-            id,
-            name,
-            property_id,
-            deleted
-          )
+          Spaces(id, name, property_id, deleted)
         )
       `)
-      .eq("Assets.Spaces.id", spaceId)
+      .in("asset_id", assetIds)
       .eq("status", ChangeLogStatus.ACCEPTED)
       .order("created_at", { ascending: false });
-
-    console.log("getSpaceHistory: ", data, spaceId);
 
     if (error) {
       console.error("Error fetching space history:", error);
       throw new Error(`Failed to fetch space history: ${error.message}`);
     }
 
-    // Filter out entries where Assets is null (asset was hard-deleted)
-    // This can happen if an asset's changelog entries remain after the asset is deleted
-    return (data || []).filter(entry => entry.Assets !== null);
+    // filter out any entries where Assets relation could not be joined
+    return (data || []).filter((entry: any) => entry.Assets !== null);
   } catch (error) {
     console.error("Error in getSpaceHistory:", error);
     throw error;
