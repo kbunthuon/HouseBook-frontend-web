@@ -15,7 +15,34 @@ import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
 import { getPropertyImages, getPropertyOwners } from "../../../backend/FetchData";
-import { Property, Owner, Space, Asset, ChangeLog } from "../types/serverTypes";
+import { Owner, ChangeLog } from "../types/serverTypes";
+
+// Backend-shaped types (matches getPropertyForEdit response)
+interface BackendAsset {
+  id: string;
+  description?: string;
+  current_specifications?: Record<string, any>;
+  deleted?: boolean;
+  AssetTypes?: { id: number; name: string; discipline?: string };
+}
+
+interface BackendSpace {
+  id: string;
+  name: string;
+  type?: string;
+  deleted?: boolean;
+  Assets?: BackendAsset[];
+}
+
+interface BackendProperty {
+  property_id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  total_floor_area?: number;
+  images?: string[];
+  Spaces?: BackendSpace[];
+}
 import { fetchJobsInfo, Job, JobAsset, JobStatus, deleteJob } from "../../../backend/JobService";
 import { cn } from "./ui/utils";
 import { 
@@ -65,7 +92,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'space' | 'asset' | 'feature', id?: string, name?: string }>({ type: 'asset' });
 
-  const [property, setProperty] = useState<Property | null>(null);
+  const [property, setProperty] = useState<BackendProperty | null>(null);
   const [owners, setOwners] = useState<Owner[] | null>(null);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [allJobAssets, setAllJobAssets] = useState<JobAsset[]>([]);
@@ -84,6 +111,53 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     description: string;
     specifications: Record<string, any>;
   }>>([]);
+  // Feature form visibility states
+  const [showFeatureFormAssetEdit, setShowFeatureFormAssetEdit] = useState(false);
+  const [showFeatureFormCreateAsset, setShowFeatureFormCreateAsset] = useState(false);
+  const [featureFormCreateSpaceIndex, setFeatureFormCreateSpaceIndex] = useState<number | null>(null);
+
+  // Small reusable in-place feature editor card (name + value)
+  function FeatureCard({
+    initialName = "",
+    initialValue = "",
+    onAdd,
+    onCancel,
+    className = "",
+  }: {
+    initialName?: string;
+    initialValue?: string;
+    onAdd: (name: string, value: string) => void;
+    onCancel: () => void;
+    className?: string;
+  }) {
+    const [name, setName] = useState(initialName);
+    const [value, setValue] = useState(initialValue);
+
+    return (
+      <div className={`pt-3 ${className}`}>
+        <Card className="w-full">
+          <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto pt-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="block">Feature name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <Label className="block">Feature value</Label>
+                <Input value={value} onChange={(e) => setValue(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+              <Button size="sm" onClick={() => { if (name.trim()) { onAdd(name.trim(), value); } }}>
+                OK
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchData();
@@ -96,7 +170,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       setError(null);
 
       const result = await getPropertyForEdit(propertyId);
-      if (result) setProperty(result);
+  if (result) setProperty(result);
       else setError("Property not found");
 
       // Fetch images
@@ -120,6 +194,35 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     }
   };
 
+  // Map backend-shaped property to the shared Property shape expected by some child components
+  const mapToSharedProperty = (bp: BackendProperty | null) => {
+    if (!bp) return null;
+    return {
+      property_id: bp.property_id,
+      address: bp.address || bp.address || "",
+      description: bp.description || "",
+      pin: "",
+      name: bp.name,
+      type: bp.total_floor_area ? "" : "",
+      status: "",
+      lastUpdated: "",
+      completionStatus: 0,
+      totalFloorArea: bp.total_floor_area,
+      spaces: bp.Spaces?.map(s => ({
+        space_id: s.id,
+        name: s.name,
+        type: s.type || "",
+        assets: s.Assets?.map(a => ({
+          asset_id: a.id,
+          type: a.AssetTypes?.name || a.type || "",
+          description: a.description || "",
+        })) || [],
+      })) || [],
+      images: bp.images || [],
+      created_at: "",
+    } as any;
+  };
+
 
   const loadAssetTypes = async () => {
     try {
@@ -137,7 +240,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       name: property?.name || '',
       description: property?.description || '',
       address: property?.address || '',
-      type: property?.type || 'Townhouse',
+      type: 'Townhouse',
       total_floor_area: property?.total_floor_area || 0
     });
     setIsDialogOpen(true);
@@ -461,7 +564,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (dialogContext.mode === 'property') {
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[80vw] max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Property Details</DialogTitle>
             </DialogHeader>
@@ -495,7 +598,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (dialogContext.mode === 'space') {
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[80vw] max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit {dialogContext.spaceName}</DialogTitle>
             </DialogHeader>
@@ -521,7 +624,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (dialogContext.mode === 'asset') {
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="w-[90vw] max-w-[90vh] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit {dialogContext.assetType}</DialogTitle>
             </DialogHeader>
@@ -537,25 +640,32 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => {
-                      const key = prompt("Enter feature name:");
-                      if (key) {
-                        const value = prompt("Enter feature value:");
-                        if (value) {
-                          setFormData({
-                            ...formData,
-                            current_specifications: {
-                              ...formData.current_specifications,
-                              [key]: value
-                            }
-                          });
-                        }
-                      }
-                    }}
+                    onClick={() => setShowFeatureFormAssetEdit(true)}
                   >
                     <Plus className="h-3 w-3 mr-1" />Add Feature
                   </Button>
                 </div>
+
+                {/* Feature form appears below header and above the list */}
+                {showFeatureFormAssetEdit && (
+                  <div className="mt-2">
+                    <FeatureCard
+                      className="w-full"
+                      onAdd={(name, value) => {
+                        setFormData({
+                          ...formData,
+                          current_specifications: {
+                            ...formData.current_specifications,
+                            [name]: value,
+                          },
+                        });
+                        setShowFeatureFormAssetEdit(false);
+                      }}
+                      onCancel={() => setShowFeatureFormAssetEdit(false)}
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {Object.entries(formData.current_specifications || {}).map(([key, value]) => (
                     <div key={key} className="flex items-center space-x-2 p-2 border rounded">
@@ -601,7 +711,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Space</DialogTitle>
               <DialogDescription>Add a new space with at least one asset and one feature per asset</DialogDescription>
@@ -695,29 +805,35 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                         />
                       </div>
                       <div>
-                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex justify-between items-center mb-2">
                           <Label>Features * (at least one)</Label>
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => {
-                              const key = prompt("Enter feature name:");
-                              if (key) {
-                                const value = prompt("Enter feature value:");
-                                if (value) {
-                                  const updated = [...newSpaceAssets];
-                                  updated[idx] = {
-                                    ...asset,
-                                    specifications: {...asset.specifications, [key]: value}
-                                  };
-                                  setNewSpaceAssets(updated);
-                                }
-                              }
-                            }}
+                            onClick={() => { setFeatureFormCreateSpaceIndex(idx); setShowFeatureFormCreateAsset(true); }}
                           >
                             <Plus className="h-3 w-3 mr-1" />Add
                           </Button>
                         </div>
+
+                        {/* Feature card below header */}
+                        {showFeatureFormCreateAsset && featureFormCreateSpaceIndex === idx && (
+                          <FeatureCard
+                            className="w-full mb-2"
+                            onAdd={(name, value) => {
+                              const updated = [...newSpaceAssets];
+                              updated[idx] = {
+                                ...asset,
+                                specifications: { ...asset.specifications, [name]: value },
+                              };
+                              setNewSpaceAssets(updated);
+                              setShowFeatureFormCreateAsset(false);
+                              setFeatureFormCreateSpaceIndex(null);
+                            }}
+                            onCancel={() => { setShowFeatureFormCreateAsset(false); setFeatureFormCreateSpaceIndex(null); }}
+                          />
+                        )}
+
                         <div className="space-y-1">
                           {Object.entries(asset.specifications).map(([key, value]) => (
                             <div key={key} className="flex items-center space-x-2 text-sm">
@@ -771,7 +887,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Asset in {dialogContext.spaceName}</DialogTitle>
               <DialogDescription>Asset must have at least one feature</DialogDescription>
@@ -801,38 +917,42 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => {
-                      const key = prompt("Enter feature name:");
-                      if (key) {
-                        const value = prompt("Enter feature value:");
-                        if (value) {
-                          setFormData({
-                            ...formData,
-                            specifications: {...(formData.specifications || {}), [key]: value}
-                          });
-                        }
-                      }
-                    }}
+                    onClick={() => setShowFeatureFormCreateAsset(true)}
                   >
                     <Plus className="h-3 w-3 mr-1" />Add Feature
                   </Button>
+                  {showFeatureFormCreateAsset && (
+                    <FeatureCard
+                      className="w-full mt-2"
+                      onAdd={(name, value) => {
+                        setFormData({
+                          ...formData,
+                          specifications: { ...(formData.specifications || {}), [name]: value },
+                        });
+                        setShowFeatureFormCreateAsset(false);
+                      }}
+                      onCancel={() => setShowFeatureFormCreateAsset(false)}
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   {Object.entries(formData.specifications || {}).map(([key, value]) => (
-                    <div key={key} className="flex items-center space-x-2 p-2 border rounded">
-                      <span className="font-medium flex-1">{key}:</span>
-                      <span className="flex-1">{String(value)}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          const specs = {...formData.specifications};
-                          delete specs[key];
-                          setFormData({...formData, specifications: specs});
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    <div key={key} className="grid grid-cols-2 gap-2 items-center p-2 border rounded">
+                      <div className="font-medium">{key}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">{String(value)}</div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            const specs = {...formData.specifications};
+                            delete specs[key];
+                            setFormData({...formData, specifications: specs});
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                   {Object.keys(formData.specifications || {}).length === 0 && (
@@ -865,7 +985,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="default">{property?.status ?? "Active"}</Badge>
+          <Badge variant="default">{(property && (property as any).status) ?? "Active"}</Badge>
           <Button variant="outline" size="sm" onClick={handleEditProperty}>
             <Edit className="h-4 w-4 mr-2" />Edit Property
           </Button>
@@ -971,7 +1091,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             title={space.name}
             spaceId={space.id}
             spaceName={space.name}
-            assets={space.Assets.filter(asset => !asset.deleted).map(asset => ({
+            assets={(space.Assets ?? []).filter(asset => !asset.deleted).map(asset => ({
               id: asset.id,
               description: asset.description,
               discipline: asset.AssetTypes?.discipline ?? "",
@@ -1007,7 +1127,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={property} onSave={handleSavePin} />
+  {/* Pass the mapped shared property to components expecting the shared Property shape */}
+  <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(property)} onSave={handleSavePin} />
 
       {renderDialog()}
 
@@ -1049,8 +1170,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </AlertDialog>
 
       {/* Space History Dialog */}
-      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+      <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <History className="h-5 w-5 mr-2" />Space Edit History
@@ -1090,8 +1211,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Dialog>
 
       {/* All Property History Dialog */}
-      <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
+  <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <History className="h-5 w-5 mr-2" />Complete Property History

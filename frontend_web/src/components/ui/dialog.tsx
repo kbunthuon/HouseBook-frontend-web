@@ -46,13 +46,18 @@ const DialogContent = React.forwardRef<
       ref={ref}
       data-slot="dialog-content"
       aria-describedby={props["aria-describedby"] ?? undefined}
+      // default sensible maxHeight to keep dialogs viewport-constrained; callers can still override via className/style
+      style={{ ...(props as any).style, maxHeight: (props as any)?.style?.maxHeight ?? '88vh' }}
       className={cn(
         "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed top-[50%] left-[50%] z-50 flex flex-col w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg",
         className,
       )}
       {...props}
     >
-      {children}
+      {/* inner wrapper lets dialog body scroll while footer/header remain visible */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {children}
+      </div>
       {!hideCloseButton && (
         <DialogPrimitive.Close className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100">
           <XIcon />
