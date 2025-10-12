@@ -113,13 +113,14 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const userId = await apiClient.getUserInfoByEmail(ownerEmail);
-        if (!userId) {
+        const {user_id, first_name, last_name, phone} = await apiClient.getUserInfoByEmail(ownerEmail);
+        console.log("Fetched userId for email", ownerEmail, user_id);
+        if (!user_id) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
-        const props = await apiClient.getPropertyList(userId);
+        const props = await apiClient.getPropertyList(user_id);
         if (props && Array.isArray(props)) {
           setMyProperties(
             props.map((p) => ({ id: p.property_id, name: p.name }))
@@ -241,20 +242,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }
     (async () => {
       const imgs = await apiClient.getPropertyImages(reportConfig.propertyId);
-      // Normalize to {name, url} format regardless of backend response
-      let imgObjs: { name: string; url: string }[] = [];
-      if (imgs.length > 0 && typeof imgs[0] === "string") {
-        imgObjs = imgs.map((url: string, idx: number) => ({
-          name: `Image ${idx + 1}`,
-          url,
-        }));
-      } else {
-        imgObjs = imgs;
-      }
-      setPropertyImages(imgObjs);
-      setSelectedImages(imgObjs.map((img) => img.url)); // Default: select all images
 
-      // Sync initial selection to backend (placeholder for future implementation)
+      // imgs might be { images: [...] }
+      const urls: string[] = Array.isArray(imgs) ? imgs : imgs.images || [];
+
+      const imgObjs: { name: string; url: string }[] = urls.map((url, idx) => ({
+        name: `Image ${idx + 1}`,
+        url,
+      }));
+
+      setPropertyImages(imgObjs);
+      setSelectedImages(imgObjs.map((img) => img.url));
+
       syncSelectionToBackend(
         reportConfig.propertyId,
         imgObjs.map((img) => img.url),
