@@ -5,8 +5,10 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Building } from "lucide-react";
-import { signupUser, loginUser, validateLogin, validateSignup } from "../../../backend/AuthService";
+import { validateLogin, validateSignup } from "../../../backend/AuthService";
 import { SignupData } from "../types/serverTypes";
+import { apiClient} from '../api/wrappers';
+import { LoginParams } from "../api/routes";
 interface AuthProps {
   onLogin: (email: string, userType: "admin" | "owner", user_id: string) => void;
 }
@@ -36,7 +38,7 @@ export function Auth({ onLogin }: AuthProps) {
 
     // Validation passes, check if backend is able to sign up
     try {
-      const result = await signupUser(signupData);
+      const result = await apiClient.signup(signupData as SignupData);
       if (result) {
         onLogin(result.email, result.userType, result.userId);
         console.log("Sign-up successful!", result);
@@ -57,7 +59,7 @@ export function Auth({ onLogin }: AuthProps) {
 
     // Validation passes, check if this user info exists as an owner or an admin
     try {
-      const result = await loginUser(loginEmail, loginPassword);
+      const result = await apiClient.login({email: loginEmail, password: loginPassword} as LoginParams);
       if (result) {
         onLogin(result.email, result.userType, result.userId);
         console.log("Sign-in successful!", result);
