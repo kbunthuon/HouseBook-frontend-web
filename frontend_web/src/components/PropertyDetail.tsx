@@ -14,7 +14,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { Owner, ChangeLog } from "../types/serverTypes";
+import { Owner, ChangeLog, Property } from "../types/serverTypes";
 
 // Backend-shaped types
 // interface BackendAsset {
@@ -207,18 +207,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       description: bp.description || "",
       pin: "",
       name: bp.name,
-      type: bp.total_floor_area ? "" : "",
+      type: bp.totalFloorArea ? "" : "",
       status: "",
       lastUpdated: "",
       completionStatus: 0,
-      totalFloorArea: bp.total_floor_area,
-      spaces: bp.Spaces?.map(s => ({
-        space_id: s.id,
+      totalFloorArea: bp.totalFloorArea,
+      spaces: bp.spaces?.map(s => ({
+        space_id: s.space_id,
         name: s.name,
         type: s.type || "",
-        assets: s.Assets?.map(a => ({
-          asset_id: a.id,
-          type: a.AssetTypes?.name || a.type || "",
+        assets: s.assets?.map(a => ({
+          asset_id: a.asset_id,
+          type: a.type || "",
           description: a.description || "",
         })) || [],
       })) || [],
@@ -258,14 +258,14 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       description: property?.description || '',
       address: property?.address || '',
       type: 'Townhouse',
-      total_floor_area: property?.total_floor_area || 0
+      total_floor_area: property?.totalFloorArea || 0
     });
     setIsDialogOpen(true);
   };
 
   // SPACE EDIT
   const handleEditSpace = (spaceId: string, spaceName: string) => {
-    const space = property?.Spaces?.find(s => s.id === spaceId);
+    const space = property?.spaces?.find(s => s.space_id === spaceId);
     console.log("handleEditSpace: ", spaceId, spaceName);
     setDialogContext({ mode: 'space', spaceId, spaceName });
     setFormData({
@@ -294,8 +294,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // ASSET EDIT
   const handleEditAsset = (spaceId: string, spaceName: string, assetId: string, assetType: string) => {
-    const space = property?.Spaces?.find(s => s.id === spaceId);
-    const asset = space?.Assets?.find(a => a.id === assetId);
+    const space = property?.spaces?.find(s => s.space_id === spaceId);
+    const asset = space?.assets?.find(a => a.asset_id === assetId);
     console.log("handleEditAssets: spaceId: ", spaceId, ", spaceName: ", spaceName, ", assetId: ", assetId, ", assetType: ", assetType);
     setDialogContext({ mode: 'asset', spaceId, spaceName, assetId, assetType });
     setFormData({
@@ -1027,7 +1027,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             <span>•</span>
             <span>{property?.address}</span>
             <span>•</span>
-            <span>{property?.total_floor_area ?? 0}m²</span>
+            <span>{property?.totalFloorArea ?? 0}m²</span>
           </div>
           <div className="pt-2">
             <Button variant="outline" size="sm" onClick={handleShowAllPropertyHistory}>
