@@ -1,4 +1,4 @@
-// src/services/JobService.ts
+// backend/JobService.ts
 /// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
 
@@ -17,9 +17,9 @@ export type JobAsset = {
 
 // Shape of a job record
 export interface Job {
-  id: string | null;       // May be null before insert
+  id: string | null;        // May be null before insert
   property_id: string;
-  tradie_id: string | null;// May be null at creation of Job
+  tradie_id: string | null; // May be null at creation of Job
   title: string;
   status: JobStatus;
   created_at: string;       // ISOString
@@ -48,7 +48,6 @@ export interface FetchJobInfoParams {
  */
 export async function fetchJobsInfo({ property_id, tradie_id = null, status = null, expired = null, last = null }: FetchJobInfoParams): Promise<[Job[], JobAsset[]]> {
   const allJobs = await fetchJobsTable({ property_id, tradie_id, status, expired, last });
-  console.log("In fetchJobsInfo - jobs:", allJobs);
 
   // Fetch assets for all jobs
   const allJobAssets: JobAsset[] = [];
@@ -60,7 +59,6 @@ export async function fetchJobsInfo({ property_id, tradie_id = null, status = nu
       }
     }
   }
-  console.log("In fetchJobsInfo - allJobAssets:", allJobAssets);
 
   return [allJobs, allJobAssets];
 }
