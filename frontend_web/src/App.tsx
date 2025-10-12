@@ -19,6 +19,7 @@ import { PropertyManagement } from "./components/PropertyManagement";
 import { PropertyDetail } from "./components/PropertyDetail";
 import { AdminFunctions } from "./components/AdminFunctions";
 import { Reports } from "./components/Reports";
+import { AdminRequests } from "./components/AdminRequests";
 
 // Owner-specific components
 import { OwnerLayout } from "./components/OwnerLayout";
@@ -128,6 +129,8 @@ export default function App() {
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
           <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
+          <Route path={ADMIN_ROUTES.requests} element={<AdminRequests userId={userId} userType={userType} />} />
+
         </Route>
         {/* OWNER AREA */}
         <Route

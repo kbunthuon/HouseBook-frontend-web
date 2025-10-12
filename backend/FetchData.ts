@@ -290,18 +290,26 @@ const { data, error } = await supabase
 
 export const getAllOwners = async () => {
   const { data, error } = await supabase
-    .from("User")
-    .select("first_name, last_name, email")
+    .from("Owner")
+    .select(`
+      owner_id,
+      user:User (
+        first_name,
+        last_name,
+        email
+      )
+    `);
 
   if (error) {
     console.error("Error fetching property owners:", error.message);
     return [];
   }
-  const owners: Owner[] = data.map((row) => ({
+
+  const owners: Owner[] = data.map((row: any) => ({
     owner_id: row.owner_id,
-    first_name: row.first_name, 
-    last_name: row.last_name,
-    email: row.email,
+    first_name: row.user?.[0]?.first_name || '',
+    last_name: row.user?.[0]?.last_name || '',
+    email: row.user?.[0]?.email || '',
   }));
 
   return owners;

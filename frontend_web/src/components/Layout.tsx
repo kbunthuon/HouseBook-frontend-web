@@ -1,6 +1,6 @@
 import { Sidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { Home, Building, Users, FileText, Settings, LogOut } from "lucide-react";
+import { Home, Building, Users, FileText, Settings, LogOut, UserPen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ADMIN_ROUTES } from "../Routes";
 interface LayoutProps {
@@ -16,7 +16,9 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
     { to: ADMIN_ROUTES.properties.list, label: "Properties", icon: Building, end: true },
     { to: ADMIN_ROUTES.properties.add, label: "Onboarding", icon: Users },
     { to: ADMIN_ROUTES.reports, label: "Reports", icon: FileText },
-    { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings }
+    { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings },
+    { to: ADMIN_ROUTES.requests, label: "Requests", icon: UserPen, end: true },
+
   ];
 
 

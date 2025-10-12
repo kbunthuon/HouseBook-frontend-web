@@ -34,7 +34,7 @@ interface ChangeLog {
 }
 
 interface Owner {
-  // owner_id: string;
+  owner_id: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -430,7 +430,7 @@ function formatDateTime(timestamp: string | number | Date) {
             <TableBody>
               {owners.length > 0 ? (
                 owners.map((owner) => (
-                  <TableRow key={owner.first_name}>
+                  <TableRow key={owner.owner_id}>
                     <TableCell className="font-medium">
                       {owner.first_name && owner.last_name
                         ? `${owner.first_name} ${owner.last_name}`

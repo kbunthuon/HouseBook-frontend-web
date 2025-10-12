@@ -1,0 +1,285 @@
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
+import { Badge } from "./ui/badge.tsx";
+import { Input } from "./ui/input.tsx";
+import { Label } from "./ui/label.tsx";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
+import { Button } from "./ui/button.tsx";
+import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
+import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
+import { useState, useEffect} from "react";
+import { getAdminProperty, getAllOwners, getChangeLogs, getPropertyOwners } from "../../../backend/FetchData.ts";
+import supabase from "../../../config/supabaseClient.ts"
+import { Property } from "../types/serverTypes.ts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+
+
+interface AdminRequestProps {
+  userId: string;
+  userType: string;
+}
+
+
+interface ChangeLog {
+  property_id: string;
+  changelog_id: string;
+  changelog_specifications: Record<string, any>;
+  changelog_description: string;
+  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
+  changelog_created_at: string;
+  user_first_name: string | null;
+  user_last_name: string | null;
+}
+
+interface Owner {
+  // owner_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+
+}
+
+export function AdminRequests({ userId, userType}: AdminRequestProps) {
+  const [myProperties, setOwnerProperties] = useState<Property[]>([])
+  const [loading, setLoading] = useState(true)
+  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [owners, setOwners] = useState<Owner[]>([]);
+
+  useEffect (() => {
+      const getOwnerProps = async () => {
+        try {
+          
+          const properties = await getAdminProperty(userId, userType);
+          setOwnerProperties(properties ?? []);
+          
+  
+          if (properties && properties.length > 0) {
+          const propertyIds = properties.map((p: any) => p.property_id);
+          console.log("property", propertyIds);
+          const changes = await getChangeLogs(propertyIds);
+
+          const ownersResults = await getAllOwners();
+          setOwners(ownersResults);
+  
+            if (!changes) {
+            console.error("Error fetching change logs.");
+            setLoading(false);
+            return;
+          }
+  
+            // Normalizing user from array so that it is a single object
+            const normalizedChanges = (changes ?? []).map((c: any) => ({
+              ...c,
+              user: c.user && c.user.length > 0 ? c.user[0] : null,
+            }));
+  
+            setRequests(normalizedChanges);
+          } else {
+            setRequests([]);
+          }
+  
+        } catch (error) {
+          console.error(error);
+          setOwnerProperties([]);
+  
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      getOwnerProps();
+    },[userId])
+
+
+
+const approveEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "ACCEPTED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Approved edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+      )
+      );
+
+    }
+  };
+
+const rejectEdit = async (id: string) => {
+    const { data, error } = await supabase
+      .from("ChangeLog")
+      .update({ status: "DECLINED" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating change log status:", error);
+    } else {
+      console.log(`Declined edit ${id}`);
+      setRequests(prev =>
+      prev.map(r =>
+        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+      )
+      );
+    }
+  }
+
+  const getEditStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "default";
+      case "ACCEPTED":
+        return "secondary";
+      case "DECLINED":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+};
+
+function formatDate(timestamp: string | number | Date) {
+  const dateObject = new Date(timestamp);
+  return dateObject.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function formatDateTime(timestamp: string | number | Date) {
+  const dateObject = new Date(timestamp);
+  return dateObject.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1>My Dashboard</h1>
+        <p className="text-muted-foreground">
+          Overview of your property portfolio
+        </p>
+      </div>
+      <div className="grid gap-6 md:grid-cols-1">
+        <Card>
+            <CardHeader>
+              <CardTitle>All Edit Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-y-auto border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Requested By</TableHead>
+                    <TableHead>Change Description</TableHead>
+                    <TableHead>Request Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Inspect</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="overflow-y:auto height:200px">
+                  {requests.map((request) => (
+                    <TableRow key={request.changelog_id}>
+                      <TableCell className="font-medium">
+                        {myProperties.find(
+                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      </TableCell>
+                      <TableCell>
+                        {request.user_first_name || request.user_last_name
+                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                          : "Unknown User"}
+                      </TableCell>
+                      <TableCell>{request.changelog_description}</TableCell>
+                      <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                      <TableCell>
+                        <Badge variant={getEditStatusColor(request.changelog_status)}>
+                          {request.changelog_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Request Details</DialogTitle>
+                                <DialogDescription>Make edits to pending requests and approve changes.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-6">
+                                <div>
+                                  <Label>Property</Label>
+                                  <Input value={myProperties.find(
+                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-1">
+                                  <div>
+                                    <Label>Requested By</Label>
+                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
+                                  </div>
+                                  <div>
+                                    <Label>Request Time</Label>
+                                    <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                  </div>
+                                </div>
+                                <div>
+                                    <Label>Change Description</Label>
+                                    <Input value={request.changelog_description} readOnly />
+                                  </div>
+                                <div>
+                                  <Label>Field Specification</Label>
+                                  <td className="px-4 py-2">
+                                    <ul className="text-xs space-y-1">
+                                      {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                        <li key={key}>
+                                          <strong>{key}:</strong> {String(value)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </td>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => rejectEdit(request.changelog_id)}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </Button>
+                                  <Button onClick={() => approveEdit(request.changelog_id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              </div>
+            </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
