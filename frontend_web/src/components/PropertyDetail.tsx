@@ -14,7 +14,6 @@ import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { getPropertyImages, getPropertyOwners } from "../../../backend/FetchData";
 import { Owner, ChangeLog } from "../types/serverTypes";
 
 // Backend-shaped types (matches getPropertyForEdit response)
@@ -63,6 +62,7 @@ import {
 } from "../../../backend/PropertyEditService";
 import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+import { apiClient } from "../api/wrappers";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -177,12 +177,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       else setError("Property not found");
 
       // Fetch images
-      const images = await getPropertyImages(propertyId);
+      const images = await apiClient.getPropertyImages(propertyId);
       console.log(images);
       // Update property with images without losing current state
       setProperty((prev) => prev ? { ...prev, images } : prev);
 
-      const ownerResult = await getPropertyOwners(propertyId);
+      const ownerResult = await apiClient.getPropertyImages(propertyId);
       if (ownerResult) setOwners(ownerResult);
 
       const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });

@@ -10,10 +10,11 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getAdminProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { getAdminProperty } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { apiClient } from "../api/wrappers.ts";
 
 
 interface DashboardProps {
@@ -54,7 +55,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
           console.log("property", propertyIds);
-          const changes = await getChangeLogs(propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");

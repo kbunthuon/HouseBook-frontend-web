@@ -14,12 +14,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
-import {
-  getPropertyDetails,
-  getProperty,
-  getUserIdByEmail,
-  getPropertyImages,
-} from "../../../backend/FetchData";
+
+import { apiClient } from "../api/wrappers";
 
 // Reference to hold the html2pdf library once loaded dynamically
 const html2pdfRef = { current: null as any };
@@ -117,13 +113,13 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const userId = await getUserIdByEmail(ownerEmail);
+        const userId = await apiClient.getUserInfoByEmail(ownerEmail);
         if (!userId) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
-        const props = await getProperty(userId);
+        const props = await apiClient.getPropertyList(userId);
         if (props && Array.isArray(props)) {
           setMyProperties(
             props.map((p) => ({ id: p.property_id, name: p.name }))
@@ -230,7 +226,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   useEffect(() => {
     if (!reportConfig.propertyId) return;
     (async () => {
-      const data = await getPropertyDetails(reportConfig.propertyId);
+      const data = await apiClient.getPropertyDetails(reportConfig.propertyId);
       setProperty(data);
     })();
   }, [reportConfig.propertyId]);
@@ -244,7 +240,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       return;
     }
     (async () => {
-      const imgs = await getPropertyImages(reportConfig.propertyId);
+      const imgs = await apiClient.getPropertyImages(reportConfig.propertyId);
       // Normalize to {name, url} format regardless of backend response
       let imgObjs: { name: string; url: string }[] = [];
       if (imgs.length > 0 && typeof imgs[0] === "string") {
