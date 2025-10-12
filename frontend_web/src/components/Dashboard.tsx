@@ -57,7 +57,6 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
-          console.log("property", propertyIds);
           const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
@@ -423,7 +422,8 @@ function formatDateTime(timestamp: string | number | Date) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
                 <TableHead>Email</TableHead>
               </TableRow>
             </TableHeader>
@@ -432,9 +432,10 @@ function formatDateTime(timestamp: string | number | Date) {
                 owners.map((owner) => (
                   <TableRow key={owner.owner_id}>
                     <TableCell className="font-medium">
-                      {owner.first_name && owner.last_name
-                        ? `${owner.first_name} ${owner.last_name}`
-                        : owner.first_name || owner.last_name || 'Unknown'}
+                      {owner.first_name || 'N/A'}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {owner.last_name || 'N/A'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {owner.email || 'No email'}
@@ -443,7 +444,7 @@ function formatDateTime(timestamp: string | number | Date) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={2} className="h-24 text-center">
+                  <TableCell colSpan={3} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <UserCog className="h-8 w-8 mb-2" />
                       <p className="font-medium">No owners found</p>

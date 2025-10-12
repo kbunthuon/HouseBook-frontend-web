@@ -18,7 +18,7 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
     { to: ADMIN_ROUTES.reports, label: "Reports", icon: FileText },
     { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings },
     { to: ADMIN_ROUTES.requests, label: "Requests", icon: UserPen, end: true },
-
+    { to: ADMIN_ROUTES.users, label: "User Management", icon: UserPen, end: true }
   ];
 
 

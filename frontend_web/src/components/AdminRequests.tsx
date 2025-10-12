@@ -167,9 +167,9 @@ function formatDateTime(timestamp: string | number | Date) {
   return (
     <div className="space-y-8">
       <div>
-        <h1>My Dashboard</h1>
+        <h1>Requests</h1>
         <p className="text-muted-foreground">
-          Overview of your property portfolio
+          All requests are displayed here.
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-1">
