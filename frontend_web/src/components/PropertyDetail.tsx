@@ -16,32 +16,32 @@ import { PinTable } from "./PinTable";
 import { toast } from "sonner";
 import { Owner, ChangeLog } from "../types/serverTypes";
 
-// Backend-shaped types (matches getPropertyForEdit response)
-interface BackendAsset {
-  id: string;
-  description?: string;
-  current_specifications?: Record<string, any>;
-  deleted?: boolean;
-  AssetTypes?: { id: number; name: string; discipline?: string };
-}
+// Backend-shaped types
+// interface BackendAsset {
+//   id: string;
+//   description?: string;
+//   current_specifications?: Record<string, any>;
+//   deleted?: boolean;
+//   AssetTypes?: { id: number; name: string; discipline?: string };
+// }
 
-interface BackendSpace {
-  id: string;
-  name: string;
-  type?: string;
-  deleted?: boolean;
-  Assets?: BackendAsset[];
-}
+// interface BackendSpace {
+//   id: string;
+//   name: string;
+//   type?: string;
+//   deleted?: boolean;
+//   Assets?: BackendAsset[];
+// }
 
-interface BackendProperty {
-  property_id: string;
-  name: string;
-  description?: string;
-  address?: string;
-  total_floor_area?: number;
-  images?: string[];
-  Spaces?: BackendSpace[];
-}
+// interface BackendProperty {
+//   property_id: string;
+//   name: string;
+//   description?: string;
+//   address?: string;
+//   total_floor_area?: number;
+//   images?: string[];
+//   Spaces?: BackendSpace[];
+// }
 import { fetchJobsInfo, Job, JobAsset, JobStatus, deleteJob } from "../../../backend/JobService";
 
 import { 
@@ -93,7 +93,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'space' | 'asset' | 'feature', id?: string, name?: string }>({ type: 'asset' });
 
-  const [property, setProperty] = useState<BackendProperty | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
   const [owners, setOwners] = useState<Owner[] | null>(null);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [allJobAssets, setAllJobAssets] = useState<JobAsset[]>([]);
@@ -199,7 +199,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   };
 
   // Map backend-shaped property to the shared Property shape expected by some child components
-  const mapToSharedProperty = (bp: BackendProperty | null) => {
+  const mapToSharedProperty = (bp: Property | null) => {
     if (!bp) return null;
     return {
       property_id: bp.property_id,
