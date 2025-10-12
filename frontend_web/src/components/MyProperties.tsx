@@ -4,23 +4,20 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft } from "lucide-react";
-import OldOwnerTransferDialog from "./OldOwnerTransferDialog.tsx";
-import { getOwnerId, getProperty } from "../../../backend/FetchData";
+import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
+import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
 
 interface MyPropertiesProps {
   ownerEmail: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
-
 }
 
 export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -68,17 +65,10 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
             Manage your property portfolio
           </p>
         </div>
-        <div className="space-x-3"> 
-          <Button onClick={() => setOpen(true)}>
-            <ArrowRightLeft className="mr-2 h-4 w-4" />
-            Transfer Property
-          </Button>
-          <Button onClick={onAddProperty}>
-            <Settings className="mr-2 h-4 w-4" />
-            Add New Property
-          </Button>
-        </div>
-        
+        <Button onClick={onAddProperty}>
+          <Settings className="mr-2 h-4 w-4" />
+          Add New Property
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -199,19 +189,6 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
           )}
         </CardContent>
       </Card>
-      <OldOwnerTransferDialog
-        open={open}
-        onOpenChange={setOpen}
-        userID={userID}
-        onSendEmail={async ({ email, link, propertyId }) => {
-          // Call API / Supabase function
-          await fetch("/api/send-transfer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, link, propertyId }),
-          });
-        }}
-      />
     </div>
   );
 }
