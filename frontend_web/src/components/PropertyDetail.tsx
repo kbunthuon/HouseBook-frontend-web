@@ -178,7 +178,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
       // Fetch images
       const images = await getPropertyImages(propertyId);
-
+      console.log(images);
       // Update property with images without losing current state
       setProperty((prev) => prev ? { ...prev, images } : prev);
 
@@ -627,7 +627,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               </div>
               <div>
                   <Label>Space Type</Label>
-                <Select value={formData.type} onValueChange={(value: string) => setFormData({...formData, type: e.target.value})}>
+                <Select value={formData.type} onValueChange={(value: string) => setFormData({...formData, type: value})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
