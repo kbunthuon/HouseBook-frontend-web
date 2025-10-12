@@ -13,6 +13,7 @@ export const API_ROUTES = {
     SIGNUP: `${BASE_URL}/auth?action=signup`,
     VERIFY: `${BASE_URL}/auth/verify`,
     REFRESH: `${BASE_URL}/refresh`,
+    LOGOUT: `${BASE_URL}/logout`,
   },
 
   // User Routes ------ will need to update soon?

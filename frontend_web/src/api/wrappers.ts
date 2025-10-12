@@ -161,6 +161,7 @@ class ApiClient {
 
     return data.user;
   }
+  
 
   async verifyAuth() {
     const response = await this.authenticatedRequest(API_ROUTES.AUTH.VERIFY);
@@ -173,8 +174,22 @@ class ApiClient {
   }
 
   async logout() {
+    const response = await fetch(API_ROUTES.AUTH.LOGOUT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // include HttpOnly refresh token cookie
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Logout failed');
+    }
+
+    // Clear access token from localStorage
     TokenManager.clearTokens();
-  }
+
+    return true; // optional, indicates logout success
+    }
 
   // User methods
   async getUserInfoByEmail(email: string) {
