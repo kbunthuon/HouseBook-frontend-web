@@ -339,13 +339,14 @@ function oneHourFromNowISO(): string {
  * @returns Array of JobAsset objects with additional asset details
  */
 export async function fetchJobAssetsWithDetails(jobId: string): Promise<any[]> {
+  /*Recent update: Fixed Supabase query syntax - moved nested Spaces join inside Assets selection 
+    to resolve "unexpected '!' expecting letter" error that was preventing job asset details from loading*/
   const { data, error } = await supabase
     .from("JobAssets")
     .select(`
       asset_id,
       job_id,
-      Assets!inner(asset_id, type, description, space_id),
-      Assets!inner.Spaces!inner(space_id, name)
+      Assets!inner(asset_id, type, description, space_id, Spaces!inner(space_id, name))
     `)
     .eq("job_id", jobId);
 

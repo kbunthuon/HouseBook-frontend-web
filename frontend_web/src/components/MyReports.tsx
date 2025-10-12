@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -20,6 +20,14 @@ import {
   getUserIdByEmail,
   getPropertyImages,
 } from "../../../backend/FetchData";
+import {
+  fetchJobsInfo,
+  Job,
+  JobAsset,
+  fetchJobAssetsWithDetails,
+  fetchJobAssets,
+  upsertJobAssets,
+} from "../../../backend/JobService";
 
 // Reference to hold the html2pdf library once loaded dynamically
 const html2pdfRef = { current: null as any };
@@ -64,6 +72,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   const [reportConfig, setReportConfig] = useState({
     propertyId: "",
     reportType: "",
+    jobId: "", // Add jobId for job-specific reports
     includeImages: false,
     includePlans: false,
     includeUtilities: false,
@@ -88,6 +97,13 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     { id: string; name: string }[]
   >([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
+
+  // Jobs for the selected property
+  const [propertyJobs, setPropertyJobs] = useState<Job[]>([]);
+  const [jobAssets, setJobAssets] = useState<JobAsset[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobAccessibleAssets, setJobAccessibleAssets] = useState<any[]>([]);
 
   // Property images state - supports both string URLs and {name, url} objects
   const [propertyImages, setPropertyImages] = useState<
@@ -139,10 +155,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     fetchProperties();
   }, [ownerEmail]);
 
-  // Available report types for the dropdown
+  // Available report types for the dropdown - now includes job-based reports
   const reportTypes = [
     { value: "overview", label: "Property Overview" },
     { value: "maintenance", label: "Maintenance History" },
+    // Add job-based report types
+    ...propertyJobs.map((job) => ({
+      value: `job-${job.id}`,
+      label: `Job Access Report: ${job.title}`,
+      jobId: job.id,
+      pin: job.pin,
+    })),
   ];
 
   // Main PDF generation function
@@ -168,6 +191,14 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       return;
     }
 
+    // For job-based reports, ensure we have job data
+    if (reportConfig.reportType.startsWith("job-") && !selectedJob) {
+      setErrorMsg(
+        "Selected job data not available. Please try selecting the job again."
+      );
+      return;
+    }
+
     try {
       setGeneratingReport(true);
       setReportProgress(10);
@@ -176,7 +207,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       await waitForImages(previewRef.current);
       setReportProgress(70);
 
-      const filename = `property_${reportConfig.propertyId}_${reportConfig.reportType}.pdf`;
+      // Generate appropriate filename based on report type
+      let filename: string;
+      if (reportConfig.reportType.startsWith("job-") && selectedJob) {
+        filename = `property_${
+          reportConfig.propertyId
+        }_job_${selectedJob.title.replace(/[^a-zA-Z0-9]/g, "_")}_pin_${
+          selectedJob.pin
+        }.pdf`;
+      } else {
+        filename = `property_${reportConfig.propertyId}_${reportConfig.reportType}.pdf`;
+      }
 
       // Configure html2pdf with optimal settings for property reports
       await html2pdf()
@@ -235,6 +276,214 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     })();
   }, [reportConfig.propertyId]);
 
+  // Filter property data to show only accessible sections for job reports
+  const displayProperty = useMemo(() => {
+    if (!property) return null;
+
+    // For non-job reports, show all property data
+    if (!selectedJob || !reportConfig.reportType.startsWith("job-")) {
+      return property;
+    }
+
+    console.log("Filtering property for job:", selectedJob.title);
+    console.log("Job accessible assets:", jobAccessibleAssets);
+    console.log("Original property spaces:", property.spaces);
+
+    // For job reports, filter to show only accessible spaces and assets
+    const accessibleSpaceIds = new Set();
+    const accessibleAssetIds = new Set();
+
+    jobAccessibleAssets.forEach((item: any) => {
+      if (item.Assets?.space_id) {
+        accessibleSpaceIds.add(item.Assets.space_id);
+        accessibleAssetIds.add(item.asset_id);
+      }
+    });
+
+    console.log("Accessible space IDs:", Array.from(accessibleSpaceIds));
+    console.log("Accessible asset IDs:", Array.from(accessibleAssetIds));
+
+    const filteredSpaces =
+      property.spaces
+        ?.filter((space: any) => accessibleSpaceIds.has(space.space_id))
+        .map((space: any) => ({
+          ...space,
+          assets:
+            space.assets?.filter((asset: any) =>
+              accessibleAssetIds.has(asset.asset_id)
+            ) || [],
+        })) || [];
+
+    console.log("Filtered spaces:", filteredSpaces);
+
+    return {
+      ...property,
+      spaces: filteredSpaces,
+    };
+  }, [property, selectedJob, reportConfig.reportType, jobAccessibleAssets]);
+
+  // Fetch jobs for the selected property
+  useEffect(() => {
+    if (!reportConfig.propertyId) {
+      setPropertyJobs([]);
+      setJobAssets([]);
+      setSelectedJob(null);
+      return;
+    }
+
+    const fetchJobs = async () => {
+      setLoadingJobs(true);
+      try {
+        const [jobs, assets] = await fetchJobsInfo({
+          property_id: reportConfig.propertyId,
+        });
+        setPropertyJobs(jobs);
+        setJobAssets(assets);
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+        setPropertyJobs([]);
+        setJobAssets([]);
+      }
+      setLoadingJobs(false);
+    };
+
+    fetchJobs();
+  }, [reportConfig.propertyId]);
+
+  // Handle job selection and fetch accessible assets for the job
+  useEffect(() => {
+    if (
+      !reportConfig.reportType ||
+      !reportConfig.reportType.startsWith("job-")
+    ) {
+      setSelectedJob(null);
+      setJobAccessibleAssets([]);
+      
+      // Reset section selection to show all spaces/assets for regular property reports
+      if (property?.spaces && reportConfig.reportType && !reportConfig.reportType.startsWith("job-")) {
+        console.log("Resetting to full property view for non-job report");
+        const allSpacesSelection: { [spaceId: string]: boolean } = {};
+        const allAssetsSelection: { [assetId: string]: boolean } = {};
+        
+        property.spaces.forEach((space: any) => {
+          allSpacesSelection[space.space_id] = true;
+          (space.assets || []).forEach((asset: any) => {
+            allAssetsSelection[asset.asset_id] = true;
+          });
+        });
+        
+        setSectionSelection({
+          generalInfo: true,
+          plans: true,
+          images: true,
+          spaces: allSpacesSelection,
+          assets: allAssetsSelection,
+        });
+      }
+      return;
+    }
+
+    const jobId = reportConfig.reportType.replace("job-", "");
+    const job = propertyJobs.find((j) => j.id === jobId);
+
+    if (job) {
+      setSelectedJob(job);
+
+      // Fetch detailed asset information for this job
+      const fetchJobAssetsForJob = async () => {
+        try {
+          console.log("Fetching assets for job ID:", jobId);
+
+          // First, try to get basic job assets
+          const basicJobAssets = await fetchJobAssets(jobId);
+          console.log("Basic job assets:", basicJobAssets);
+
+          // Then get detailed information
+          let accessibleAssets: any[] = [];
+          
+          /*Recent update: Added separate try-catch for fetchJobAssetsWithDetails to ensure 
+            fallback logic always executes when detailed fetch fails or throws error*/
+          try {
+            accessibleAssets = await fetchJobAssetsWithDetails(jobId);
+            console.log("Fetched accessible assets:", accessibleAssets);
+          } catch (detailError) {
+            console.log("Failed to fetch detailed assets, will use fallback matching:", detailError);
+            accessibleAssets = []; // Ensure it's empty to trigger fallback
+          }
+
+          /*Recent update: Enhanced fallback logic to reliably match basic job assets with 
+            property space/asset data when detailed fetch fails, ensuring job reports show accessible sections*/
+          // If we have no detailed assets but have basic assets, use fallback matching
+          if (accessibleAssets.length === 0 && basicJobAssets.length > 0) {
+            console.log(
+              "No detailed assets found, but basic assets exist. Using fallback matching."
+            );
+
+            // Fallback: get property details and match assets manually
+            if (property) {
+              const matchedAssets: any[] = [];
+              basicJobAssets.forEach((jobAsset: any) => {
+                property.spaces?.forEach((space: any) => {
+                  space.assets?.forEach((asset: any) => {
+                    if (asset.asset_id === jobAsset.asset_id) {
+                      matchedAssets.push({
+                        asset_id: jobAsset.asset_id,
+                        job_id: jobAsset.job_id,
+                        Assets: {
+                          asset_id: asset.asset_id,
+                          type: asset.type,
+                          description: asset.description,
+                          space_id: space.space_id,
+                          Spaces: {
+                            space_id: space.space_id,
+                            name: space.name,
+                          },
+                        },
+                      });
+                    }
+                  });
+                });
+              });
+              console.log("Manually matched assets:", matchedAssets);
+              accessibleAssets = matchedAssets; // Use matched assets as accessible assets
+            }
+          }
+
+          // Set the accessible assets for this job
+          setJobAccessibleAssets(accessibleAssets);
+
+          // Update section selection to ONLY show accessible assets for this job
+          // This ensures tradees can only see sections they have access to
+          const newSectionSelection = {
+            generalInfo: true,
+            plans: true,
+            images: true,
+            spaces: {} as { [spaceId: string]: boolean },
+            assets: {} as { [assetId: string]: boolean },
+          };
+
+          // Pre-select ONLY the accessible spaces and assets for this job
+          accessibleAssets.forEach((item: any) => {
+            console.log("Pre-selecting accessible asset for job:", item);
+            if (item.Assets && item.Assets.space_id) {
+              newSectionSelection.spaces[item.Assets.space_id] = true;
+              newSectionSelection.assets[item.asset_id] = true;
+            }
+          });
+
+          console.log("Job-specific section selection (only accessible):", newSectionSelection);
+          console.log("Total accessible assets for this job:", accessibleAssets.length);
+          setSectionSelection(newSectionSelection);
+        } catch (error) {
+          console.error("Error fetching job assets:", error);
+          setJobAccessibleAssets([]);
+        }
+      };
+
+      fetchJobAssetsForJob();
+    }
+  }, [reportConfig.reportType, propertyJobs, property]);
+
   // Fetch property images when property changes
   // Supports both string array and object array formats from backend
   useEffect(() => {
@@ -245,16 +494,13 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }
     (async () => {
       const imgs = await getPropertyImages(reportConfig.propertyId);
-      // Normalize to {name, url} format regardless of backend response
-      let imgObjs: { name: string; url: string }[] = [];
-      if (imgs.length > 0 && typeof imgs[0] === "string") {
-        imgObjs = imgs.map((url: string, idx: number) => ({
+      // Convert string array to {name, url} format
+      const imgObjs: { name: string; url: string }[] = (imgs as string[]).map(
+        (url: string, idx: number) => ({
           name: `Image ${idx + 1}`,
           url,
-        }));
-      } else {
-        imgObjs = imgs;
-      }
+        })
+      );
       setPropertyImages(imgObjs);
       setSelectedImages(imgObjs.map((img) => img.url)); // Default: select all images
 
@@ -316,8 +562,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       };
 
       // Cascade: If unchecking a space, also uncheck all its assets
-      if (!checked && property?.spaces) {
-        const space = property.spaces.find((s: any) => s.space_id === spaceId);
+      if (!checked && displayProperty?.spaces) {
+        const space = displayProperty.spaces.find((s: any) => s.space_id === spaceId);
         if (space?.assets) {
           const newAssets = { ...prev.assets };
           space.assets.forEach((asset: any) => {
@@ -339,8 +585,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       const newSpaces = { ...prev.spaces };
 
       // Find which space this asset belongs to and manage parent relationship
-      if (property?.spaces) {
-        for (const space of property.spaces) {
+      if (displayProperty?.spaces) {
+        for (const space of displayProperty.spaces) {
           if (space.assets?.some((asset: any) => asset.asset_id === assetId)) {
             if (checked) {
               // Auto-select parent space when selecting any child asset
@@ -377,20 +623,20 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     setSelectedImages(checked ? propertyImages.map((img) => img.url) : []);
   };
 
-  // Check if all spaces are currently selected
+  // Check if all spaces are currently selected (using displayProperty for job filtering)
   const allSpacesSelected =
-    property?.spaces &&
+    displayProperty?.spaces &&
     Object.values(sectionSelection.spaces).filter(Boolean).length ===
-      property.spaces.length;
+      displayProperty.spaces.length;
 
   // Bulk select/deselect all spaces and their assets
   // Maintains parent-child relationships during bulk operations
   const handleSelectAllSpaces = (checked: boolean) => {
-    if (!property?.spaces) return;
+    if (!displayProperty?.spaces) return;
     const newSpaces: { [spaceId: string]: boolean } = {};
     const newAssets: { [assetId: string]: boolean } = {};
 
-    property.spaces.forEach((space: any) => {
+    displayProperty.spaces.forEach((space: any) => {
       newSpaces[space.space_id] = checked;
       // Also select/deselect all assets in each space
       (space.assets || []).forEach((asset: any) => {
@@ -405,21 +651,21 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     }));
   };
 
-  // Check if all assets across all spaces are selected
+  // Check if all assets across all spaces are selected (using displayProperty for job filtering)
   const allAssetsSelected =
-    property?.spaces &&
-    property.spaces
+    displayProperty?.spaces &&
+    displayProperty.spaces
       .flatMap((space: any) => space.assets || [])
       .every((asset: any) => sectionSelection.assets[asset.asset_id]);
 
   // Bulk select/deselect all assets with intelligent space management
   // When selecting assets, auto-select their parent spaces
   const handleSelectAllAssets = (checked: boolean) => {
-    if (!property?.spaces) return;
+    if (!displayProperty?.spaces) return;
     const newAssets: { [assetId: string]: boolean } = {};
     const newSpaces: { [spaceId: string]: boolean } = {};
 
-    property.spaces.forEach((space: any) => {
+    displayProperty.spaces.forEach((space: any) => {
       let hasSelectedAsset = false;
       (space.assets || []).forEach((asset: any) => {
         newAssets[asset.asset_id] = checked;
@@ -477,7 +723,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             <div>
               <Label htmlFor="reportType">Report Type</Label>
               <Select
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   setReportConfig({ ...reportConfig, reportType: value })
                 }
               >
@@ -589,18 +835,27 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           )}
 
           {/* Space/asset selection */}
-          {property?.spaces && (
+          {displayProperty?.spaces && (
             <div className="space-y-2">
-              <Label className="block mb-1">Spaces & Assets to include</Label>
+              <Label className="block mb-1">
+                {selectedJob && reportConfig.reportType.startsWith("job-") 
+                  ? `Job Access: ${selectedJob.title} (PIN: ${selectedJob.pin})` 
+                  : "Spaces & Assets to include"}
+              </Label>
+              
+              {/* Show job info for job reports */}
+              {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <div className="text-sm text-blue-800">
+                    <div><strong>Job:</strong> {selectedJob.title}</div>
+                    <div><strong>PIN:</strong> {selectedJob.pin}</div>
+                    <div><strong>Status:</strong> {selectedJob.status}</div>
+                    <div><strong>Accessible Sections:</strong> {jobAccessibleAssets.length} asset(s)</div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center gap-4 mb-2">
-                {/* Button 1: Select All SPACES (rooms) 
-                <input
-                  type="checkbox"
-                  checked={!!allSpacesSelected}
-                  onChange={(e) => handleSelectAllSpaces(e.target.checked)}
-                  id="selectAllSpaces"
-                /> */}
-
                 <Checkbox
                   checked={allSpacesSelected && allAssetsSelected}
                   onCheckedChange={(e : boolean) => {
@@ -609,30 +864,14 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                   }}
                   id="selectEverything"
                 />
-                <Label htmlFor="selectEverything">Select Everything</Label>
-
-                {/* <Label
-                  htmlFor="selectAllSpaces"
-                  className="text-sm cursor-pointer"
-                >
-                  Select All Spaces
-                </Label> */}
-                {/* Button 2: Select All Assets (features) 
-                <input
-                  type="checkbox"
-                  checked={!!allAssetsSelected}
-                  onChange={(e) => handleSelectAllAssets(e.target.checked)}
-                  id="selectAllAssets"
-                />
-                <Label
-                  htmlFor="selectAllAssets"
-                  className="text-sm cursor-pointer"
-                >
-                  Select All Assets
-                </Label> */}
+                <Label htmlFor="selectEverything">
+                  {selectedJob && reportConfig.reportType.startsWith("job-") 
+                    ? "Select All Accessible Sections" 
+                    : "Select Everything"}
+                </Label>
               </div>
               <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
-                {property.spaces.map((space: any) => (
+                {displayProperty.spaces.map((space: any) => (
                   <div key={space.space_id} className="mb-1">
                     <label className="flex items-center gap-2 font-medium">
                       <Checkbox
@@ -642,6 +881,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                         }
                       />
                       {space.name}
+                      {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Accessible
+                        </Badge>
+                      )}
                     </label>
                     <div className="ml-6 flex flex-col gap-1">
                       {(space.assets || []).map((asset: any) => (
@@ -659,6 +903,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                             }
                           />
                           {asset.type}
+                          {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              Access Granted
+                            </Badge>
+                          )}
                         </label>
                       ))}
                     </div>
@@ -807,16 +1056,37 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               <div className="pdf-section-title">General Information</div>
               <div className="pdf-sub">
                 <span className="pdf-label">Property Name:</span>
-                {property?.name || ""}
+                {displayProperty?.name || property?.name || ""}
               </div>
               <div className="pdf-sub">
                 <span className="pdf-label">Description:</span>
-                {property?.description || ""}
+                {displayProperty?.description || property?.description || ""}
               </div>
               <div className="pdf-sub">
                 <span className="pdf-label">Address:</span>
-                {property?.address || ""}
+                {displayProperty?.address || property?.address || ""}
               </div>
+              {/* Add job info for job reports */}
+              {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                <>
+                  <div className="pdf-sub">
+                    <span className="pdf-label">Job Title:</span>
+                    {selectedJob.title}
+                  </div>
+                  <div className="pdf-sub">
+                    <span className="pdf-label">Job PIN:</span>
+                    {selectedJob.pin}
+                  </div>
+                  <div className="pdf-sub">
+                    <span className="pdf-label">Job Status:</span>
+                    {selectedJob.status}
+                  </div>
+                  <div className="pdf-sub">
+                    <span className="pdf-label">Accessible Sections:</span>
+                    {jobAccessibleAssets.length} asset(s)
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -856,11 +1126,16 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           {/* Dynamically render selected spaces and their assets */}
           {
             /* Each space is wrapped in pdf-space-section for page-break protection */
-            property?.spaces?.map((space: any) =>
+            displayProperty?.spaces?.map((space: any) =>
               sectionSelection.spaces[space.space_id] ? (
                 <div className="pdf-space-section" key={space.space_id}>
                   <div className="pdf-space-content">
                     <div className="pdf-section-title">{space.name}</div>
+                    {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                      <div className="pdf-sub" style={{ fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
+                        <em>✓ Accessible via Job PIN: {selectedJob.pin}</em>
+                      </div>
+                    )}
                     {space.assets && space.assets.length > 0 ? (
                       // Only render assets that are specifically selected
                       space.assets
@@ -872,6 +1147,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           <div className="pdf-sub" key={asset.asset_id}>
                             <span className="pdf-label">{asset.type}:</span>
                             {asset.description || "No description available"}
+                            {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                              <span style={{ fontSize: "0.8rem", color: "#666", marginLeft: "8px" }}>
+                                [Access Granted]
+                              </span>
+                            )}
                           </div>
                         ))
                     ) : (
