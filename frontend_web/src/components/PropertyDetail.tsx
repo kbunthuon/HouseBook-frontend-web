@@ -178,10 +178,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       else setError("Property not found");
 
       // Fetch images
-      const images = await apiClient.getPropertyImages(propertyId);
-      console.log(images);
+      const imagesResult = await apiClient.getPropertyImages(propertyId);
+      console.log(imagesResult);
       // Update property with images without losing current state
-      setProperty((prev) => prev ? { ...prev, images } : prev);
+      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
 
       const ownerResult = await apiClient.getPropertyOwners(propertyId);
       if (ownerResult) setOwners(ownerResult);
@@ -201,6 +201,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   // Map backend-shaped property to the shared Property shape expected by some child components
   const mapToSharedProperty = (bp: Property | null) => {
     if (!bp) return null;
+    console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
       property_id: bp.property_id,
       address: bp.address || bp.address || "",
