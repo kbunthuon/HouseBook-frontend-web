@@ -34,7 +34,13 @@ export function Auth({ onLogin }: AuthProps) {
     // Validate input
     const newErrors = await validateSignup(signupData);
     setSignupErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    
+    const hasErrors = Object.values(newErrors).some(
+      (arr) => Array.isArray(arr) && arr.length > 0
+    );
+
+    if (hasErrors) return;
+
 
     // Validation passes, check if backend is able to sign up
     try {
