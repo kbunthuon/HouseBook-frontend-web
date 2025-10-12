@@ -104,6 +104,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -182,7 +183,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       // Update property with images without losing current state
       setProperty((prev) => prev ? { ...prev, images } : prev);
 
-      const ownerResult = await apiClient.getPropertyImages(propertyId);
+      const ownerResult = await apiClient.getPropertyOwners(propertyId);
       if (ownerResult) setOwners(ownerResult);
 
       const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
