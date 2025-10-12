@@ -218,6 +218,7 @@ return (
         <CardTitle>Pending Edit Requests</CardTitle>
       </CardHeader>
       <CardContent>
+        
         <div className="max-h-[300px] overflow-y-auto border rounded-lg">
           <Table>
             <TableHeader>
@@ -231,7 +232,11 @@ return (
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.slice(0, 15).map((request) => (
+              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              requests
+              .filter((r) => r.changelog_status !== "ACCEPTED")
+              .slice(0, 15)
+              .map((request) => (
                 <TableRow key={request.changelog_id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
@@ -319,8 +324,19 @@ return (
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
+              ))
+            ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mb-2" />
+                  <p className="font-medium">No pending requests</p>
+                  <p className="text-sm">All edit requests have been processed</p>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
           </Table>
         </div>
       </CardContent>

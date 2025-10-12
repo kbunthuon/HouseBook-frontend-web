@@ -1,8 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
 import { Badge } from "./ui/badge.tsx";
-import { Progress } from "./ui/progress.tsx";
 import { Input } from "./ui/input.tsx";
-import { Textarea } from "./ui/textarea.tsx";
 import { Label } from "./ui/label.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
@@ -10,7 +8,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getAdminProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners, getChangeLogs, getPropertyOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -35,17 +33,23 @@ interface ChangeLog {
   user_last_name: string | null;
 }
 
+interface Owner {
+  // owner_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+
+}
+
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
       const getOwnerProps = async () => {
         try {
-          // Get owner id
-          // const ownerId = await getOwnerId(userId);
-          // if (!ownerId) throw Error("Owner ID not found");
           
           const properties = await getAdminProperty(userId, userType);
           setOwnerProperties(properties ?? []);
@@ -55,6 +59,9 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           const propertyIds = properties.map((p: any) => p.property_id);
           console.log("property", propertyIds);
           const changes = await getChangeLogs(propertyIds);
+
+          const ownersResults = await getAllOwners();
+          setOwners(ownersResults);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -196,28 +203,6 @@ function formatDateTime(timestamp: string | number | Date) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={metric.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {metric.title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${metric.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {metric.change} from last month
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
       {/* Properties Preview */}
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -302,6 +287,7 @@ function formatDateTime(timestamp: string | number | Date) {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="max-h-[300px] overflow-y-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -313,96 +299,113 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableHead>Inspect</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="overflow-y:auto height:200px">
-                  {requests.map((request) => (
-                    <TableRow key={request.changelog_id}>
-                      <TableCell className="font-medium">
-                        {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
-                      </TableCell>
-                      <TableCell>
-                        {request.user_first_name || request.user_last_name
-                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
-                          : "Unknown User"}
-                      </TableCell>
-                      <TableCell>{request.changelog_description}</TableCell>
-                      <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
-                      <TableCell>
-                        <Badge variant={getEditStatusColor(request.changelog_status)}>
-                          {request.changelog_status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit Request Details</DialogTitle>
-                                <DialogDescription>Make edits to pending requests and approve changes.</DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-6">
-                                <div>
-                                  <Label>Property</Label>
-                                  <Input value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
-                                </div>
-                                <div className="grid gap-4 md:grid-cols-1">
-                                  <div>
-                                    <Label>Requested By</Label>
-                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
-                                  </div>
-                                  <div>
-                                    <Label>Request Time</Label>
-                                    <Input value={formatDateTime(request.changelog_created_at)} readOnly />
-                                  </div>
-                                </div>
-                                <div>
-                                    <Label>Change Description</Label>
-                                    <Input value={request.changelog_description} readOnly />
-                                  </div>
-                                <div>
-                                  <Label>Field Specification</Label>
-                                  <td className="px-4 py-2">
-                                    <ul className="text-xs space-y-1">
-                                      {Object.entries(request.changelog_specifications).map(([key, value]) => (
-                                        <li key={key}>
-                                          <strong>{key}:</strong> {String(value)}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </td>
-                                </div>
-                                <div className="flex justify-end space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => rejectEdit(request.changelog_id)}
-                                  >
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Reject
-                                  </Button>
-                                  <Button onClick={() => approveEdit(request.changelog_id)}>
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Approve
-                                  </Button>
-                                </div>
+                <TableBody className="max-h-[300px] overflow-y-auto border rounded-lg">
+              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              requests
+              .slice(0, 15)
+              .map((request) => (
+                <TableRow key={request.changelog_id}>
+                  <TableCell className="font-medium">
+                    {myProperties.find(
+                      (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                  </TableCell>
+                  <TableCell>
+                    {request.user_first_name || request.user_last_name
+                      ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                      : "Unknown User"}
+                  </TableCell>
+                  <TableCell>{request.changelog_description}</TableCell>
+                  <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  <TableCell>
+                    <Badge variant={getEditStatusColor(request.changelog_status)}>
+                      {request.changelog_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Edit Request Details</DialogTitle>
+                            <DialogDescription>Make edits to pending requests and approve changes.</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-6">
+                            <div>
+                              <Label>Property</Label>
+                              <Input 
+                                value={myProperties.find(
+                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} 
+                                readOnly 
+                              />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div>
+                                <Label>Requested By</Label>
+                                <Input 
+                                  value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} 
+                                  readOnly 
+                                />
                               </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                              <div>
+                                <Label>Request Time</Label>
+                                <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                              </div>
+                            </div>
+                            <div>
+                              <Label>Change Description</Label>
+                              <Input value={request.changelog_description} readOnly />
+                            </div>
+                            <div>
+                              <Label>Field Specification</Label>
+                              <div className="p-4 border rounded-lg bg-gray-50">
+                                <ul className="text-sm space-y-1">
+                                  {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                    <li key={key}>
+                                      <strong>{key}:</strong> {String(value)}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => rejectEdit(request.changelog_id)}
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Reject
+                              </Button>
+                              <Button onClick={() => approveEdit(request.changelog_id)}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mb-2" />
+                  <p className="font-medium">No pending requests</p>
+                  <p className="text-sm">All edit requests have been processed</p>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
               </Table>
-              <h3 className="mt-4 text-lg font-medium"></h3>
-                <p className="text-muted-foreground">
-                  All recent property transfers and admin-related activity will be reported here.
-                </p>
+            </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -416,13 +419,42 @@ function formatDateTime(timestamp: string | number | Date) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <UserCog className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">User Management</h3>
-                <p className="text-muted-foreground">
-                  All recent property transfers and admin-related activity will be reported here.
-                </p>
-              </div>
+            <div className="max-h-[300px] overflow-y-auto border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {owners.length > 0 ? (
+                owners.map((owner) => (
+                  <TableRow key={owner.first_name}>
+                    <TableCell className="font-medium">
+                      {owner.first_name && owner.last_name
+                        ? `${owner.first_name} ${owner.last_name}`
+                        : owner.first_name || owner.last_name || 'Unknown'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {owner.email || 'No email'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} className="h-24 text-center">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <UserCog className="h-8 w-8 mb-2" />
+                      <p className="font-medium">No owners found</p>
+                      <p className="text-sm">This property has no registered owners</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -431,68 +463,30 @@ function formatDateTime(timestamp: string | number | Date) {
       </CardContent>
 
     </Card>
-    
 
-    
-            
-        
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* <Card>
-          <CardHeader>
-            <CardTitle>Onboarding Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Properties with Complete Data</span>
-                <span>75%</span>
-              </div>
-              <Progress value={75} />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Utility Information</span>
-                <span>82%</span>
-              </div>
-              <Progress value={82} />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Floor Plans Uploaded</span>
-                <span>68%</span>
-              </div>
-              <Progress value={68} />
-            </div>
-          </CardContent>
-        </Card> */}
-
-        {/* <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {activity.property} • {activity.user}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.time}
-                    </p>
-                  </div>
-                  <Badge variant={activity.status === "completed" ? "default" : "secondary"}>
-                    {activity.status}
-                  </Badge>
-                </div> */}
-              {/* ))}
-            </div> */}
-          {/* </CardContent> */}
-        {/* </Card> } */}
+    {/* Metrics */}
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <Card key={metric.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {metric.title}
+                </CardTitle>
+                <Icon className={`h-4 w-4 ${metric.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metric.value}</div>
+                <p className="text-xs text-muted-foreground">
+                  {metric.change} from last month
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
+    
     </div>
   );
 }

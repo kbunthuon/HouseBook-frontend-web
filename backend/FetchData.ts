@@ -287,6 +287,26 @@ const { data, error } = await supabase
   return properties;
 };
 
+
+export const getAllOwners = async () => {
+  const { data, error } = await supabase
+    .from("User")
+    .select("first_name, last_name, email")
+
+  if (error) {
+    console.error("Error fetching property owners:", error.message);
+    return [];
+  }
+  const owners: Owner[] = data.map((row) => ({
+    owner_id: row.owner_id,
+    first_name: row.first_name, 
+    last_name: row.last_name,
+    email: row.email,
+  }));
+
+  return owners;
+}
+
 // export async function fetchAssetType(): Promise<Record<string, string[]>> {
 //   const { data, error } = await supabase
 //     .from("AssetTypes") 
