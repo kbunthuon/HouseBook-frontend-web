@@ -105,10 +105,10 @@ export function PinTable({ propertyId, property, jobs, jobAssets, onDeleteJob, o
                   </p>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {formatDate(job.created_at)}
+                  {new Date(job.created_at).toLocaleString()}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {job.end_time ? formatDate(job.end_time) : "Never"}
+                  {job.end_time ? new Date(job.end_time).toLocaleString() : "Never"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-1">

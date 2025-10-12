@@ -16,17 +16,6 @@ interface MyPropertiesProps {
 
 }
 
-/*
-interface Property {
-  property_id: string;
-  name: string;
-  address: string;
-  type: string;
-  status: string;
-  completionStatus: string;
-}
-*/
-
 export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
@@ -140,8 +129,8 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                 <TableRow>
                   <TableHead>Property</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Completion</TableHead>
+                  {/* <TableHead>Status</TableHead>
+                  <TableHead>Completion</TableHead> */}
                   <TableHead>Last Updated</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -156,19 +145,19 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                       </div>
                     </TableCell>
                     <TableCell>{property.type}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Badge variant={getStatusColor(property.status)}>
                         {property.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> */}
+                    {/* <TableCell>
                       <div className="flex items-center space-x-2">
                         <span className={`text-sm font-medium ${getCompletionColor(property.completionStatus)}`}>
                           {property.completionStatus}%
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell>{property.lastUpdated}</TableCell>
+                    </TableCell> */}
+                    <TableCell>{new Date(property.lastUpdated).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         {onViewProperty && (
