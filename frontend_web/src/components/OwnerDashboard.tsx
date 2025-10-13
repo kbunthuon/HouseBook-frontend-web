@@ -51,6 +51,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
         const properties = await apiClient.getPropertyList(userId);
         setOwnerProperties(properties ?? []);
 
+
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
           const changes = await apiClient.getChangeLogs(propertyIds);
@@ -71,39 +72,6 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
           } else {
             setRequests([]);
           }
-
-        // if (properties && properties.length > 0) {
-        //   const propertyIds = properties.map((p: any) => p.property_id);
-        //   const { data: changes, error: changesError } = await supabase
-        //     .from("changelog_property_view")
-        //     .select(`
-        //       changelog_id,
-        //       changelog_specifications,
-        //       changelog_description,
-        //       changelog_created_at,
-        //       changelog_status,
-        //       property_id,
-        //       user_first_name,
-        //       user_last_name
-        //     `)
-        //     .in("property_id", propertyIds)
-        //     .order("changelog_created_at", { ascending: false });
-
-        //   if (changesError) {
-        //     console.error("Error fetching change log:", changesError);
-        //     setLoading(false);
-        //     return;
-        //   }
-        //   // Normalizing user from array so that it is a single object
-        //   const normalizedChanges = (changes ?? []).map((c: any) => ({
-        //     ...c,
-        //     user: c.user && c.user.length > 0 ? c.user[0] : null,
-        //   }));
-
-        //   setRequests(normalizedChanges);
-        // } else {
-        //   setRequests([]);
-        // }
 
       } catch (error) {
         console.error(error);
