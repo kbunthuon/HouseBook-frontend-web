@@ -1,7 +1,7 @@
 import supabase from "../config/supabaseClient";
 
 // Setting what OwnerData looks like
-import { OwnerData, FormData, SpaceInt } from "@housebookgroup/shared-types";
+import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
 import { apiClient } from "../frontend_web/src/api/wrappers";
 
 export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
@@ -24,7 +24,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[
 
 }
 
-export async function adminOnboardProperty(ownerData: OwnerData, formData: FormData, spaces: SpaceInt[]) {
+export async function adminOnboardProperty(ownerData: Owner, formData: FormData, spaces: SpaceInt[]) {
   // Check if this user account exists
   // const exists = await checkOwnerExists(ownerData);
   // if (!exists) {
@@ -52,7 +52,7 @@ export async function adminOnboardProperty(ownerData: OwnerData, formData: FormD
 
 }
 
-const checkOwnerExists = async (owner: OwnerData) => {
+const checkOwnerExists = async (owner: Owner) => {
   const { data, error } = await supabase
     .from("User")
     .select("user_id")
