@@ -28,16 +28,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-
-interface Owner {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
+import { Owner } from '@housebookgroup/shared-types';
 
 export const UserManagementPage = () => {
-  const [owners, setOwners] = useState<Owner[]>([]);
+  const [owners, setOwners] = useState<Owner[]>([{
+    ownerId: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: ""
+  }]);
   const [filteredOwners, setFilteredOwners] = useState<Owner[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -75,13 +75,13 @@ export const UserManagementPage = () => {
 
     const query = searchQuery.toLowerCase();
     const filtered = owners.filter((owner) => {
-      const fullName = `${owner.first_name} ${owner.last_name}`.toLowerCase();
+      const fullName = `${owner.firstName} ${owner.lastName}`.toLowerCase();
       const email = owner.email?.toLowerCase() || '';
       
       return (
         fullName.includes(query) ||
-        owner.first_name?.toLowerCase().includes(query) ||
-        owner.last_name?.toLowerCase().includes(query) ||
+        owner.firstName?.toLowerCase().includes(query) ||
+        owner.lastName?.toLowerCase().includes(query) ||
         email.includes(query)
       );
     });
@@ -198,12 +198,12 @@ export const UserManagementPage = () => {
               <TableBody>
                 {filteredOwners.length > 0 ? (
                   filteredOwners.map((owner) => (
-                    <TableRow key={owner.owner_id} className="hover:bg-muted/50">
+                    <TableRow key={owner.ownerId} className="hover:bg-muted/50">
                       <TableCell className="font-medium border-r">
-                        {owner.first_name || 'N/A'}
+                        {owner.firstName || 'N/A'}
                       </TableCell>
                       <TableCell className="font-medium border-r">
-                        {owner.last_name || 'N/A'}
+                        {owner.lastName || 'N/A'}
                       </TableCell>
                       <TableCell className="border-r">
                         <div className="flex items-center gap-2">
@@ -229,16 +229,16 @@ export const UserManagementPage = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleViewOwner(owner.owner_id)}>
+                            <DropdownMenuItem onClick={() => handleViewOwner(owner.ownerId)}>
                               <User className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditOwner(owner.owner_id)}>
+                            <DropdownMenuItem onClick={() => handleEditOwner(owner.ownerId)}>
                               Edit Owner
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => handleDeactivateOwner(owner.owner_id)}
+                              onClick={() => handleDeactivateOwner(owner.ownerId)}
                               className="text-destructive"
                             >
                               <UserX className="h-4 w-4 mr-2" />

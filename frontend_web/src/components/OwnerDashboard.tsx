@@ -24,8 +24,8 @@ interface OwnerDashboardProps {
 }
 
 interface ChangeLog {
-  property_id: string;
-  changelog_id: string;
+  propertyId: string;
+  changelogId: string;
   changelog_specifications: Record<string, any>;
   changelog_description: string;
   changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
@@ -52,7 +52,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
         if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
+          const propertyIds = properties.map((p: any) => p.propertyId);
           const changes = await getChangeLogs(propertyIds);
   
             if (!changes) {
@@ -132,7 +132,7 @@ const approveEdit = async (id: string) => {
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -151,7 +151,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -225,10 +225,10 @@ return (
               .filter((r) => r.changelog_status !== "ACCEPTED")
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelog_id}>
+                <TableRow key={request.changelogId}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
                     {request.user_first_name || request.user_last_name
@@ -260,7 +260,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -296,12 +296,12 @@ return (
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelog_id)}
+                                onClick={() => rejectEdit(request.changelogId)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelog_id)}>
+                              <Button onClick={() => approveEdit(request.changelogId)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
@@ -346,16 +346,16 @@ return (
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.property_id} 
+                  key={property.propertyId} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splash_image ? (
+                    {property.splashImage ? (
                       <img
-                        src={property.splash_image}
+                        src={property.splashImage}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />

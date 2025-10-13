@@ -14,14 +14,14 @@ interface AuthProps {
 export function Auth({ onLogin }: AuthProps) {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [signupData, setSignupData] = useState({
+  const [signupData, setSignupData] = useState<SignupData>({
     email: "",
     password: "",
-    first_name: "",
-    last_name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
-    userType: "owner" as "admin" | "owner"
-  });
+    userType: "owner"
+});
   const [serverError, setServerError] = useState("");
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string[]>>({});
@@ -141,17 +141,17 @@ export function Auth({ onLogin }: AuthProps) {
                     <Label htmlFor="signup-first-name">First Name</Label>
                     <Input
                       id="signup-first-name"
-                      value={signupData.first_name}
+                      value={signupData.firstName}
                       onChange={(e) =>
-                        setSignupData({ ...signupData, first_name: e.target.value })
+                        setSignupData({ ...signupData, firstName: e.target.value })
                       }
                       autoComplete="on"
                       placeholder="John"
                       required
                     />
-                    {signupErrors.first_name && (
+                    {signupErrors.firstName && (
                       <ul className="text-red-500 text-sm list-disc list-inside mt-1">
-                        {signupErrors.first_name.map((err, idx) => (
+                        {signupErrors.firstName.map((err, idx) => (
                           <li key={idx}>{err}</li>
                         ))}
                       </ul>
@@ -161,17 +161,17 @@ export function Auth({ onLogin }: AuthProps) {
                     <Label htmlFor="signup-last-name">Last Name</Label>
                     <Input
                       id="signup-last-name"
-                      value={signupData.last_name}
+                      value={signupData.lastName}
                       onChange={(e) =>
-                        setSignupData({ ...signupData, last_name: e.target.value })
+                        setSignupData({ ...signupData, lastName: e.target.value })
                       }
                       autoComplete="on"
                       placeholder="Doe"
                       required
                     />
-                    {signupErrors.last_name && (
+                    {signupErrors.lastName && (
                       <ul className="text-red-500 text-sm list-disc list-inside mt-1">
-                        {signupErrors.last_name.map((err, idx) => (
+                        {signupErrors.lastName.map((err, idx) => (
                           <li key={idx}>{err}</li>
                         ))}
                       </ul>

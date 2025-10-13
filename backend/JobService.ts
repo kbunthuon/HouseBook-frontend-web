@@ -10,10 +10,10 @@ export enum JobStatus {
   DELETED = "DELETED",
 }
 
-export type JobAsset = {
+export interface JobAsset {
   asset_id: string;
   job_id: string;
-};
+}
 
 // Shape of a job record
 export interface Job {

@@ -54,20 +54,20 @@ export const getProperty = async (userID: string): Promise<Property[]> => {
       : "";
 
     return {
-      property_id: row.property_id,
+      propertyId: row.property_id,
       name: row.property_name,
       address: row.address,
       description: row.description,
       pin: row.pin,
-      created_at: row.property_created_at,
+      createdAt: row.property_created_at,
       type: row.type,
       status: row.status,
       lastUpdated: row.last_updated,
       completionStatus: row.completion_status,
-      total_floor_area: row.total_floor_area,
-      Spaces: [], // use consistent capitalization
+      totalFloorArea: row.total_floor_area,
+      spaces: [],
       images: [], 
-      splash_image: splashImageUrl,
+      splashImage: splashImageUrl,
     };
   });
 
@@ -114,7 +114,7 @@ export const getPropertyDetails = async (propertyId: string): Promise<Property |
   const first = data[0];
 
   const property: Property = {
-    property_id: first.property_property_id,
+    propertyId: first.property_property_id,
     name: first.property_name,
     address: first.property_address,
     description: first.property_description,
@@ -123,9 +123,9 @@ export const getPropertyDetails = async (propertyId: string): Promise<Property |
     status: first.property_status,
     lastUpdated: first.property_lastupdated,
     completionStatus: first.property_completionstatus,
-    total_floor_area: first.property_total_floor_area,
-    created_at: first.property_created_at,
-    Spaces: [],
+    totalFloorArea: first.property_total_floor_area,
+    createdAt: first.property_created_at,
+    spaces: [],
     images: [],
   };
 
@@ -139,7 +139,7 @@ export const getPropertyDetails = async (propertyId: string): Promise<Property |
         id: row.spaces_id,
         name: row.spaces_name,
         type: row.spaces_type,
-        Assets: [],
+        assets: [],
         deleted: row.spaces_deleted ?? false,
       };
     }
@@ -150,18 +150,18 @@ export const getPropertyDetails = async (propertyId: string): Promise<Property |
         type: row.assettypes_name ?? "",
         description: row.assets_description ?? "",
         deleted: row.assets_deleted ?? false,
-        current_specifications: row.assets_current_specifications ?? {},
-        AssetTypes: {
+        currentSpecifications: row.assets_current_specifications ?? {},
+        assetTypes: {
           id: row.assettypes_id ?? "",
           name: row.assettypes_name ?? "",
           discipline: row.assettypes_discipline ?? "",
         },
       };
-      spaceMap[row.spaces_id].Assets.push(asset);
+      spaceMap[row.spaces_id].assets.push(asset);
     }
   }
 
-  property.Spaces = Object.values(spaceMap);
+  property.spaces = Object.values(spaceMap);
 
   property.images = (await getPropertyImages(propertyId)) ?? [];
 
@@ -199,7 +199,7 @@ export const getPropertyImages = async (propertyId: string, imageName?: string):
 export const getPropertyOwners = async (propertyId: string): Promise<Owner[] | null> => {
   const { data, error } = await supabase
     .from("owner_property_view")
-    .select("owner_id, first_name, last_name, email")
+    .select("owner_id, first_name, last_name, email, phone")
     .eq("property_id", propertyId);
 
   if (error) {
@@ -208,10 +208,11 @@ export const getPropertyOwners = async (propertyId: string): Promise<Owner[] | n
   }
 
   const owners: Owner[] = data.map((row) => ({
-    owner_id: row.owner_id,
-    first_name: row.first_name,
-    last_name: row.last_name,
+    ownerId: row.owner_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
     email: row.email,
+    phone: row.phone
   }));
 
   return owners || null;
@@ -268,12 +269,12 @@ const { data, error } = await supabase
       : '';
 
     return {
-      property_id: row.property_id,
+      propertyId: row.property_id,
       name: row.property_name,
       address: row.address,
       description: row.description,
       pin: row.pin,
-      created_at: row.property_created_at,
+      createdAt: row.property_created_at,
       type: row.type,
       status: row.status,
       lastUpdated: row.last_updated,
@@ -290,7 +291,7 @@ const { data, error } = await supabase
 };
 
 
-export const getAllOwners = async () => {
+export async function getAllOwners() {
   const { data, error } = await supabase
     .from("owner_user_view")
     .select(`
@@ -298,7 +299,8 @@ export const getAllOwners = async () => {
       first_name,
       last_name,
       email,
-      created_at
+      created_at,
+      phone
       )
     `)
     .order('created_at', {ascending: false});
@@ -309,10 +311,11 @@ export const getAllOwners = async () => {
   }
 
   const owners: Owner[] = data.map((row: any) => ({
-    owner_id: row.owner_id,
-    first_name: row.first_name, 
-    last_name: row.last_name,
+    ownerId: row.owner_id,
+    firstName: row.first_name, 
+    lastName: row.last_name,
     email: row.email,
+    phone: row.phone
   }));
 
   return owners;

@@ -1,6 +1,6 @@
 // FormContext.tsx - Create this new file
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
+import { FormData, SpaceInt, Owner } from "../types/serverTypes";
 
 interface FormContextType {
     formData: FormData;
@@ -19,8 +19,8 @@ interface AdminFormContextType {
     setSpaces: React.Dispatch<React.SetStateAction<SpaceInt[]>>;
     currentStep: number;
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-    ownerData: OwnerData;
-    setOwnerData: React.Dispatch<React.SetStateAction<OwnerData>>;
+    owner: Owner;
+    setOwner: React.Dispatch<React.SetStateAction<Owner>>;
     resetForm: () => void;
 }
 
@@ -50,7 +50,8 @@ const initialSpaces: SpaceInt[] = [
     }
 ];
 
-const initialOwnerData : OwnerData = {
+const initialOwnerData : Owner = {
+    ownerId: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -88,7 +89,7 @@ export function AdminFormProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
     const [spaces, setSpaces] = useState<SpaceInt[]>(initialSpaces);
     const [currentStep, setCurrentStep] = useState(1);
-    const [ownerData, setOwnerData] = useState<OwnerData>(initialOwnerData);
+    const [owner, setOwner] = useState<Owner>(initialOwnerData);
     const resetForm = () => {
     setFormData(initialFormData);
     setSpaces(initialSpaces);
@@ -104,8 +105,8 @@ export function AdminFormProvider({ children }: { children: ReactNode }) {
         setSpaces,
         currentStep,
         setCurrentStep,
-        ownerData,
-        setOwnerData,
+        owner,
+        setOwner,
         resetForm
         }}
     >

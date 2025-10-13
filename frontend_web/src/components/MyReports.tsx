@@ -17,9 +17,9 @@ import { FileText, Download, BarChart3 } from "lucide-react";
 import {
   getPropertyDetails,
   getProperty,
-  getUserIdByEmail,
-  getPropertyImages,
+  getUserIdByEmail
 } from "../../../backend/FetchData";
+import { getPropertyImages } from "../../../backend/ImageUpload";
 
 // Reference to hold the html2pdf library once loaded dynamically
 const html2pdfRef = { current: null as any };
@@ -126,7 +126,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         const props = await getProperty(userId);
         if (props && Array.isArray(props)) {
           setMyProperties(
-            props.map((p) => ({ id: p.property_id, name: p.name }))
+            props.map((p) => ({ id: p.propertyId, name: p.name }))
           );
         } else {
           setMyProperties([]);
@@ -248,9 +248,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       // Normalize to {name, url} format regardless of backend response
       let imgObjs: { name: string; url: string }[] = [];
       if (imgs.length > 0 && typeof imgs[0] === "string") {
-        imgObjs = imgs.map((url: string, idx: number) => ({
-          name: `Image ${idx + 1}`,
-          url,
+        imgObjs = imgs.map(img => ({
+          name: img.name,
+          url: img.url,
         }));
       } else {
         imgObjs = imgs;
@@ -477,7 +477,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             <div>
               <Label htmlFor="reportType">Report Type</Label>
               <Select
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   setReportConfig({ ...reportConfig, reportType: value })
                 }
               >
