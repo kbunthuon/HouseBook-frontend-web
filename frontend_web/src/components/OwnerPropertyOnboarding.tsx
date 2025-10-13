@@ -18,6 +18,7 @@ import { ownerOnboardProperty} from "../../../backend/OnboardPropertyService";
 import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
 import { useFormContext } from "./FormContext";
+
 export function OwnerPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
@@ -191,6 +192,38 @@ export function OwnerPropertyOnboarding() {
       newSpaces[spaceIndex].assets[assetIndex].features.splice(featureIndex, 1);
       return newSpaces;
     });
+  };
+
+  // Step validators
+  const validateStep1 = () => {
+    return (
+      formData.propertyName.trim() !== "" &&        // Property name not null
+      formData.propertyDescription.trim() !== "" && // Property description not null
+      formData.address.trim() !== ""                // Property address not null 
+    );
+  };
+
+  const validateStep2 = () => {
+    return (
+      spaces.length > 0 && 
+      spaces.every(
+        s => s.name.trim() !== "" && 
+        s.type.trim() !== "" &&
+        s.assets.length > 0 && // Space must have at least one Asset
+        s.assets.every(
+          a => a.name.trim() !== "" && // Asset name not null
+          a.typeId != "" &&            // Asset type not null
+          a.features.length > 0 &&     // Asset must have at least one Feature
+          a.features.every(f => f.name.trim() !== "" && f.value.trim() !== "") // Each feature must have its fields filled
+        )
+      )
+    );
+  };
+
+  // Step validator mapping
+  const stepValidators: Record<number, () => boolean> = {
+    1: validateStep1,
+    2: validateStep2
   };
 
   const renderStep = () => {
@@ -623,6 +656,7 @@ export function OwnerPropertyOnboarding() {
             </Button>
             <Button
               onClick={handleNext}
+              disabled={stepValidators[currentStep] ? !stepValidators[currentStep]() : false}
             >
               {currentStep === steps.length ? "Complete Onboarding" : "Next"}
             </Button>

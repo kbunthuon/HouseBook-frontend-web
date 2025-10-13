@@ -109,10 +109,14 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
 
   type PropertySection = { name: string; assets: { id: string; type: string }[]; };
   const propertySections: PropertySection[] =
-    (property?.spaces ?? []).map(s => ({
+    (property?.Spaces ?? []).map(s => ({
       name: s.name,
-      assets: (s.assets ?? []).map(a => ({ id: a.asset_id, type: a.type })),
+      assets: (s.Assets ?? []).map(a => ({
+        id: a.id,
+        type: a.type ?? a.AssetTypes?.name ?? "", // ✅ fallback
+      })),
     }));
+
 
   const assetKeyToId: Record<string, string> = {};
   for (const section of propertySections) {
@@ -238,6 +242,8 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
         next.delete(spaceName);
         kids.forEach(k => next.delete(k));
       }
+      // Update discipline selections after space toggle
+      updateDisciplineSelections([...next]);
       return [...next];
     });
     updateSelectedAssets(spaceName, checked);
@@ -377,11 +383,11 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
           {/* Sections Access Control */}
           <div className="space-y-3">
             <Label>Select accessible sections for this PIN:</Label>
-            <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto justify-items-start">
+            <div className="flex flex-col gap-3 max-h-[35vh] overflow-y-auto justify-items-start">
               {propertySections.map((space) => {
                 const expanded = !!openSpaces[space.name];
 
-                return (
+                return (  
                   <div key={space.name} className="w-full">
                     {/* Parent checkbox */}
                     <div className="flex items-center space-x-2">
