@@ -19,8 +19,8 @@ export function Auth({ onLogin }: AuthProps) {
   const [signupData, setSignupData] = useState({
     email: "",
     password: "",
-    first_name: "",
-    last_name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     userType: "owner" as "admin" | "owner"
   });
@@ -143,9 +143,9 @@ export function Auth({ onLogin }: AuthProps) {
                     <Label htmlFor="signup-first-name">First Name</Label>
                     <Input
                       id="signup-first-name"
-                      value={signupData.first_name}
+                      value={signupData.firstName}
                       onChange={(e) =>
-                        setSignupData({ ...signupData, first_name: e.target.value })
+                        setSignupData({ ...signupData, firstName: e.target.value })
                       }
                       autoComplete="on"
                       placeholder="John"
@@ -163,9 +163,9 @@ export function Auth({ onLogin }: AuthProps) {
                     <Label htmlFor="signup-last-name">Last Name</Label>
                     <Input
                       id="signup-last-name"
-                      value={signupData.last_name}
+                      value={signupData.lastName}
                       onChange={(e) =>
-                        setSignupData({ ...signupData, last_name: e.target.value })
+                        setSignupData({ ...signupData, lastName: e.target.value })
                       }
                       autoComplete="on"
                       placeholder="Doe"

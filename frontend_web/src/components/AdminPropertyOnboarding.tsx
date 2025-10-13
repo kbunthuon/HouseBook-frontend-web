@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { adminOnboardProperty } from "../../../backend/OnboardPropertyService";
-import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
+import { FormData, SpaceInt, Owner } from "../types/serverTypes";
 import { ADMIN_ROUTES } from "../Routes";
 import { useAdminFormContext } from "./FormContext";
 

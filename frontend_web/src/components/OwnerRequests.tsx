@@ -185,7 +185,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableRow key={request.changelog_id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                          (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
                         {request.user_first_name || request.user_last_name
@@ -216,7 +216,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>
