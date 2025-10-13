@@ -53,7 +53,8 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
         if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
+          const propertyIds = properties.map((p: any) => p.propertyId);
+          console.log("Fetching change logs for properties:", propertyIds);
           const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
@@ -224,7 +225,7 @@ return (
                 <TableRow key={request.changelog_id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
                     {request.user_first_name || request.user_last_name
@@ -256,7 +257,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -331,16 +332,16 @@ return (
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.property_id} 
+                  key={property.propertyId} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splash_image ? (
+                    {property.splashImage ? (
                       <img
-                        src={property.splash_image}
+                        src={property.splashImage}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />

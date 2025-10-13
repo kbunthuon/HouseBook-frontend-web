@@ -172,8 +172,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     try {
       setLoading(true);
       setError(null);
-
-      const result = await getPropertyForEdit(propertyId);
+      console.log("Fetching data for propertyId:", propertyId);
+      const result = await apiClient.getPropertyDetails(propertyId);
   if (result) setProperty(result);
       else setError("Property not found");
 
@@ -203,7 +203,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (!bp) return null;
     console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
-      property_id: bp.property_id,
+      property_id: bp.propertyId,
       address: bp.address || bp.address || "",
       description: bp.description || "",
       pin: "",
@@ -214,11 +214,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       completionStatus: 0,
       totalFloorArea: bp.totalFloorArea,
       spaces: bp.spaces?.map(s => ({
-        space_id: s.space_id,
+        space_id: s.id,
         name: s.name,
         type: s.type || "",
         assets: s.assets?.map(a => ({
-          asset_id: a.asset_id,
+          asset_id: a.id,
           type: a.type || "",
           description: a.description || "",
         })) || [],
@@ -266,7 +266,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // SPACE EDIT
   const handleEditSpace = (spaceId: string, spaceName: string) => {
-    const space = property?.spaces?.find(s => s.space_id === spaceId);
+    const space = property?.spaces?.find(s => s.id === spaceId);
     console.log("handleEditSpace: ", spaceId, spaceName);
     setDialogContext({ mode: 'space', spaceId, spaceName });
     setFormData({
@@ -295,13 +295,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // ASSET EDIT
   const handleEditAsset = (spaceId: string, spaceName: string, assetId: string, assetType: string) => {
-    const space = property?.spaces?.find(s => s.space_id === spaceId);
-    const asset = space?.assets?.find(a => a.asset_id === assetId);
+    const space = property?.spaces?.find(s => s.id === spaceId);
+    const asset = space?.assets?.find(a => a.id === assetId);
     console.log("handleEditAssets: spaceId: ", spaceId, ", spaceName: ", spaceName, ", assetId: ", assetId, ", assetType: ", assetType);
     setDialogContext({ mode: 'asset', spaceId, spaceName, assetId, assetType });
     setFormData({
       description: asset?.description || '',
-      current_specifications: asset?.current_specifications || {}
+      current_specifications: asset?.currentSpecifications || {}
     });
     setIsDialogOpen(true);
   };
@@ -1024,7 +1024,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           <h1>{property?.name ?? "Property"}</h1>
           <p className="text-muted-foreground text-lg">{property?.description}</p>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>Owner: {owners?.[0] ? `${owners[0].first_name} ${owners[0].last_name}` : "N/A"}</span>
+            <span>Owner: {owners?.[0] ? `${owners[0].firstName} ${owners[0].lastName}` : "N/A"}</span>
             <span>•</span>
             <span>{property?.address}</span>
             <span>•</span>
@@ -1112,21 +1112,21 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {property?.Spaces?.filter(space => !space.deleted).map(space => (
+        {property?.spaces?.filter(space => !space.deleted).map(space => (
           <SpecificationSection
             key={space.id}
             title={space.name}
             spaceId={space.id}
             spaceName={space.name}
-            assets={(space.Assets ?? []).filter(asset => !asset.deleted).map(asset => ({
+            assets={(space.assets ?? []).filter(asset => !asset.deleted).map(asset => ({
               id: asset.id,
               description: asset.description,
-              discipline: asset.AssetTypes?.discipline ?? "",
-              current_specifications: asset.current_specifications ?? {},
+              discipline: asset.assetTypes?.discipline ?? "",
+              current_specifications: asset.currentSpecifications ?? {},
               AssetTypes: {
-                id: asset.AssetTypes?.id ?? "",
-                name: asset.AssetTypes?.name ?? "",
-                discipline: asset.AssetTypes?.discipline ?? "",
+                id: asset.assetTypes?.id ?? "",
+                name: asset.assetTypes?.name ?? "",
+                discipline: asset.assetTypes?.discipline ?? "",
               },
               deleted: asset.deleted ?? false,
             }))}
@@ -1220,7 +1220,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                       </div>
                       <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
-                    <p className="text-sm mb-2">{item.change_description}</p>
+                    <p className="text-sm mb-2">{item.changeDescription}</p>
                     {item.specifications && Object.keys(item.specifications).length > 0 && (
                       <div className="mt-2 p-2 bg-muted/50 rounded space-y-1">
                         {formatSpecifications(item.specifications)}
@@ -1263,7 +1263,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                       </div>
                       <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
-                    <p className="text-sm mb-2">{item.change_description}</p>
+                    <p className="text-sm mb-2">{item.changeDescription}</p>
                     {item.specifications && Object.keys(item.specifications).length > 0 && (
                       <div className="mt-2 p-3 bg-muted/50 rounded space-y-1">
                         {formatSpecifications(item.specifications)}

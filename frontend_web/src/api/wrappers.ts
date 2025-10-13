@@ -337,9 +337,10 @@ class ApiClient {
 
   // Changelog methods
   async getChangeLogs(propertyIds: string[]) {
-    const response = await this.authenticatedRequest(
-      API_ROUTES.CHANGELOG.GET(propertyIds)
-    );
+    console.log("propertyIds being sent:", propertyIds);
+    const url = API_ROUTES.CHANGELOG.GET(propertyIds);
+    console.log("Fetching changelogs from:", url);
+    const response = await this.authenticatedRequest(url);
 
     if (!response.ok) {
       const error = await response.json();

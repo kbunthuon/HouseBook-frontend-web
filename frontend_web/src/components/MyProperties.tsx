@@ -128,7 +128,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.property_id}>
+                  <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -155,7 +155,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.property_id)}
+                            onClick={() => onViewProperty(property.propertyId)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />

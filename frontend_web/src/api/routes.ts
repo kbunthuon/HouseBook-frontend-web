@@ -53,7 +53,9 @@ export const API_ROUTES = {
 
   // Changelog Routes
   CHANGELOG: {
-    GET: (propertyIds: string[]) => `${BASE_URL}/changelog?propertyIds=${propertyIds.join(",")}`,
+    GET: (propertyIds: string[]) =>
+      `${BASE_URL}/changelog?propertyIds=${encodeURIComponent(propertyIds.join(','))}`,
+
   },
 } as const;
 
