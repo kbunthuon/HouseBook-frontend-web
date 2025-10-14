@@ -14,6 +14,9 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
+// Import QRCodeCanvas for generating QR codes in PDF reports
+// This allows property QR codes to be included in reports for easy property identification
+import { QRCodeCanvas } from "qrcode.react";
 import {
   getPropertyDetails,
   getProperty,
@@ -111,6 +114,11 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   >([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
+  // QR code inclusion state - controls whether QR code appears in the report
+  // Added to allow users to optionally include/exclude the property QR code in PDF reports
+  // Default is true to include QR code by default for property identification
+  const [includeQRCode, setIncludeQRCode] = useState<boolean>(true);
+
   // Section selection state - controls what appears in the final PDF
   // Implements hierarchical selection where spaces contain assets
   const [sectionSelection, setSectionSelection] = useState<{
@@ -158,7 +166,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   // Available report types for the dropdown - now includes job-based reports
   const reportTypes = [
     { value: "overview", label: "Property Overview" },
-    { value: "maintenance", label: "Maintenance History" },
     // Add job-based report types
     ...propertyJobs.map((job) => ({
       value: `job-${job.id}`,
@@ -358,20 +365,24 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     ) {
       setSelectedJob(null);
       setJobAccessibleAssets([]);
-      
+
       // Reset section selection to show all spaces/assets for regular property reports
-      if (property?.spaces && reportConfig.reportType && !reportConfig.reportType.startsWith("job-")) {
+      if (
+        property?.spaces &&
+        reportConfig.reportType &&
+        !reportConfig.reportType.startsWith("job-")
+      ) {
         console.log("Resetting to full property view for non-job report");
         const allSpacesSelection: { [spaceId: string]: boolean } = {};
         const allAssetsSelection: { [assetId: string]: boolean } = {};
-        
+
         property.spaces.forEach((space: any) => {
           allSpacesSelection[space.space_id] = true;
           (space.assets || []).forEach((asset: any) => {
             allAssetsSelection[asset.asset_id] = true;
           });
         });
-        
+
         setSectionSelection({
           generalInfo: true,
           plans: true,
@@ -400,14 +411,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
           // Then get detailed information
           let accessibleAssets: any[] = [];
-          
+
           /*Recent update: Added separate try-catch for fetchJobAssetsWithDetails to ensure 
             fallback logic always executes when detailed fetch fails or throws error*/
           try {
             accessibleAssets = await fetchJobAssetsWithDetails(jobId);
             console.log("Fetched accessible assets:", accessibleAssets);
           } catch (detailError) {
-            console.log("Failed to fetch detailed assets, will use fallback matching:", detailError);
+            console.log(
+              "Failed to fetch detailed assets, will use fallback matching:",
+              detailError
+            );
             accessibleAssets = []; // Ensure it's empty to trigger fallback
           }
 
@@ -471,8 +485,14 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             }
           });
 
-          console.log("Job-specific section selection (only accessible):", newSectionSelection);
-          console.log("Total accessible assets for this job:", accessibleAssets.length);
+          console.log(
+            "Job-specific section selection (only accessible):",
+            newSectionSelection
+          );
+          console.log(
+            "Total accessible assets for this job:",
+            accessibleAssets.length
+          );
           setSectionSelection(newSectionSelection);
         } catch (error) {
           console.error("Error fetching job assets:", error);
@@ -563,7 +583,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
       // Cascade: If unchecking a space, also uncheck all its assets
       if (!checked && displayProperty?.spaces) {
-        const space = displayProperty.spaces.find((s: any) => s.space_id === spaceId);
+        const space = displayProperty.spaces.find(
+          (s: any) => s.space_id === spaceId
+        );
         if (space?.assets) {
           const newAssets = { ...prev.assets };
           space.assets.forEach((asset: any) => {
@@ -766,6 +788,22 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             </div>
           </div>
 
+          {/* QR Code inclusion checkbox */}
+          {/* Added QR code option to allow users to choose whether to include property QR code in reports */}
+          {/* This provides flexibility for different report use cases - some may want QR codes, others may not */}
+          <div className="space-y-2">
+            <Label className="block mb-1">Additional Options</Label>
+            <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={includeQRCode}
+                  onCheckedChange={(checked: boolean) => setIncludeQRCode(checked)}
+                />
+                Include QR Code for Property
+              </label>
+            </div>
+          </div>
+
           {/* Property Images selection */}
           {propertyImages.length > 0 && (
             <div className="space-y-2">
@@ -773,7 +811,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               <div className="flex items-center mb-2">
                 <Checkbox
                   checked={allImagesSelected}
-                  onCheckedChange={(e:boolean) => handleSelectAllImages(e)}
+                  onCheckedChange={(e: boolean) => handleSelectAllImages(e)}
                   id="selectAllImages"
                 />
                 <Label
@@ -838,35 +876,44 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           {displayProperty?.spaces && (
             <div className="space-y-2">
               <Label className="block mb-1">
-                {selectedJob && reportConfig.reportType.startsWith("job-") 
-                  ? `Job Access: ${selectedJob.title} (PIN: ${selectedJob.pin})` 
+                {selectedJob && reportConfig.reportType.startsWith("job-")
+                  ? `Job Access: ${selectedJob.title} (PIN: ${selectedJob.pin})`
                   : "Spaces & Assets to include"}
               </Label>
-              
+
               {/* Show job info for job reports */}
               {selectedJob && reportConfig.reportType.startsWith("job-") && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                   <div className="text-sm text-blue-800">
-                    <div><strong>Job:</strong> {selectedJob.title}</div>
-                    <div><strong>PIN:</strong> {selectedJob.pin}</div>
-                    <div><strong>Status:</strong> {selectedJob.status}</div>
-                    <div><strong>Accessible Sections:</strong> {jobAccessibleAssets.length} asset(s)</div>
+                    <div>
+                      <strong>Job:</strong> {selectedJob.title}
+                    </div>
+                    <div>
+                      <strong>PIN:</strong> {selectedJob.pin}
+                    </div>
+                    <div>
+                      <strong>Status:</strong> {selectedJob.status}
+                    </div>
+                    <div>
+                      <strong>Accessible Sections:</strong>{" "}
+                      {jobAccessibleAssets.length} asset(s)
+                    </div>
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center gap-4 mb-2">
                 <Checkbox
                   checked={allSpacesSelected && allAssetsSelected}
-                  onCheckedChange={(e : boolean) => {
+                  onCheckedChange={(e: boolean) => {
                     handleSelectAllSpaces(e); // Select all rooms
                     handleSelectAllAssets(e); // Select all features
                   }}
                   id="selectEverything"
                 />
                 <Label htmlFor="selectEverything">
-                  {selectedJob && reportConfig.reportType.startsWith("job-") 
-                    ? "Select All Accessible Sections" 
+                  {selectedJob && reportConfig.reportType.startsWith("job-")
+                    ? "Select All Accessible Sections"
                     : "Select Everything"}
                 </Label>
               </div>
@@ -881,11 +928,12 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                         }
                       />
                       {space.name}
-                      {selectedJob && reportConfig.reportType.startsWith("job-") && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          Accessible
-                        </Badge>
-                      )}
+                      {selectedJob &&
+                        reportConfig.reportType.startsWith("job-") && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            Accessible
+                          </Badge>
+                        )}
                     </label>
                     <div className="ml-6 flex flex-col gap-1">
                       {(space.assets || []).map((asset: any) => (
@@ -896,18 +944,16 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           <Checkbox
                             checked={!!sectionSelection.assets[asset.asset_id]}
                             onCheckedChange={(e: boolean) =>
-                              handleAssetToggle(
-                                asset.asset_id,
-                                e
-                              )
+                              handleAssetToggle(asset.asset_id, e)
                             }
                           />
                           {asset.type}
-                          {selectedJob && reportConfig.reportType.startsWith("job-") && (
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              Access Granted
-                            </Badge>
-                          )}
+                          {selectedJob &&
+                            reportConfig.reportType.startsWith("job-") && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                Access Granted
+                              </Badge>
+                            )}
                         </label>
                       ))}
                     </div>
@@ -965,14 +1011,24 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           style={{
             width: 794,
             minHeight: 1123,
-            background: "#f7f8fa",
-            padding: 0,
+            background: "#ffffff",
+            padding: "30px 35px",  // Reduced padding to give more content space
             color: "#222",
             fontFamily:
               "'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif",
             boxSizing: "border-box",
+            // Ensure content fits within page boundaries with strict width control
+            maxWidth: "794px",
+            overflow: "hidden"
           }}
         >
+          {/* Add inner container to control content width more strictly */}
+          <div style={{
+            width: "100%",
+            maxWidth: "724px",  // 794px - (35px * 2) = 724px available width
+            margin: "0 auto",   // Center the content
+            boxSizing: "border-box"
+          }}>
           <style>
             {`
               /* CSS Custom Properties for consistent theming */
@@ -985,53 +1041,93 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 --secondary: #f0f1f2 !important;
               }
 
-              /* Standard PDF section styling */
+              /* Standard PDF section styling - improved containment and professional appearance */
               .pdf-section {
-                border: 1px solid #ccc;
-                border-radius: 12px;
-                padding: 18px 24px;
-                margin-bottom: 18px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                padding: 16px;  /* Reduced padding for better fit */
+                margin-bottom: 16px;
+                background: #ffffff;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 /* CRITICAL: Prevent sections from being split across PDF pages */
                 page-break-inside: avoid;
                 break-inside: avoid;
+                /* Ensure content stays within boundaries */
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
               }
 
-              /* Special styling for space sections with enhanced page-break protection */
+              /* Special styling for space sections with enhanced page-break protection and containment */
               .pdf-space-section {
-                border: 1px solid #ccc;
-                border-radius: 12px;
-                padding: 18px 24px;
-                margin-bottom: 18px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                padding: 16px;  /* Reduced padding for better fit */
+                margin-bottom: 16px;
+                background: #ffffff;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 /* Prevent space content from being cut between pages */
                 page-break-inside: avoid;
                 break-inside: avoid;
                 page-break-before: auto;  /* Allow natural page breaks before, but not inside */
+                /* Ensure content stays within boundaries */
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
               }
 
-              /* Typography styles for PDF content */
+              /* Typography styles for PDF content - improved hierarchy and readability */
               .pdf-section-title {
-                font-size: 1.1rem;
-                font-weight: bold;
-                margin-bottom: 8px;
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin-bottom: 12px;
+                color: #1f2937;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 8px;
               }
               .pdf-label {
-                font-weight: bold;
-                margin-right: 6px;
+                font-weight: 600;
+                margin-right: 8px;
+                color: #374151;
               }
               .pdf-sub {
-                color: #444;
-                font-size: 0.98rem;
-                margin-bottom: 4px;
+                color: #4b5563;
+                font-size: 0.95rem;
+                margin-bottom: 6px;
+                line-height: 1.4;
               }
               .pdf-divider {
-                border-bottom: 1px solid #eee;
-                margin: 18px 0;
+                border-bottom: 2px solid #e5e7eb;
+                margin: 20px 0;
               }
 
-              /* Ensure image galleries don't break across pages */
+              /* Ensure image galleries don't break across pages and fit properly */
               .pdf-images-row {
                 page-break-inside: avoid;
                 break-inside: avoid;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                justify-content: center;
+                max-width: 100%;
+              }
+
+              /* Image container styling for better presentation */
+              .pdf-image-container {
+                max-width: 200px;
+                max-height: 150px;
+                overflow: hidden;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              }
+
+              .pdf-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
               }
 
               /* Keep space content together as a cohesive unit */
@@ -1041,13 +1137,33 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               }
             `}
           </style>
-          <div style={{ marginBottom: 24 }}>
-            <h2
-              style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 4 }}
-            >
-              {/* REPORT */}
-            </h2>
-            <div className="pdf-divider" />
+          
+          {/* Professional Report Header */}
+          <div style={{ 
+            marginBottom: 32,
+            textAlign: "center",
+            borderBottom: "3px solid #3b82f6",
+            paddingBottom: 20
+          }}>
+            <h1 style={{ 
+              fontSize: "2rem", 
+              fontWeight: 700, 
+              marginBottom: 8,
+              color: "#1f2937"
+            }}>
+              Property Report
+            </h1>
+            <div style={{
+              fontSize: "0.9rem",
+              color: "#6b7280",
+              fontStyle: "italic"
+            }}>
+              Generated on {new Date().toLocaleDateString('en-AU', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
           </div>
 
           {/* General Information */}
@@ -1087,6 +1203,80 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* QR Code Section */}
+          {/* Conditionally render QR code section based on user's checkbox selection */}
+          {/* Only shows if includeQRCode is true AND we have a valid propertyId */}
+          {/* QR code contains the propertyId for easy property identification and access */}
+          {includeQRCode && reportConfig.propertyId && (
+            <div className="pdf-section">
+              <div className="pdf-section-title">Property QR Code</div>
+              
+              {/* Professional QR code container - optimized for strict PDF width constraints */}
+              <div style={{ 
+                display: "flex", 
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "12px 4px",  // Minimal padding to maximize available space
+                margin: "12px 0",
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%"
+              }}>
+                {/* QR code wrapper - minimal size to ensure page fit */}
+                <div style={{
+                  padding: "12px",     // Reduced padding
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px", // Smaller radius
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",  // Subtle shadow
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  maxWidth: "160px",   // Smaller max width to ensure fit
+                  margin: "0 auto"     // Center the container
+                }}>
+                  {/* Enhanced QR code - conservative size for guaranteed page fit */}
+                  <QRCodeCanvas
+                    value={reportConfig.propertyId}  // QR code contains the property ID
+                    size={100}                       // Reduced to 100px for guaranteed fit
+                    level="H"                        // High error correction for better scanning
+                    bgColor="#ffffff"                // Explicit white background for PDF printing
+                    fgColor="#000000"                // Explicit black for maximum contrast
+                  />
+                </div>
+                
+                {/* Property ID reference - compact styling */}
+                <div style={{ 
+                  marginTop: "10px",
+                  textAlign: "center",
+                  fontSize: "0.8rem",  // Smaller font
+                  color: "#374151",
+                  fontWeight: "500",
+                  wordBreak: "break-all",
+                  maxWidth: "100%",
+                  padding: "0 8px"     // Small padding to prevent edge touch
+                }}>
+                  Property ID: {reportConfig.propertyId}
+                </div>
+                
+                {/* Improved instruction text - compact styling */}
+                <div style={{ 
+                  marginTop: "6px",
+                  textAlign: "center", 
+                  fontSize: "0.75rem",  // Smaller font
+                  color: "#6b7280",
+                  fontStyle: "italic",
+                  maxWidth: "250px",    // Smaller max width
+                  lineHeight: "1.2",
+                  wordWrap: "break-word",
+                  padding: "0 8px"      // Small padding to prevent edge touch
+                }}>
+                  Scan this QR code with your mobile device to quickly access property information
+                </div>
+              </div>
             </div>
           )}
 
@@ -1131,11 +1321,19 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 <div className="pdf-space-section" key={space.space_id}>
                   <div className="pdf-space-content">
                     <div className="pdf-section-title">{space.name}</div>
-                    {selectedJob && reportConfig.reportType.startsWith("job-") && (
-                      <div className="pdf-sub" style={{ fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
-                        <em>✓ Accessible via Job PIN: {selectedJob.pin}</em>
-                      </div>
-                    )}
+                    {selectedJob &&
+                      reportConfig.reportType.startsWith("job-") && (
+                        <div
+                          className="pdf-sub"
+                          style={{
+                            fontSize: "0.9rem",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <em>✓ Accessible via Job PIN: {selectedJob.pin}</em>
+                        </div>
+                      )}
                     {space.assets && space.assets.length > 0 ? (
                       // Only render assets that are specifically selected
                       space.assets
@@ -1147,11 +1345,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           <div className="pdf-sub" key={asset.asset_id}>
                             <span className="pdf-label">{asset.type}:</span>
                             {asset.description || "No description available"}
-                            {selectedJob && reportConfig.reportType.startsWith("job-") && (
-                              <span style={{ fontSize: "0.8rem", color: "#666", marginLeft: "8px" }}>
-                                [Access Granted]
-                              </span>
-                            )}
+                            {selectedJob &&
+                              reportConfig.reportType.startsWith("job-") && (
+                                <span
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    color: "#666",
+                                    marginLeft: "8px",
+                                  }}
+                                >
+                                  [Access Granted]
+                                </span>
+                              )}
                           </div>
                         ))
                     ) : (
@@ -1162,6 +1367,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               ) : null
             )
           }
+          </div> {/* Close inner content container */}
         </div>
         {/* PDF Footer */}
         {/* <div className="pdf-footer">
