@@ -138,7 +138,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const {user_id, first_name, last_name, phone} = await apiClient.getUserInfoByEmail(ownerEmail);
+        const { user_id, first_name, last_name, phone } =
+          await apiClient.getUserInfoByEmail(ownerEmail);
         console.log("Fetched userId for email", ownerEmail, user_id);
         if (!user_id) {
           setMyProperties([]);
@@ -148,7 +149,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         const props = await apiClient.getPropertyList(user_id);
         if (props && Array.isArray(props)) {
           setMyProperties(
-            props.map((p) => ({ id: p.property_id, name: p.name }))
+            props.map((p) => ({ id: p.propertyId, name: p.name }))
           );
         } else {
           setMyProperties([]);
@@ -796,7 +797,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={includeQRCode}
-                  onCheckedChange={(checked: boolean) => setIncludeQRCode(checked)}
+                  onCheckedChange={(checked: boolean) =>
+                    setIncludeQRCode(checked)
+                  }
                 />
                 Include QR Code for Property
               </label>
@@ -1011,25 +1014,27 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             width: 794,
             minHeight: 1123,
             background: "#ffffff",
-            padding: "30px 35px",  // Reduced padding to give more content space
+            padding: "30px 35px", // Reduced padding to give more content space
             color: "#222",
             fontFamily:
               "'Segoe UI', 'Arial', 'Helvetica Neue', Arial, sans-serif",
             boxSizing: "border-box",
             // Ensure content fits within page boundaries with strict width control
             maxWidth: "794px",
-            overflow: "hidden"
+            overflow: "hidden",
           }}
         >
           {/* Add inner container to control content width more strictly */}
-          <div style={{
-            width: "100%",
-            maxWidth: "724px",  // 794px - (35px * 2) = 724px available width
-            margin: "0 auto",   // Center the content
-            boxSizing: "border-box"
-          }}>
-          <style>
-            {`
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "724px", // 794px - (35px * 2) = 724px available width
+              margin: "0 auto", // Center the content
+              boxSizing: "border-box",
+            }}
+          >
+            <style>
+              {`
               /* CSS Custom Properties for consistent theming */
               :root, pdf-preview {
                 --foreground: #242424 !important;
@@ -1135,238 +1140,255 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 break-inside: avoid;
               }
             `}
-          </style>
-          
-          {/* Professional Report Header */}
-          <div style={{ 
-            marginBottom: 32,
-            textAlign: "center",
-            borderBottom: "3px solid #3b82f6",
-            paddingBottom: 20
-          }}>
-            <h1 style={{ 
-              fontSize: "2rem", 
-              fontWeight: 700, 
-              marginBottom: 8,
-              color: "#1f2937"
-            }}>
-              Property Report
-            </h1>
-            <div style={{
-              fontSize: "0.9rem",
-              color: "#6b7280",
-              fontStyle: "italic"
-            }}>
-              Generated on {new Date().toLocaleDateString('en-AU', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </div>
-          </div>
+            </style>
 
-          {/* General Information */}
-          {sectionSelection.generalInfo && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">General Information</div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Property Name:</span>
-                {displayProperty?.name || property?.name || ""}
-              </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Description:</span>
-                {displayProperty?.description || property?.description || ""}
-              </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Address:</span>
-                {displayProperty?.address || property?.address || ""}
-              </div>
-              {/* Add job info for job reports */}
-              {selectedJob && reportConfig.reportType.startsWith("job-") && (
-                <>
-                  <div className="pdf-sub">
-                    <span className="pdf-label">Job Title:</span>
-                    {selectedJob.title}
-                  </div>
-                  <div className="pdf-sub">
-                    <span className="pdf-label">Job PIN:</span>
-                    {selectedJob.pin}
-                  </div>
-                  <div className="pdf-sub">
-                    <span className="pdf-label">Job Status:</span>
-                    {selectedJob.status}
-                  </div>
-                  <div className="pdf-sub">
-                    <span className="pdf-label">Accessible Sections:</span>
-                    {jobAccessibleAssets.length} asset(s)
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* QR Code Section */}
-          {/* Conditionally render QR code section based on user's checkbox selection */}
-          {/* Only shows if includeQRCode is true AND we have a valid propertyId */}
-          {/* QR code contains the propertyId for easy property identification and access */}
-          {includeQRCode && reportConfig.propertyId && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">Property QR Code</div>
-              
-              {/* Professional QR code container - optimized for strict PDF width constraints */}
-              <div style={{ 
-                display: "flex", 
-                flexDirection: "column",
-                alignItems: "center",
-                padding: "12px 4px",  // Minimal padding to maximize available space
-                margin: "12px 0",
-                boxSizing: "border-box",
-                width: "100%",
-                maxWidth: "100%"
-              }}>
-                {/* QR code wrapper - minimal size to ensure page fit */}
-                <div style={{
-                  padding: "12px",     // Reduced padding
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "6px", // Smaller radius
-                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",  // Subtle shadow
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  maxWidth: "160px",   // Smaller max width to ensure fit
-                  margin: "0 auto"     // Center the container
-                }}>
-                  {/* Enhanced QR code - conservative size for guaranteed page fit */}
-                  <QRCodeCanvas
-                    value={reportConfig.propertyId}  // QR code contains the property ID
-                    size={100}                       // Reduced to 100px for guaranteed fit
-                    level="H"                        // High error correction for better scanning
-                    bgColor="#ffffff"                // Explicit white background for PDF printing
-                    fgColor="#000000"                // Explicit black for maximum contrast
-                  />
-                </div>
-                
-                {/* Property ID reference - compact styling */}
-                <div style={{ 
-                  marginTop: "10px",
-                  textAlign: "center",
-                  fontSize: "0.8rem",  // Smaller font
-                  color: "#374151",
-                  fontWeight: "500",
-                  wordBreak: "break-all",
-                  maxWidth: "100%",
-                  padding: "0 8px"     // Small padding to prevent edge touch
-                }}>
-                  Property ID: {reportConfig.propertyId}
-                </div>
-                
-                {/* Improved instruction text - compact styling */}
-                <div style={{ 
-                  marginTop: "6px",
-                  textAlign: "center", 
-                  fontSize: "0.75rem",  // Smaller font
+            {/* Professional Report Header */}
+            <div
+              style={{
+                marginBottom: 32,
+                textAlign: "center",
+                borderBottom: "3px solid #3b82f6",
+                paddingBottom: 20,
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "2rem",
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: "#1f2937",
+                }}
+              >
+                Property Report
+              </h1>
+              <div
+                style={{
+                  fontSize: "0.9rem",
                   color: "#6b7280",
                   fontStyle: "italic",
-                  maxWidth: "250px",    // Smaller max width
-                  lineHeight: "1.2",
-                  wordWrap: "break-word",
-                  padding: "0 8px"      // Small padding to prevent edge touch
-                }}>
-                  Scan this QR code with your mobile device to quickly access property information
+                }}
+              >
+                Generated on{" "}
+                {new Date().toLocaleDateString("en-AU", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </div>
+            </div>
+
+            {/* General Information */}
+            {sectionSelection.generalInfo && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">General Information</div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Property Name:</span>
+                  {displayProperty?.name || property?.name || ""}
                 </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Description:</span>
+                  {displayProperty?.description || property?.description || ""}
+                </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Address:</span>
+                  {displayProperty?.address || property?.address || ""}
+                </div>
+                {/* Add job info for job reports */}
+                {selectedJob && reportConfig.reportType.startsWith("job-") && (
+                  <>
+                    <div className="pdf-sub">
+                      <span className="pdf-label">Job Title:</span>
+                      {selectedJob.title}
+                    </div>
+                    <div className="pdf-sub">
+                      <span className="pdf-label">Job PIN:</span>
+                      {selectedJob.pin}
+                    </div>
+                    <div className="pdf-sub">
+                      <span className="pdf-label">Job Status:</span>
+                      {selectedJob.status}
+                    </div>
+                    <div className="pdf-sub">
+                      <span className="pdf-label">Accessible Sections:</span>
+                      {jobAccessibleAssets.length} asset(s)
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Plans & Documents */}
-          {sectionSelection.plans && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">Plans & Documents</div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Floor Plans:</span>
-                No floor plans uploaded
-              </div>
-              <div className="pdf-sub">
-                <span className="pdf-label">Building Plans:</span>
-                No building plans uploaded
-              </div>
-            </div>
-          )}
+            {/* QR Code Section */}
+            {/* Conditionally render QR code section based on user's checkbox selection */}
+            {/* Only shows if includeQRCode is true AND we have a valid propertyId */}
+            {/* QR code contains the propertyId for easy property identification and access */}
+            {includeQRCode && reportConfig.propertyId && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">Property QR Code</div>
 
-          {/* Property Images */}
-          {selectedImages.length > 0 && (
-            <div className="pdf-section">
-              <div className="pdf-section-title">Property Images</div>
-              <div className="pdf-images-row">
-                {selectedImages.map((url, idx) => (
-                  <div className="pdf-image-container" key={url + idx}>
-                    <img
-                      src={url}
-                      alt={`Property ${idx + 1}`}
-                      className="pdf-image"
+                {/* Professional QR code container - optimized for strict PDF width constraints */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    padding: "12px 4px", // Minimal padding to maximize available space
+                    margin: "12px 0",
+                    boxSizing: "border-box",
+                    width: "100%",
+                    maxWidth: "100%",
+                  }}
+                >
+                  {/* QR code wrapper - minimal size to ensure page fit */}
+                  <div
+                    style={{
+                      padding: "12px", // Reduced padding
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "6px", // Smaller radius
+                      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)", // Subtle shadow
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      maxWidth: "160px", // Smaller max width to ensure fit
+                      margin: "0 auto", // Center the container
+                    }}
+                  >
+                    {/* Enhanced QR code - conservative size for guaranteed page fit */}
+                    <QRCodeCanvas
+                      value={reportConfig.propertyId} // QR code contains the property ID
+                      size={100} // Reduced to 100px for guaranteed fit
+                      level="H" // High error correction for better scanning
+                      bgColor="#ffffff" // Explicit white background for PDF printing
+                      fgColor="#000000" // Explicit black for maximum contrast
                     />
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Dynamically render selected spaces and their assets */}
-          {
-            /* Each space is wrapped in pdf-space-section for page-break protection */
-            displayProperty?.spaces?.map((space: any) =>
-              sectionSelection.spaces[space.space_id] ? (
-                <div className="pdf-space-section" key={space.space_id}>
-                  <div className="pdf-space-content">
-                    <div className="pdf-section-title">{space.name}</div>
-                    {selectedJob &&
-                      reportConfig.reportType.startsWith("job-") && (
-                        <div
-                          className="pdf-sub"
-                          style={{
-                            fontSize: "0.9rem",
-                            color: "#666",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <em>✓ Accessible via Job PIN: {selectedJob.pin}</em>
-                        </div>
-                      )}
-                    {space.assets && space.assets.length > 0 ? (
-                      // Only render assets that are specifically selected
-                      space.assets
-                        .filter(
-                          (asset: any) =>
-                            sectionSelection.assets[asset.asset_id]
-                        )
-                        .map((asset: any) => (
-                          <div className="pdf-sub" key={asset.asset_id}>
-                            <span className="pdf-label">{asset.type}:</span>
-                            {asset.description || "No description available"}
-                            {selectedJob &&
-                              reportConfig.reportType.startsWith("job-") && (
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "#666",
-                                    marginLeft: "8px",
-                                  }}
-                                >
-                                  [Access Granted]
-                                </span>
-                              )}
-                          </div>
-                        ))
-                    ) : (
-                      <div className="pdf-sub">No details available</div>
-                    )}
+                  {/* Property ID reference - compact styling */}
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      textAlign: "center",
+                      fontSize: "0.8rem", // Smaller font
+                      color: "#374151",
+                      fontWeight: "500",
+                      wordBreak: "break-all",
+                      maxWidth: "100%",
+                      padding: "0 8px", // Small padding to prevent edge touch
+                    }}
+                  >
+                    Property ID: {reportConfig.propertyId}
+                  </div>
+
+                  {/* Improved instruction text - compact styling */}
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      textAlign: "center",
+                      fontSize: "0.75rem", // Smaller font
+                      color: "#6b7280",
+                      fontStyle: "italic",
+                      maxWidth: "250px", // Smaller max width
+                      lineHeight: "1.2",
+                      wordWrap: "break-word",
+                      padding: "0 8px", // Small padding to prevent edge touch
+                    }}
+                  >
+                    Scan this QR code with your mobile device to quickly access
+                    property information
                   </div>
                 </div>
-              ) : null
-            )
-          }
-          </div> {/* Close inner content container */}
+              </div>
+            )}
+
+            {/* Plans & Documents */}
+            {sectionSelection.plans && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">Plans & Documents</div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Floor Plans:</span>
+                  No floor plans uploaded
+                </div>
+                <div className="pdf-sub">
+                  <span className="pdf-label">Building Plans:</span>
+                  No building plans uploaded
+                </div>
+              </div>
+            )}
+
+            {/* Property Images */}
+            {selectedImages.length > 0 && (
+              <div className="pdf-section">
+                <div className="pdf-section-title">Property Images</div>
+                <div className="pdf-images-row">
+                  {selectedImages.map((url, idx) => (
+                    <div className="pdf-image-container" key={url + idx}>
+                      <img
+                        src={url}
+                        alt={`Property ${idx + 1}`}
+                        className="pdf-image"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dynamically render selected spaces and their assets */}
+            {
+              /* Each space is wrapped in pdf-space-section for page-break protection */
+              displayProperty?.spaces?.map((space: any) =>
+                sectionSelection.spaces[space.space_id] ? (
+                  <div className="pdf-space-section" key={space.space_id}>
+                    <div className="pdf-space-content">
+                      <div className="pdf-section-title">{space.name}</div>
+                      {selectedJob &&
+                        reportConfig.reportType.startsWith("job-") && (
+                          <div
+                            className="pdf-sub"
+                            style={{
+                              fontSize: "0.9rem",
+                              color: "#666",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <em>✓ Accessible via Job PIN: {selectedJob.pin}</em>
+                          </div>
+                        )}
+                      {space.assets && space.assets.length > 0 ? (
+                        // Only render assets that are specifically selected
+                        space.assets
+                          .filter(
+                            (asset: any) =>
+                              sectionSelection.assets[asset.asset_id]
+                          )
+                          .map((asset: any) => (
+                            <div className="pdf-sub" key={asset.asset_id}>
+                              <span className="pdf-label">{asset.type}:</span>
+                              {asset.description || "No description available"}
+                              {selectedJob &&
+                                reportConfig.reportType.startsWith("job-") && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.8rem",
+                                      color: "#666",
+                                      marginLeft: "8px",
+                                    }}
+                                  >
+                                    [Access Granted]
+                                  </span>
+                                )}
+                            </div>
+                          ))
+                      ) : (
+                        <div className="pdf-sub">No details available</div>
+                      )}
+                    </div>
+                  </div>
+                ) : null
+              )
+            }
+          </div>{" "}
+          {/* Close inner content container */}
         </div>
         {/* PDF Footer */}
         {/* <div className="pdf-footer">
