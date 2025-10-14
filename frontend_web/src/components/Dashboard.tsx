@@ -10,7 +10,7 @@ import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from
 import { useState, useEffect} from "react";
 import { getAdminProperty, getAllOwners, getChangeLogs, getPropertyOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
-import { Property } from "../types/serverTypes.ts";
+import { Property, Owner } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 
@@ -23,22 +23,14 @@ interface DashboardProps {
 
 
 interface ChangeLog {
-  property_id: string;
-  changelog_id: string;
+  propertyId: string;
+  changelogId: string;
   changelog_specifications: Record<string, any>;
   changelog_description: string;
   changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
   changelog_created_at: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
-}
-
-interface Owner {
-  owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-
+  user_firstName: string | null;
+  user_lastName: string | null;
 }
 
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
@@ -56,7 +48,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           
   
           if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
+          const propertyIds = properties.map((p: any) => p.propertyId);
           const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
@@ -135,7 +127,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -154,7 +146,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -218,16 +210,16 @@ function formatDateTime(timestamp: string | number | Date) {
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.property_id} 
+                  key={property.propertyId} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splash_image ? (
+                    {property.splashImage ? (
                       <img
-                        src={property.splash_image}
+                        src={property.splashImage}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />
@@ -303,14 +295,14 @@ function formatDateTime(timestamp: string | number | Date) {
               requests
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelog_id}>
+                <TableRow key={request.changelogId}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.user_first_name || request.user_last_name
-                      ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                    {request.user_firstName || request.user_lastName
+                      ? `${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
                   <TableCell>{request.changelog_description}</TableCell>
@@ -338,7 +330,7 @@ function formatDateTime(timestamp: string | number | Date) {
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -346,7 +338,7 @@ function formatDateTime(timestamp: string | number | Date) {
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} 
+                                  value={`${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>
@@ -374,12 +366,12 @@ function formatDateTime(timestamp: string | number | Date) {
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelog_id)}
+                                onClick={() => rejectEdit(request.changelogId)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelog_id)}>
+                              <Button onClick={() => approveEdit(request.changelogId)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
@@ -430,12 +422,12 @@ function formatDateTime(timestamp: string | number | Date) {
             <TableBody>
               {owners.length > 0 ? (
                 owners.map((owner) => (
-                  <TableRow key={owner.owner_id}>
+                  <TableRow key={owner.ownerId}>
                     <TableCell className="font-medium">
-                      {owner.first_name || 'N/A'}
+                      {owner.firstName || 'N/A'}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {owner.last_name || 'N/A'}
+                      {owner.lastName || 'N/A'}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {owner.email || 'No email'}

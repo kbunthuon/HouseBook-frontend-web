@@ -10,7 +10,7 @@ import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from
 import { useState, useEffect} from "react";
 import { getAdminProperty, getAllOwners, getChangeLogs, getPropertyOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
-import { Property } from "../types/serverTypes.ts";
+import { Property, Owner } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 
@@ -29,14 +29,6 @@ interface ChangeLog {
   changelog_created_at: string;
   user_first_name: string | null;
   user_last_name: string | null;
-}
-
-interface Owner {
-  // owner_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-
 }
 
 export function AdminRequests({ userId, userType}: AdminRequestProps) {
@@ -195,7 +187,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableRow key={request.changelog_id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                          (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
                         {request.user_first_name || request.user_last_name
@@ -226,7 +218,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>

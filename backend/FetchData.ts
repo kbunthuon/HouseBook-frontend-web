@@ -299,7 +299,6 @@ export async function getAllOwners() {
       first_name,
       last_name,
       email,
-      created_at,
       phone
       )
     `)
@@ -318,6 +317,7 @@ export async function getAllOwners() {
     phone: row.phone
   }));
 
+  console.log(owners);
   return owners;
 }
 
