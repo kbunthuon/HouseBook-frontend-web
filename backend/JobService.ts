@@ -1,4 +1,4 @@
-// src/services/JobService.ts
+// backend/JobService.ts
 /// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
 
@@ -17,13 +17,13 @@ export type JobAsset = {
 
 // Shape of a job record
 export interface Job {
-  id: string | null; // May be null before insert
+  id: string | null;        // May be null before insert
   property_id: string;
   tradie_id: string | null; // May be null at creation of Job
   title: string;
   status: JobStatus;
-  created_at: string; // ISOString
-  end_time: string | null; // ISOString
+  created_at: string;       // ISOString
+  end_time: string | null;  // ISOString
   expired: boolean;
   pin: string;
 }
@@ -46,21 +46,8 @@ export interface FetchJobInfoParams {
  * @param last - (Optional) Limit the number of jobs returned (most recent first).
  * @returns A list of Job list and JobAsset list
  */
-export async function fetchJobsInfo({
-  property_id,
-  tradie_id = null,
-  status = null,
-  expired = null,
-  last = null,
-}: FetchJobInfoParams): Promise<[Job[], JobAsset[]]> {
-  const allJobs = await fetchJobsTable({
-    property_id,
-    tradie_id,
-    status,
-    expired,
-    last,
-  });
-  console.log("In fetchJobsInfo - jobs:", allJobs);
+export async function fetchJobsInfo({ property_id, tradie_id = null, status = null, expired = null, last = null }: FetchJobInfoParams): Promise<[Job[], JobAsset[]]> {
+  const allJobs = await fetchJobsTable({ property_id, tradie_id, status, expired, last });
 
   // Fetch assets for all jobs
   const allJobAssets: JobAsset[] = [];
@@ -72,7 +59,6 @@ export async function fetchJobsInfo({
       }
     }
   }
-  console.log("In fetchJobsInfo - allJobAssets:", allJobAssets);
 
   return [allJobs, allJobAssets];
 }
@@ -86,13 +72,7 @@ export async function fetchJobsInfo({
  * @param last - (Optional) Limit the number of jobs returned (most recent first).
  * @returns A list of jobs matching the filters, ordered by creation time (newest first).
  */
-export async function fetchJobsTable({
-  property_id,
-  tradie_id = null,
-  status = null,
-  expired = null,
-  last = null,
-}: FetchJobInfoParams): Promise<Job[]> {
+export async function fetchJobsTable({ property_id, tradie_id = null, status = null, expired = null, last = null }: FetchJobInfoParams): Promise<Job[]> {
   let query = supabase.from("Jobs").select("*").eq("property_id", property_id);
 
   if (tradie_id) {
@@ -128,19 +108,13 @@ export async function fetchJobsTable({
  * @param jobId - The ID of the inserted job
  * @param assetIds - Array of asset IDs to associate with this job
  */
-export async function insertJobAssetsTable(
-  jobId: string,
-  assetIds: string[]
-): Promise<JobAsset[] | null> {
+export async function insertJobAssetsTable(jobId: string, assetIds: string[]): Promise<JobAsset[] | null> {
   if (!jobId) throw new Error("Missing job ID for inserting JobAssets.");
   if (!assetIds || assetIds.length === 0) return null; // nothing to insert
 
-  const rows = assetIds.map((asset_id) => ({ job_id: jobId, asset_id }));
+  const rows = assetIds.map(asset_id => ({ job_id: jobId, asset_id }));
 
-  const { data, error } = await supabase
-    .from("JobAssets")
-    .insert(rows)
-    .select();
+  const { data, error } = await supabase.from("JobAssets").insert(rows).select();
 
   if (error) throw new Error(`Failed to insert JobAssets: ${error.message}`);
 
@@ -156,24 +130,18 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
   // Validate required fields
   if (!job.property_id) throw new Error(`Missing "property_id".`);
   if (!job.title) throw new Error(`Missing "title".`);
-  if (job.expired === undefined || job.expired === null)
-    throw new Error(`Missing "expired".`);
+  if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);
 
   // Insert job
-  const { data, error } = await supabase
-    .from("Jobs")
-    .insert([
-      {
-        property_id: job.property_id,
-        title: job.title,
-        status: JobStatus.PENDING, // Start off a job with PENDING status
-        end_time: job.end_time
-          ? new Date(job.end_time).toISOString()
-          : oneHourFromNowISO(),
-        expired: false, // Just created, cannot be expired
-      },
-    ])
-    .select(); // returns the inserted row
+  const { data, error } = await supabase.from("Jobs").insert([
+    {
+      property_id: job.property_id,
+      title: job.title,
+      status: JobStatus.PENDING, // Start off a job with PENDING status
+      end_time: job.end_time ? new Date(job.end_time).toISOString() : oneHourFromNowISO(),
+      expired: false, // Just created, cannot be expired
+    } 
+  ]).select(); // returns the inserted row
 
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) return null;
@@ -187,10 +155,7 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
  * @param job - Job data (title, property_id, end_time etc.)
  * @param assetIds - Array of selected asset IDs
  */
-export async function insertJobsInfo(
-  job: Job,
-  assetIds: string[]
-): Promise<[Job, JobAsset[] | null]> {
+export async function insertJobsInfo(job: Job, assetIds: string[]): Promise<[Job, JobAsset[] | null]> {
   // 1. Insert job
   const insertedJob = await insertJobsTable(job);
 
@@ -285,10 +250,7 @@ export async function updateJobTable(job: Job): Promise<Job> {
  * @param assetIds - Array of asset IDs to associate
  * @returns Array of JobAsset rows
  */
-export async function upsertJobAssets(
-  jobId: string,
-  assetIds: string[]
-): Promise<JobAsset[] | null> {
+export async function upsertJobAssets(jobId: string, assetIds: string[]): Promise<JobAsset[] | null> {
   if (!jobId) throw new Error("Job ID is required for upserting assets.");
 
   try {
@@ -301,9 +263,7 @@ export async function upsertJobAssets(
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
-      throw new Error(
-        `Failed to delete old job assets: ${deleteError.message}`
-      );
+      throw new Error(`Failed to delete old job assets: ${deleteError.message}`);
     }
 
     // If no new assets to insert, return null
@@ -314,22 +274,19 @@ export async function upsertJobAssets(
 
     // Remove duplicates and prepare rows
     const uniqueAssetIds = [...new Set(assetIds)];
-    console.log(
-      `Inserting ${uniqueAssetIds.length} unique assets:`,
-      uniqueAssetIds
-    );
-
-    const rows = uniqueAssetIds.map((asset_id) => ({
-      job_id: jobId,
-      asset_id: asset_id,
+    console.log(`Inserting ${uniqueAssetIds.length} unique assets:`, uniqueAssetIds);
+    
+    const rows = uniqueAssetIds.map(asset_id => ({ 
+      job_id: jobId, 
+      asset_id: asset_id 
     }));
 
     // Use upsert to handle any potential conflicts
     const { data, error: upsertError } = await supabase
       .from("JobAssets")
-      .upsert(rows, {
-        onConflict: "job_id,asset_id",
-        ignoreDuplicates: false,
+      .upsert(rows, { 
+        onConflict: 'job_id,asset_id',
+        ignoreDuplicates: false 
       })
       .select();
 
@@ -340,6 +297,7 @@ export async function upsertJobAssets(
 
     console.log("Successfully upserted job assets:", data);
     return data || [];
+    
   } catch (error) {
     console.error("Error in upsertJobAssets:", error);
     throw error;
@@ -352,10 +310,7 @@ export async function upsertJobAssets(
  * @param assetIds - Array of asset IDs to associate with this job
  * @returns Updated Job and JobAsset list
  */
-export async function updateJobInfo(
-  job: Job,
-  assetIds: string[]
-): Promise<[Job, JobAsset[] | null]> {
+export async function updateJobInfo(job: Job, assetIds: string[]): Promise<[Job, JobAsset[] | null]> {
   if (!job.id) throw new Error("Job ID is required for update.");
 
   // 1. Update the job row
@@ -382,17 +337,14 @@ function oneHourFromNowISO(): string {
  * @returns Array of JobAsset objects with additional asset details
  */
 export async function fetchJobAssetsWithDetails(jobId: string): Promise<any[]> {
-  /*Recent update: Fixed Supabase query syntax - moved nested Spaces join inside Assets selection 
-    to resolve "unexpected '!' expecting letter" error that was preventing job asset details from loading*/
   const { data, error } = await supabase
     .from("JobAssets")
-    .select(
-      `
+    .select(`
       asset_id,
       job_id,
-      Assets!inner(asset_id, type, description, space_id, Spaces!inner(space_id, name))
-    `
-    )
+      Assets!inner(asset_id, type, description, space_id),
+      Assets!inner.Spaces!inner(space_id, name)
+    `)
     .eq("job_id", jobId);
 
   if (error) {
