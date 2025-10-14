@@ -109,11 +109,11 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
 
   type PropertySection = { name: string; assets: { id: string; type: string }[]; };
   const propertySections: PropertySection[] =
-    (property?.Spaces ?? []).map(s => ({
+    (property?.spaces ?? []).map(s => ({
       name: s.name,
-      assets: (s.Assets ?? []).map(a => ({
+      assets: (s.assets ?? []).map(a => ({
         id: a.id,
-        type: a.type ?? a.AssetTypes?.name ?? "", // ✅ fallback
+        type: a.type ?? a.assetTypes?.name ?? "", // ✅ fallback
       })),
     }));
 
