@@ -225,11 +225,17 @@ function AdminPropertyDetailPage() {
 /** ---------- Owner nested helpers ---------- */
 function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail: string }) {
   const navigate = useNavigate();
-  // NOTE: you previously passed userId as ownerEmail; keep whichever your component expects.
+  
+  const handleViewProperty = (id: string) => {
+    console.log('Navigating to property:', id);
+    console.log('Navigation path:', ROUTES.properties.detail(id));
+    navigate(ROUTES.properties.detail(id));
+  };
+  
   return (
     <MyProperties
-      ownerEmail={userId /* or userEmail if that's correct */}
-      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      ownerEmail={userId}
+      onViewProperty={handleViewProperty}
       onAddProperty={() => navigate(ROUTES.properties.add)}
     />
   );
@@ -238,6 +244,12 @@ function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail:
 function OwnerPropertyDetailPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
+
+  console.log('OwnerPropertyDetailPage rendered');
+  console.log('propertyId from useParams:', propertyId);
+  console.log('All params:', useParams());
+  console.log('Current location:', window.location.pathname);
+  
   return (
     <PropertyDetail
       propertyId={propertyId!}

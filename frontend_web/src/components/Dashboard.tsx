@@ -10,10 +10,11 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getAdminProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { getAdminProperty } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { apiClient } from "../api/wrappers.ts";
 
 
 interface DashboardProps {
@@ -54,7 +55,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
           console.log("property", propertyIds);
-          const changes = await getChangeLogs(propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -234,16 +235,16 @@ function formatDateTime(timestamp: string | number | Date) {
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.property_id} 
+                  key={property.propertyId} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splash_image ? (
+                    {property.splashImage ? (
                       <img
-                        src={property.splash_image}
+                        src={property.splashImage}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />
@@ -318,7 +319,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableRow key={request.changelog_id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                          (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
                         {request.user_first_name || request.user_last_name
@@ -349,7 +350,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>

@@ -5,8 +5,9 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-import { getProperty } from "../../../backend/FetchData";
+// import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
+import { apiClient } from "../api/wrappers";
 
 interface MyPropertiesProps {
   ownerEmail: string;
@@ -22,7 +23,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
   useEffect(() => {
     const loadProperties = async () => {
       setLoading(true);
-      const properties = await getProperty(userID); 
+      const properties = await apiClient.getPropertyList(userID); 
       setMyProperties(properties || []);
       setLoading(false);
     };
@@ -127,7 +128,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.property_id}>
+                  <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -154,7 +155,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.property_id)}
+                            onClick={() => onViewProperty(property.propertyId)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />

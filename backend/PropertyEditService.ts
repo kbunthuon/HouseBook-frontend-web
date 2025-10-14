@@ -1,7 +1,6 @@
 // backend/PropertyEditService.ts
 import supabase from "../config/supabaseClient";
 import { createChangeLogEntry, ChangeLogAction } from "./ChangeLogService";
-import { getPropertyImages } from "./FetchData";
 
 // Types for update operations
 export interface PropertyUpdate {

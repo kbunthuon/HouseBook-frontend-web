@@ -10,9 +10,9 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import { Property } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
+import { apiClient } from "../api/wrappers.ts";
 
 
 interface OwnerRequestsProps {
@@ -40,16 +40,16 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
       const getOwnerProps = async () => {
         try {
           // Get owner id
-          const ownerId = await getOwnerId(userId);
+          const ownerId = await apiClient.getOwnerId(userId);
           if (!ownerId) throw Error("Owner ID not found");
           
-          const properties = await getProperty(userId);
+          const properties = await apiClient.getPropertyList(userId);
           setOwnerProperties(properties ?? []);
   
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.property_id);
-          const changes = await getChangeLogs(propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -185,7 +185,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableRow key={request.changelog_id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
-                          (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                          (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
                         {request.user_first_name || request.user_last_name
@@ -216,7 +216,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>
