@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarTrigger,
+  SidebarInset,
   useSidebar,
 } from "./ui/sidebar";
 
@@ -45,7 +46,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <FixedSidebarTrigger />
 
         <Sidebar collapsible="offcanvas">
@@ -105,10 +106,12 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
-
-        <div className="flex-1 overflow-auto">
-          <div className="p-8">{children}</div>
-        </div>
+        
+        <SidebarInset className="flex-1">
+          <div className="h-full w-full overflow-auto">
+            <div className="p-8 w-full">{children}</div>
+          </div>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );

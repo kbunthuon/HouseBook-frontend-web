@@ -156,7 +156,7 @@ export default function App() {
           }
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
-          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
+          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} />} />
           <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
@@ -229,12 +229,11 @@ function AdminPropertyDetailPage() {
 }
 
 /** ---------- Owner nested helpers ---------- */
-function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail: string }) {
+function OwnerPropertiesPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
-  // NOTE: you previously passed userId as ownerEmail; keep whichever your component expects.
   return (
     <MyProperties
-      ownerEmail={userId /* or userEmail if that's correct */}
+      ownerId={userId}
       onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
       onAddProperty={() => navigate(ROUTES.properties.add)}
     />

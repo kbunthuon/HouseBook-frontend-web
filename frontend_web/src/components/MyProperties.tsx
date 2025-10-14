@@ -9,12 +9,12 @@ import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
 
 interface MyPropertiesProps {
-  ownerEmail: string;
+  ownerId: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
-export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
+export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
