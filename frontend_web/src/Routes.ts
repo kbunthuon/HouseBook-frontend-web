@@ -8,6 +8,12 @@ export const ROUTES = {
   },
   reports: "/owner/reports",
   requests: "/owner/requests",
+
+  propertyTransfer: "/owner/property-transfer/:id",
+  propertyTransferPath: (id: string) => `/owner/property-transfer/${id}`,
+
+  propertyTransferSubmitted: "/owner/property-transfer/:id/submitted",
+  propertyTransferSubmittedPath: (id: string) => `/owner/property-transfer/${id}/submitted`,
 };
 
 export const DASHBOARD = "dashboard";
