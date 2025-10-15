@@ -47,10 +47,10 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           const properties = await getAdminProperty(userId, userType);
           setOwnerProperties(properties ?? []);
           
-  
+          console.log(properties);
           if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
-          console.log("property", propertyIds);
+          const propertyIds = properties.map((p: any) => p.propertyId);
+
           const changes = await apiClient.getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
