@@ -14,7 +14,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { Owner, ChangeLog, Property } from "../types/serverTypes";
+import { Owner, ChangeLog, Property, Asset } from "../types/serverTypes";
 
 // Backend-shaped types
 // interface BackendAsset {
