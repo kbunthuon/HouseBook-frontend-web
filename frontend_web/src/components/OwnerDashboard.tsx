@@ -10,9 +10,10 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import { Property } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
+
+import { apiClient } from "../api/wrappers.ts";
 
 
 
@@ -44,16 +45,17 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
     const getOwnerProps = async () => {
       try {
         // Get owner id
-        const ownerId = await getOwnerId(userId);
+        const ownerId = await apiClient.getOwnerId(userId);
         if (!ownerId) throw Error("Owner ID not found");
         
-        const properties = await getProperty(userId);
+        const properties = await apiClient.getPropertyList(userId);
         setOwnerProperties(properties ?? []);
 
 
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
-          const changes = await getChangeLogs(propertyIds);
+          console.log("Fetching change logs for properties:", propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");

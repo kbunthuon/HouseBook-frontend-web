@@ -14,10 +14,9 @@ import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { getPropertyImages, getPropertyOwners } from "../../../backend/FetchData";
-import { Owner, ChangeLog, Asset, Space, Property, AssetType } from "../types/serverTypes";
+import { Owner, ChangeLog, Property, Asset } from "../types/serverTypes";
 
-// Backend-shaped types (matches getPropertyForEdit response)
+// Backend-shaped types
 // interface BackendAsset {
 //   id: string;
 //   description?: string;
@@ -63,6 +62,7 @@ import {
 } from "../../../backend/PropertyEditService";
 import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+import { apiClient } from "../api/wrappers";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -104,6 +104,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -171,18 +172,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     try {
       setLoading(true);
       setError(null);
-
-      const result = await getPropertyForEdit(propertyId);
+      console.log("Fetching data for propertyId:", propertyId);
+      const result = await apiClient.getPropertyDetails(propertyId);
   if (result) setProperty(result);
       else setError("Property not found");
 
       // Fetch images
-      const images = await getPropertyImages(propertyId);
-      console.log(images);
+      const imagesResult = await apiClient.getPropertyImages(propertyId);
+      console.log(imagesResult);
       // Update property with images without losing current state
-      setProperty((prev) => prev ? { ...prev, images } : prev);
+      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
 
-      const ownerResult = await getPropertyOwners(propertyId);
+      const ownerResult = await apiClient.getPropertyOwners(propertyId);
       if (ownerResult) setOwners(ownerResult);
 
       const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
@@ -200,6 +201,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   // Map backend-shaped property to the shared Property shape expected by some child components
   const mapToSharedProperty = (bp: Property | null) => {
     if (!bp) return null;
+    console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
       propertyId: bp.propertyId,
       address: bp.address || bp.address || "",

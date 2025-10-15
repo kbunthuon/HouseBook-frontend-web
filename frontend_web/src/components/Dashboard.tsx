@@ -8,10 +8,11 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners, getChangeLogs, getPropertyOwners } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property, Owner } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { apiClient } from "../api/wrappers.ts";
 
 
 interface DashboardProps {
@@ -48,8 +49,9 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           
   
           if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-          const changes = await getChangeLogs(propertyIds);
+          const propertyIds = properties.map((p: any) => p.property_id);
+          console.log("property", propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
