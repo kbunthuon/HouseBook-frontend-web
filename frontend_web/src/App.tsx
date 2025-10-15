@@ -203,7 +203,7 @@ function DashboardPage({ userId, userType}: { userId: string, userType: string }
     <Dashboard
       userId={userId}
       userType={userType}
-      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
       onAddProperty={() => navigate(ADMIN_ROUTES.properties.add)}
     />
   );
