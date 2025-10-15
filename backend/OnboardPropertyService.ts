@@ -1,8 +1,8 @@
 import supabase from "../config/supabaseClient";
-import { getOwnerId, getUserIdByEmail } from "./FetchData";
 
-// Setting what Owner looks like
+// Setting what OwnerData looks like
 import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
+import { apiClient } from "../frontend_web/src/api/wrappers";
 
 export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
   // Get the user id
@@ -11,8 +11,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[
   const userId = user.id;
   
   // Get the owner id
-  const ownerId = await getOwnerId(userId);
-  if (!ownerId) throw new Error("Owner ID not returned");
+  const ownerId = await apiClient.getOwnerId(userId);
 
   // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);
@@ -25,7 +24,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[
 
 }
 
-export async function adminOnboardProperty(owner: Owner, formData: FormData, spaces: SpaceInt[]) {
+export async function adminOnboardProperty(ownerData: Owner, formData: FormData, spaces: SpaceInt[]) {
   // Check if this user account exists
   // const exists = await checkOwnerExists(owner);
   // if (!exists) {
@@ -34,14 +33,13 @@ export async function adminOnboardProperty(owner: Owner, formData: FormData, spa
   // }
 
   // Get the user id using the owner's email
-  const userId = await getUserIdByEmail(owner.email);
+  const userId = await apiClient.getUserInfoByEmail(ownerData.email);
   if (!userId) throw new Error("User ID not returned from signup");
   console.log("userId:");
   console.log(userId);
   
   // Get the owner id
-  const ownerId = await getOwnerId(userId);
-  if (!ownerId) throw new Error("Owner ID not returned");
+  const ownerId = await apiClient.getOwnerId(userId);
 
   // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);

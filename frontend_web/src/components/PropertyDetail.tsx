@@ -14,36 +14,9 @@ import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { getPropertyImages, getPropertyOwners } from "../../../backend/FetchData";
-import { Owner, ChangeLog, Property, Asset, Space, AssetType} from "../types/serverTypes";
+import { Owner, ChangeLog, Property, Asset } from "../types/serverTypes";
 
-// Backend-shaped types (matches getPropertyForEdit response)
-// interface BackendAsset {
-//   id: string;
-//   description?: string;
-//   current_specifications?: Record<string, any>;
-//   deleted?: boolean;
-//   AssetTypes?: { id: number; name: string; discipline?: string };
-// }
-
-// interface BackendSpace {
-//   id: string;
-//   name: string;
-//   type?: string;
-//   deleted?: boolean;
-//   Assets?: BackendAsset[];
-// }
-
-// // interface BackendProperty {
-// //   property_id: string;
-// //   name: string;
-// //   description?: string;
-// //   address?: string;
-// //   total_floor_area?: number;
-// //   images?: string[];
-// //   Spaces?: BackendSpace[];
-// // }
-import { fetchJobsInfo, Job, JobAsset, JobStatus, deleteJob } from "../../../backend/JobService";
+import { fetchJobsInfo, Job, JobAsset, deleteJob } from "../../../backend/JobService";
 
 import { 
   updateProperty, 
@@ -63,6 +36,7 @@ import {
 } from "../../../backend/PropertyEditService";
 import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+import { apiClient } from "../api/wrappers";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -104,6 +78,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -171,18 +146,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     try {
       setLoading(true);
       setError(null);
-
-      const result = await getPropertyForEdit(propertyId);
+      console.log("Fetching data for propertyId:", propertyId);
+      const result = await apiClient.getPropertyDetails(propertyId);
   if (result) setProperty(result);
       else setError("Property not found");
 
       // Fetch images
-      const images = await getPropertyImages(propertyId);
-      console.log(images);
+      const imagesResult = await apiClient.getPropertyImages(propertyId);
+      console.log(imagesResult);
       // Update property with images without losing current state
-      setProperty((prev) => prev ? { ...prev, images } : prev);
+      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
 
-      const ownerResult = await getPropertyOwners(propertyId);
+      const ownerResult = await apiClient.getPropertyOwners(propertyId);
       if (ownerResult) setOwners(ownerResult);
 
       const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
@@ -200,6 +175,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   // Map backend-shaped property to the shared Property shape expected by some child components
   const mapToSharedProperty = (bp: Property | null) => {
     if (!bp) return null;
+    console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
       propertyId: bp.propertyId,
       address: bp.address || bp.address || "",
@@ -1022,7 +998,16 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           <h1>{property?.name ?? "Property"}</h1>
           <p className="text-muted-foreground text-lg">{property?.description}</p>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>Owner: {owners?.[0] ? `${owners[0].firstName} ${owners[0].lastName}` : "N/A"}</span>
+            <span>
+              {owners && owners.length > 0 ? (
+                <>
+                  Owner{owners.length > 1 ? "s" : ""}:{" "}
+                  {owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ")}
+                </>
+              ) : (
+                "Owner: N/A"
+              )}
+            </span>
             <span>•</span>
             <span>{property?.address}</span>
             <span>•</span>
@@ -1034,6 +1019,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
           </div>
         </div>
+
+
 
         <div className="space-y-2 flex flex-col items-end">
           <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64">

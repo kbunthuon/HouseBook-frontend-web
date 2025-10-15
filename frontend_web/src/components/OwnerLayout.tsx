@@ -28,7 +28,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
 
   const menu = [
     { to: ROUTES.dashboard, label: "My Dashboard", icon: Home, end: true },
-    { to: ROUTES.properties.list, label: "My Properties", icon: Building, },
+    { to: ROUTES.properties.list, label: "My Properties", icon: Building},
     { to: ROUTES.properties.add, label: "Add Property", icon: Plus, end: true },
     { to: ROUTES.reports, label: "Reports", icon: FileText, end: false },
     { to: ROUTES.requests, label: "Requests", icon: UserPen, end: true },

@@ -243,6 +243,12 @@ function OwnerPropertiesPage({ userId }: { userId: string }) {
 function OwnerPropertyDetailPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
+
+  console.log('OwnerPropertyDetailPage rendered');
+  console.log('propertyId from useParams:', propertyId);
+  console.log('All params:', useParams());
+  console.log('Current location:', window.location.pathname);
+  
   return (
     <PropertyDetail
       propertyId={propertyId!}
