@@ -48,7 +48,7 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
   
   
           if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
+          const propertyIds = properties.map((p: any) => p.propertyId);
           const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
