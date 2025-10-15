@@ -1,4 +1,4 @@
-// Layout.tsx - Fixed version with proper viewport constraints
+// Layout.tsx
 import {
   Sidebar,
   SidebarContent,

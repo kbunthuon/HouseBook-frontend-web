@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Copy, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Job, JobAsset, JobStatus } from "../../../backend/JobService";
+import { Job, JobAsset } from "../../../backend/JobService";
 import { useState } from "react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { Property } from "../types/serverTypes";
@@ -64,7 +64,6 @@ export function PinTable({ propertyId, property, jobs, jobAssets, onDeleteJob, o
         <TableHeader>
           <TableRow>
             <TableHead>PIN</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Number of Accessible Assets</TableHead>
             <TableHead>Created Time</TableHead>
@@ -84,19 +83,6 @@ export function PinTable({ propertyId, property, jobs, jobAssets, onDeleteJob, o
                   <code className="bg-muted px-2 py-1 rounded font-mono text-sm">{job.pin}</code>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      job.status === JobStatus.ACCEPTED
-                        ? "default"
-                        : job.status === JobStatus.PENDING
-                        ? "secondary"
-                        : "destructive"
-                    }
-                  >
-                    {job.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
                   <p className="text-sm">{job.title}</p>
                 </TableCell>
                 <TableCell>
@@ -105,10 +91,10 @@ export function PinTable({ propertyId, property, jobs, jobAssets, onDeleteJob, o
                   </p>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {new Date(job.created_at).toLocaleString()}
+                  {new Date(job.createdAt).toLocaleString()}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {job.end_time ? new Date(job.end_time).toLocaleString() : "Never"}
+                  {job.endTime ? new Date(job.endTime).toLocaleString() : "Never"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-1">

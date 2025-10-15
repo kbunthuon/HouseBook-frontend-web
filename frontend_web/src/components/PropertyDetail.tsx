@@ -8,8 +8,8 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
@@ -78,7 +78,16 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
+  const qrCodeRef = useRef<HTMLCanvasElement>(null);
+
+  // Image management states
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
+  const [isImageDeleteDialogOpen, setIsImageDeleteDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedImagesToDelete, setSelectedImagesToDelete] = useState<string[]>([]);
+  const [isImageConfirmOpen, setIsImageConfirmOpen] = useState(false);
+  const [imageAction, setImageAction] = useState<'upload' | 'delete' | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -148,7 +157,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       setError(null);
       console.log("Fetching data for propertyId:", propertyId);
       const result = await apiClient.getPropertyDetails(propertyId);
-  if (result) setProperty(result);
+      if (result) setProperty(result);
       else setError("Property not found");
 
       // Fetch images
@@ -160,7 +169,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       const ownerResult = await apiClient.getPropertyOwners(propertyId);
       if (ownerResult) setOwners(ownerResult);
 
-      const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
+      const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
       if (jobs) setAllJobs(jobs);
       if (jobAssets) setAllJobAssets(jobAssets);
 
@@ -432,7 +441,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // PIN handlers
   const handleSavePin = async (job: Job, assetIds?: string[]) => {
-    const [jobs, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
+    const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
     if (jobs) setAllJobs(jobs);
     if (jobAssets) setAllJobAssets(jobAssets);
     toast.success("Job saved successfully");
@@ -440,7 +449,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   const handleSaveJobEdits = async (updatedJob: Job) => {
     setAllJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
-    const [, jobAssets] = await fetchJobsInfo({ property_id: propertyId });
+    const [, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
     if (jobAssets) setAllJobAssets(jobAssets);
     toast.success("Job updated successfully");
   };
@@ -453,6 +462,118 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       toast.success("Job deleted successfully");
     } else {
       toast.error("Failed to delete job");
+    }
+  };
+
+  const handleDownloadQRPDF = async () => {
+    try {
+      // Load jsPDF from CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      
+      // @ts-ignore - jsPDF is loaded globally
+      const { jsPDF } = window.jspdf;
+      
+      const doc = new jsPDF();
+      
+      // Add property information
+      doc.setFontSize(20);
+      doc.text(property?.name || 'Property', 20, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Address: ${property?.address || 'N/A'}`, 20, 35);
+      
+      if (owners && owners.length > 0) {
+        const ownerText = owners.length > 1 ? 'Owners:' : 'Owner:';
+        const ownerNames = owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ");
+        doc.text(`${ownerText} ${ownerNames}`, 20, 45);
+      }
+      
+      doc.text(`Total Floor Area: ${property?.totalFloorArea || 0}m²`, 20, 55);
+      
+      // Add QR code
+      if (qrCodeRef.current) {
+        const qrImageData = qrCodeRef.current.toDataURL('image/png');
+        doc.addImage(qrImageData, 'PNG', 20, 70, 80, 80);
+      }
+      
+      doc.setFontSize(10);
+      doc.text(`Property ID: ${propertyId}`, 20, 160);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 167);
+      
+      // Save the PDF
+      doc.save(`${property?.name || 'property'}-QR.pdf`);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
+  // Image management handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(filesArray);
+    }
+  };
+
+  const handleRemoveSelectedFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleOpenUploadDialog = () => {
+    setSelectedFiles([]);
+    setIsImageUploadDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setSelectedImagesToDelete([]);
+    setIsImageDeleteDialogOpen(true);
+  };
+
+  const handleToggleImageForDeletion = (url: string) => {
+    setSelectedImagesToDelete(prev => 
+      prev.includes(url) 
+        ? prev.filter(u => u !== url)
+        : [...prev, url]
+    );
+  };
+
+  const handleConfirmImageAction = () => {
+    setIsImageUploadDialogOpen(false);
+    setIsImageDeleteDialogOpen(false);
+    setIsImageConfirmOpen(true);
+  };
+
+  const handleFinalImageAction = async () => {
+    setIsImageConfirmOpen(false);
+    
+    try {
+      if (imageAction === 'upload' && selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          await apiClient.uploadPropertyImage(propertyId, file);
+        }
+        toast.success(`${selectedFiles.length} image(s) uploaded successfully`);
+        setSelectedFiles([]);
+        
+      } else if (imageAction === 'delete' && selectedImagesToDelete.length > 0) {
+        await apiClient.deletePropertyImages(selectedImagesToDelete);
+        toast.success(`${selectedImagesToDelete.length} image(s) deleted successfully`);
+        setSelectedImagesToDelete([]);
+      }
+      
+      await fetchData();
+      setImageAction(null);
+    } catch (error: any) {
+      console.error("Image operation failed:", error);
+      toast.error(`Failed: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -649,7 +770,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                   </Button>
                 </div>
 
-                {/* Feature form appears below header and above the list */}
                 {showFeatureFormAssetEdit && (
                   <div className="mt-2">
                     <FeatureCard
@@ -806,7 +926,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                         />
                       </div>
                       <div>
-                          <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center mb-2">
                           <Label>Features * (at least one)</Label>
                           <Button 
                             size="sm" 
@@ -817,7 +937,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                           </Button>
                         </div>
 
-                        {/* Feature card below header */}
                         {showFeatureFormCreateAsset && featureFormCreateSpaceIndex === idx && (
                           <FeatureCard
                             className="w-full mb-2"
@@ -922,20 +1041,22 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                   >
                     <Plus className="h-3 w-3 mr-1" />Add Feature
                   </Button>
-                  {showFeatureFormCreateAsset && (
-                    <FeatureCard
-                      className="w-full mt-2"
-                      onAdd={(name, value) => {
-                        setFormData({
-                          ...formData,
-                          specifications: { ...(formData.specifications || {}), [name]: value },
-                        });
-                        setShowFeatureFormCreateAsset(false);
-                      }}
-                      onCancel={() => setShowFeatureFormCreateAsset(false)}
-                    />
-                  )}
                 </div>
+                
+                {showFeatureFormCreateAsset && (
+                  <FeatureCard
+                    className="w-full mt-2"
+                    onAdd={(name, value) => {
+                      setFormData({
+                        ...formData,
+                        specifications: { ...(formData.specifications || {}), [name]: value },
+                      });
+                      setShowFeatureFormCreateAsset(false);
+                    }}
+                    onCancel={() => setShowFeatureFormCreateAsset(false)}
+                  />
+                )}
+                
                 <div className="space-y-2">
                   {Object.entries(formData.specifications || {}).map(([key, value]) => (
                     <div key={key} className="grid grid-cols-2 gap-2 items-center p-2 border rounded">
@@ -978,8 +1099,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   if (error) return <div className="p-8 text-center text-destructive">Error: {error}</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />Back to Properties
@@ -994,11 +1115,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <h1>{property?.name ?? "Property"}</h1>
-          <p className="text-muted-foreground text-lg">{property?.description}</p>
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>
+        <div className="space-y-2 min-w-0">
+          <h1 className="break-words">{property?.name ?? "Property"}</h1>
+          <p className="text-muted-foreground text-lg break-words">{property?.description}</p>
+          <div className="flex items-center flex-wrap gap-2 text-sm text-muted-foreground">
+            <span className="break-words">
               {owners && owners.length > 0 ? (
                 <>
                   Owner{owners.length > 1 ? "s" : ""}:{" "}
@@ -1009,22 +1130,23 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               )}
             </span>
             <span>•</span>
-            <span>{property?.address}</span>
+            <span className="break-words">{property?.address}</span>
             <span>•</span>
             <span>{property?.totalFloorArea ?? 0}m²</span>
           </div>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleShowAllPropertyHistory}>
               <History className="h-3 w-3 mr-1" />View All History
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadQRPDF}>
+              <Download className="h-3 w-3 mr-1" />Download QR PDF
             </Button>
           </div>
         </div>
 
-
-
         <div className="space-y-2 flex flex-col items-end">
           <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64">
-            <QRCodeCanvas value={propertyId} size={200} level="H" />
+            <QRCodeCanvas ref={qrCodeRef} value={propertyId} size={200} level="H" />
           </div>
           <Button onClick={() => setIsPinDialogOpen(true)} className="w-64" size="sm">
             Create New Job
@@ -1035,27 +1157,36 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       <Separator />
 
       {/* Property Images */}
-      <Card>
-        <CardHeader>
+      <Card className="w-full max-w-full overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
           <CardTitle className="flex items-center">
             <Image className="h-5 w-5 mr-2" />
             Property Images
           </CardTitle>
+          <div className="flex items-center space-x-2 flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleOpenUploadDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Images
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!property?.images || property.images.length === 0}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Images
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full max-w-full overflow-hidden">
           {property?.images && property.images.length > 0 ? (
-            <div className="flex flex-row gap-3 overflow-x-auto max-w-max max-h-[35vh] py-2">
+            <div className="flex flex-row gap-3 overflow-x-auto w-full max-h-[35vh] py-2">
               {property.images.map((url, idx) => (
                 <div
                   key={idx}
-                  className={"w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"}
-                  style={{ minWidth: '320px', maxWidth: '320px'}}
+                  className="flex-shrink-0 w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
                   onClick={() => setSelectedImage(url)}
                 >
                   <img
                     src={url}
                     alt={`Property Image ${idx + 1}`}
-                    className="max-h-full max-w-full object-contain"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               ))}
@@ -1068,7 +1199,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-      {/* Modal */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogOverlay className="bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
         <DialogContent
@@ -1084,10 +1214,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           )}
         </DialogContent>
       </Dialog>
-
-
-
-
 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Spaces & Assets</h2>
@@ -1119,8 +1245,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         ))}
       </div>
 
-
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -1139,12 +1263,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-  {/* Pass the mapped shared property to components expecting the shared Property shape */}
-  <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(property)} onSave={handleSavePin} />
+      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(property)} onSave={handleSavePin} />
 
       {renderDialog()}
 
-      {/* Confirmation Dialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1160,7 +1282,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1181,9 +1302,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Space History Dialog */}
-    <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
-      <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
+      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+        <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center mb-4">
               <History className="h-5 w-5 mr-2" />Space Edit History
@@ -1222,7 +1342,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </DialogContent>
       </Dialog>
 
-      {/* All Property History Dialog */}
       <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
         <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
@@ -1244,7 +1363,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                         </Badge>
                         <Badge variant="outline">{(item as any).Assets?.Spaces?.name}</Badge>
                         <Badge variant="secondary">{(item as any).Assets?.AssetTypes?.name}</Badge>
-                        {/* {(item as any).Assets?.deleted && <Badge variant="outline" className="text-muted-foreground">Deleted</Badge>} */}
                       </div>
                       <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
@@ -1264,6 +1382,156 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload Images</DialogTitle>
+            <DialogDescription>Select images to upload to this property</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Choose Images
+            </Button>
+            
+            {selectedFiles.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="relative border rounded-lg overflow-hidden">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => handleRemoveSelectedFile(idx)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="p-2 bg-muted">
+                      <p className="text-xs truncate">{file.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
+                No images selected
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />Cancel
+            </Button>
+            <Button 
+              onClick={() => { setImageAction('upload'); handleConfirmImageAction(); }} 
+              disabled={selectedFiles.length === 0}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Delete Dialog */}
+      <Dialog open={isImageDeleteDialogOpen} onOpenChange={setIsImageDeleteDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Delete Images</DialogTitle>
+            <DialogDescription>Select images to delete from this property</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {property?.images && property.images.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {property.images.map((url, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      selectedImagesToDelete.includes(url) 
+                        ? 'border-destructive ring-2 ring-destructive' 
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleToggleImageForDeletion(url)}
+                  >
+                    <img
+                      src={url}
+                      alt={`Image ${idx + 1}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    {selectedImagesToDelete.includes(url) && (
+                      <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
+                        <div className="bg-destructive text-white rounded-full p-2">
+                          <Trash2 className="h-6 w-6" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No images available
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageDeleteDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => { setImageAction('delete'); handleConfirmImageAction(); }} 
+              disabled={selectedImagesToDelete.length === 0}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete {selectedImagesToDelete.length > 0 && `(${selectedImagesToDelete.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Action Confirmation Dialog */}
+      <AlertDialog open={isImageConfirmOpen} onOpenChange={setIsImageConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {imageAction === 'upload' ? 'Confirm Upload' : 'Confirm Deletion'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {imageAction === 'upload' 
+                ? `Are you sure you want to upload ${selectedFiles.length} image(s)?`
+                : `Are you sure you want to delete ${selectedImagesToDelete.length} image(s)? This action cannot be undone.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setImageAction(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleFinalImageAction}>
+              {imageAction === 'upload' ? 'Upload' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
