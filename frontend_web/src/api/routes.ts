@@ -18,7 +18,8 @@ export const API_ROUTES = {
 
   // User Routes ------ will need to update soon?
   USER: {
-    INFO_BY_EMAIL: (email: string) => `${BASE_URL}/user/infoByEmail?email=${encodeURIComponent(email)}`,
+    INFO_BY_EMAIL: (email: string) =>
+      `${BASE_URL}/user/infoByEmail?email=${encodeURIComponent(email)}`,
   },
 
   // Owner Routes
@@ -34,9 +35,12 @@ export const API_ROUTES = {
 
   // Property Routes
   PROPERTY: {
-    LIST: (userId: string) => `${BASE_URL}/property?action=list&userId=${userId}`,
-    OWNERS: (propertyId: string) => `${BASE_URL}/property?action=owners&propertyId=${propertyId}`,
-    DETAILS: (propertyId: string) => `${BASE_URL}/property?action=details&propertyId=${propertyId}`,
+    LIST: (userId: string) =>
+      `${BASE_URL}/property?action=list&userId=${userId}`,
+    OWNERS: (propertyId: string) =>
+      `${BASE_URL}/property?action=owners&propertyId=${propertyId}`,
+    DETAILS: (propertyId: string) =>
+      `${BASE_URL}/property?action=details&propertyId=${propertyId}`,
   },
 
   // Images Routes
@@ -49,13 +53,15 @@ export const API_ROUTES = {
       return url;
     },
     UPLOAD: `${BASE_URL}/images`,
+    DELETE: `${BASE_URL}/images`,
   },
 
   // Changelog Routes
   CHANGELOG: {
     GET: (propertyIds: string[]) =>
-      `${BASE_URL}/changelog?propertyIds=${encodeURIComponent(propertyIds.join(','))}`,
-
+      `${BASE_URL}/changelog?propertyIds=${encodeURIComponent(
+        propertyIds.join(",")
+      )}`,
   },
 } as const;
 
