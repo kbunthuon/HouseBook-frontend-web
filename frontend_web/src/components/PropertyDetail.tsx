@@ -8,8 +8,8 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Upload, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon } from "lucide-react";
+import { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
@@ -78,9 +78,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [deletingImages, setDeletingImages] = useState<Set<string>>(new Set());
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
 
   // New space creation state
@@ -456,70 +453,6 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       toast.success("Job deleted successfully");
     } else {
       toast.error("Failed to delete job");
-    }
-  };
-
-    // Image handlers
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    // Validate file size (e.g., 10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      toast.error("Image size must be less than 10MB");
-      return;
-    }
-
-    setUploadingImage(true);
-    try {
-      await apiClient.uploadPropertyImage(propertyId, file);
-      toast.success("Image uploaded successfully");
-      
-      // Refresh images
-      const imagesResult = await apiClient.getPropertyImages(propertyId);
-      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
-    } catch (error: any) {
-      console.error("Failed to upload image:", error);
-      toast.error(`Failed to upload image: ${error.message || 'Unknown error'}`);
-    } finally {
-      setUploadingImage(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleImageDelete = async (imageUrl: string) => {
-    setDeletingImages(prev => new Set(prev).add(imageUrl));
-    try {
-      await apiClient.deletePropertyImages(imageUrl);
-      toast.success("Image deleted successfully");
-      
-      // Remove image from local state
-      setProperty((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          images: prev.images?.filter(url => url !== imageUrl) || []
-        };
-      });
-    } catch (error: any) {
-      console.error("Failed to delete image:", error);
-      toast.error(`Failed to delete image: ${error.message || 'Unknown error'}`);
-    } finally {
-      setDeletingImages(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(imageUrl);
-        return newSet;
-      });
     }
   };
 
@@ -1104,79 +1037,32 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       {/* Property Images */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
-              <Image className="h-5 w-5 mr-2" />
-              Property Images
-            </CardTitle>
-            <div className="flex items-center space-x-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Button
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-              >
-                {uploadingImage ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Image
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="flex items-center">
+            <Image className="h-5 w-5 mr-2" />
+            Property Images
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {property?.images && property.images.length > 0 ? (
             <div className="flex flex-row gap-3 overflow-x-auto max-w-max max-h-[35vh] py-2">
-              {property.images.map((url, idx) => {
-                const isDeleting = deletingImages.has(url);
-                return (
-                  <div
-                    key={idx}
-                    className="relative w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col group"
-                    style={{ minWidth: '320px', maxWidth: '320px'}}
-                  >
-                    <img
-                      src={url}
-                      alt={`Property Image ${idx + 1}`}
-                      className="max-h-full max-w-full object-contain cursor-pointer"
-                      onClick={() => !isDeleting && setSelectedImage(url)}
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleImageDelete(url);
-                      }}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                );
-              })}
+              {property.images.map((url, idx) => (
+                <div
+                  key={idx}
+                  className={"w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"}
+                  style={{ minWidth: '320px', maxWidth: '320px'}}
+                  onClick={() => setSelectedImage(url)}
+                >
+                  <img
+                    src={url}
+                    alt={`Property Image ${idx + 1}`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              No images available. Click "Upload Image" to add photos.
+              No images available
             </div>
           )}
         </CardContent>
