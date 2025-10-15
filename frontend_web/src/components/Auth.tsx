@@ -16,14 +16,14 @@ interface AuthProps {
 export function Auth({ onLogin }: AuthProps) {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [signupData, setSignupData] = useState({
+  const [signupData, setSignupData] = useState<SignupData>({
     email: "",
     password: "",
     firstName: "",
     lastName: "",
     phone: "",
-    userType: "owner" as "admin" | "owner"
-  });
+    userType: "owner"
+});
   const [serverError, setServerError] = useState("");
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string[]>>({});
@@ -151,9 +151,9 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="John"
                       required
                     />
-                    {signupErrors.first_name && (
+                    {signupErrors.firstName && (
                       <ul className="text-red-500 text-sm list-disc list-inside mt-1">
-                        {signupErrors.first_name.map((err, idx) => (
+                        {signupErrors.firstName.map((err, idx) => (
                           <li key={idx}>{err}</li>
                         ))}
                       </ul>
@@ -171,9 +171,9 @@ export function Auth({ onLogin }: AuthProps) {
                       placeholder="Doe"
                       required
                     />
-                    {signupErrors.last_name && (
+                    {signupErrors.lastName && (
                       <ul className="text-red-500 text-sm list-disc list-inside mt-1">
-                        {signupErrors.last_name.map((err, idx) => (
+                        {signupErrors.lastName.map((err, idx) => (
                           <li key={idx}>{err}</li>
                         ))}
                       </ul>

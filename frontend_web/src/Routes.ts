@@ -22,6 +22,8 @@ export const ADMIN_ROUTES = {
   },
   reports: "/admin/reports",
   adminTools: "/admin/admin-tools",
+  requests: "/admin/requests",
+  users: "/admin/user-management"
 };
 
 export const LOGIN = "/login";

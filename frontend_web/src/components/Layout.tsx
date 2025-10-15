@@ -1,3 +1,4 @@
+// Layout.tsx
 import {
   Sidebar,
   SidebarContent,
@@ -7,13 +8,14 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  SidebarRail,
+  SidebarInset,
   useSidebar,
 } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { Home, Building, Users, FileText, Settings, LogOut } from "lucide-react";
+import { Home, Building, Users, FileText, Settings, LogOut, UserPen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ADMIN_ROUTES } from "../Routes";
+
 interface LayoutProps {
   children: React.ReactNode;
   currentPage: string;
@@ -27,15 +29,13 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
     { to: ADMIN_ROUTES.properties.list, label: "Properties", icon: Building, end: true },
     { to: ADMIN_ROUTES.properties.add, label: "Onboarding", icon: Users },
     { to: ADMIN_ROUTES.reports, label: "Reports", icon: FileText },
-    { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings }
+    { to: ADMIN_ROUTES.adminTools, label: "Admin", icon: Settings },
+    { to: ADMIN_ROUTES.requests, label: "Requests", icon: UserPen, end: true },
+    { to: ADMIN_ROUTES.users, label: "User Management", icon: UserPen, end: true }
   ];
 
-
-
-  // Fixed trigger shown when sidebar is collapsed/offcanvas
   function FixedSidebarTrigger() {
     const { open, toggleSidebar, isMobile } = useSidebar();
-    // Show the trigger on mobile always (sidebar is a sheet), or when desktop sidebar is collapsed.
     if (!isMobile && open) return null;
     return (
       <div className="fixed top-4 left-4 z-50 md:top-6 md:left-6">
@@ -46,9 +46,8 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <FixedSidebarTrigger />
-        <SidebarRail />
 
         <Sidebar collapsible="offcanvas">
           <SidebarContent>
@@ -92,9 +91,11 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
           </SidebarContent>
         </Sidebar>
 
-        <div className="flex-1 overflow-auto">
-          <div className="p-8">{children}</div>
-        </div>
+        <SidebarInset className="flex-1">
+          <div className="h-full w-full overflow-auto">
+            <div className="p-8 w-full">{children}</div>
+          </div>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );

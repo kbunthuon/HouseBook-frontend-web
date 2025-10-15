@@ -32,8 +32,8 @@ export function AdminPropertyOnboarding() {
       currentStep,
       setCurrentStep,
       resetForm,
-      ownerData,
-      setOwnerData
+      owner,
+      setOwner
     } = useAdminFormContext();
 
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export function AdminPropertyOnboarding() {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
       try {
-        const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
+        const propertyId = await adminOnboardProperty(owner, formData, spaces);
         console.log(propertyId);
         
         // Reset the form data after successful submission
@@ -200,10 +200,10 @@ export function AdminPropertyOnboarding() {
   // Step validators
   const validateStep1 = () => {
     return (
-      ownerData.phone.trim() !== "" &&
-      ownerData.firstName.trim() !== "" &&
-      ownerData.lastName.trim() !== "" &&
-      ownerData.email.trim() !== ""
+      owner.phone.trim() !== "" &&
+      owner.firstName.trim() !== "" &&
+      owner.lastName.trim() !== "" &&
+      owner.email.trim() !== ""
     );
   };
 
@@ -249,16 +249,16 @@ export function AdminPropertyOnboarding() {
                 <Label htmlFor="Owner First Name">Owner First Name</Label>
                 <Input
                   id="ownerFirstName"
-                  value={ownerData.firstName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, firstName: e.target.value})}
+                  value={owner.firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, firstName: e.target.value})}
                 />
               </div>
               <div>
                 <Label htmlFor="OwnerLastName">Owner Last Name</Label>
                 <Input
                   id="ownerLastName"
-                  value={ownerData.lastName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, lastName: e.target.value})}
+                  value={owner.lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, lastName: e.target.value})}
                 />
               </div>
             </div>
@@ -267,16 +267,16 @@ export function AdminPropertyOnboarding() {
                 <Label htmlFor="Phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  value={ownerData.phone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, phone: e.target.value})}
+                  value={owner.phone}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, phone: e.target.value})}
                 />
               </div>
               <div>
                 <Label htmlFor="Email">Email</Label>
                 <Input
                   id="email"
-                  value={ownerData.email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, email: e.target.value})}
+                  value={owner.email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, email: e.target.value})}
                 />
               </div>
             </div>

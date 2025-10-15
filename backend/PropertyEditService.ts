@@ -469,11 +469,38 @@ export async function getPropertyForEdit(propertyId: string): Promise<any> {
       .eq("Spaces.Assets.deleted", false)
       .single();
 
-
-
     if (error) {
       console.error("Error fetching property for edit:", error);
       throw new Error(`Failed to fetch property: ${error.message}`);
+    }
+
+    // Transform the data to match expected format
+    if (data) {
+      return {
+        propertyId: data.property_id,
+        name: data.name,
+        description: data.description,
+        address: data.address,
+        totalFloorArea: data.total_floor_area,
+        images: data.images || [],
+        spaces: (data.Spaces || []).map((space: any) => ({
+          id: space.id,
+          name: space.name,
+          type: space.type,
+          deleted: space.deleted,
+          assets: (space.Assets || []).map((asset: any) => ({
+            id: asset.id,
+            description: asset.description,
+            currentSpecifications: asset.current_specifications,
+            deleted: asset.deleted,
+            assetTypes: {
+              id: asset.AssetTypes.id,
+              name: asset.AssetTypes.name,
+              discipline: asset.AssetTypes.discipline
+            }
+          }))
+        }))
+      };
     }
 
     return data;

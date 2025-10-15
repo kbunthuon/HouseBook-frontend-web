@@ -203,7 +203,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (!bp) return null;
     console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
-      property_id: bp.propertyId,
+      propertyId: bp.propertyId,
       address: bp.address || bp.address || "",
       description: bp.description || "",
       pin: "",
@@ -218,8 +218,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         name: s.name,
         type: s.type || "",
         assets: s.assets?.map(a => ({
-          asset_id: a.id,
-          type: a.type || "",
+          assetId: a.id,
+          type: a.assetTypes?.name || a.type || "",
           description: a.description || "",
         })) || [],
       })) || [],
@@ -259,7 +259,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       description: property?.description || '',
       address: property?.address || '',
       type: 'Townhouse',
-      total_floor_area: property?.totalFloorArea || 0
+      totalFloorArea: property?.totalFloorArea || 0
     });
     setIsDialogOpen(true);
   };
@@ -528,19 +528,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold">{asset.AssetTypes.name}</span>
+                  <span className="font-semibold">{asset.assetTypes.name}</span>
                   <div className="flex items-center space-x-1">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => handleEditAsset(spaceId, spaceName, asset.id, asset.AssetTypes.name)}
+                      onClick={() => handleEditAsset(spaceId, spaceName, asset.id, asset.assetTypes.name)}
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => handleDeleteAsset(asset.id, asset.AssetTypes.name)}
+                      onClick={() => handleDeleteAsset(asset.id, asset.assetTypes.name)}
                     >
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
@@ -552,9 +552,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               </div>
             </div>
             
-            {asset.current_specifications && Object.keys(asset.current_specifications).length > 0 ? (
+            {asset.currentSpecifications && Object.keys(asset.currentSpecifications).length > 0 ? (
               <div className="space-y-1 bg-muted/30 p-2 rounded">
-                {Object.entries(asset.current_specifications).map(([key, value]) => (
+                {Object.entries(asset.currentSpecifications).map(([key, value]) => (
                   <div key={key} className="text-sm flex justify-between items-center group">
                     <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
                     <div className="flex items-center space-x-2">
@@ -1122,8 +1122,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               id: asset.id,
               description: asset.description,
               discipline: asset.assetTypes?.discipline ?? "",
-              current_specifications: asset.currentSpecifications ?? {},
-              AssetTypes: {
+              currentSpecifications: asset.currentSpecifications ?? {},
+              assetTypes: {
                 id: asset.assetTypes?.id ?? "",
                 name: asset.assetTypes?.name ?? "",
                 discipline: asset.assetTypes?.discipline ?? "",

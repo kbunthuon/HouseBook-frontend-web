@@ -19,8 +19,8 @@ interface AdminFormContextType {
     setSpaces: React.Dispatch<React.SetStateAction<SpaceInt[]>>;
     currentStep: number;
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-    ownerData: Owner;
-    setOwnerData: React.Dispatch<React.SetStateAction<Owner>>;
+    owner: Owner;
+    setOwner: React.Dispatch<React.SetStateAction<Owner>>;
     resetForm: () => void;
 }
 
@@ -89,7 +89,7 @@ export function AdminFormProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
     const [spaces, setSpaces] = useState<SpaceInt[]>(initialSpaces);
     const [currentStep, setCurrentStep] = useState(1);
-    const [ownerData, setOwnerData] = useState<Owner>(initialOwnerData);
+    const [owner, setOwner] = useState<Owner>(initialOwnerData);
     const resetForm = () => {
     setFormData(initialFormData);
     setSpaces(initialSpaces);
@@ -105,8 +105,8 @@ export function AdminFormProvider({ children }: { children: ReactNode }) {
         setSpaces,
         currentStep,
         setCurrentStep,
-        ownerData,
-        setOwnerData,
+        owner,
+        setOwner,
         resetForm
         }}
     >

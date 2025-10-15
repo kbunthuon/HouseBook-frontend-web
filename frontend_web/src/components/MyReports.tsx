@@ -446,7 +446,6 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           id: asset.id,
                           type: asset.type,
                           description: asset.description,
-                          id: space.id,
                           Spaces: {
                             id: space.id,
                             name: space.name,
