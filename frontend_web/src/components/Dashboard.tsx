@@ -210,16 +210,16 @@ function formatDateTime(timestamp: string | number | Date) {
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.propertyId} 
+                  key={property.property_id} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
+                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splashImage ? (
+                    {property.splash_image ? (
                       <img
-                        src={property.splashImage}
+                        src={property.splash_image}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />
@@ -298,7 +298,7 @@ function formatDateTime(timestamp: string | number | Date) {
                 <TableRow key={request.changelogId}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
+                      (p) => p.property_id === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
                     {request.user_firstName || request.user_lastName
@@ -330,7 +330,7 @@ function formatDateTime(timestamp: string | number | Date) {
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
+                                  (p) => p.property_id === request.propertyId)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
