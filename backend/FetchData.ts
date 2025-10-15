@@ -282,7 +282,7 @@ const { data, error } = await supabase
       totalFloorArea: row.total_floor_area,
       spaces: [],  // populate later if needed
       images: [],  // populate later if needed
-      splash_image: splashImageUrl,
+      splashImage: splashImageUrl,
     };
   });
 
