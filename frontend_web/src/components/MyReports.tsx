@@ -300,9 +300,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const accessibleAssetIds = new Set();
 
     jobAccessibleAssets.forEach((item: any) => {
-      if (item.Assets?.space_id) {
-        accessibleSpaceIds.add(item.Assets.space_id);
-        accessibleAssetIds.add(item.asset_id);
+      if (item.Assets?.id) {
+        accessibleSpaceIds.add(item.Assets.id);
+        accessibleAssetIds.add(item.id);
       }
     });
 
@@ -311,12 +311,12 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
     const filteredSpaces =
       property.spaces
-        ?.filter((space: any) => accessibleSpaceIds.has(space.space_id))
+        ?.filter((space: any) => accessibleSpaceIds.has(space.id))
         .map((space: any) => ({
           ...space,
           assets:
             space.assets?.filter((asset: any) =>
-              accessibleAssetIds.has(asset.asset_id)
+              accessibleAssetIds.has(asset.id)
             ) || [],
         })) || [];
 
@@ -376,9 +376,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
         const allAssetsSelection: { [assetId: string]: boolean } = {};
 
         property.spaces.forEach((space: any) => {
-          allSpacesSelection[space.space_id] = true;
+          allSpacesSelection[space.id] = true;
           (space.assets || []).forEach((asset: any) => {
-            allAssetsSelection[asset.asset_id] = true;
+            allAssetsSelection[asset.id] = true;
           });
         });
 
@@ -438,17 +438,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               basicJobAssets.forEach((jobAsset: any) => {
                 property.spaces?.forEach((space: any) => {
                   space.assets?.forEach((asset: any) => {
-                    if (asset.asset_id === jobAsset.asset_id) {
+                    if (asset.id === jobAsset.id) {
                       matchedAssets.push({
-                        asset_id: jobAsset.asset_id,
+                        id: jobAsset.id,
                         job_id: jobAsset.job_id,
                         Assets: {
-                          asset_id: asset.asset_id,
+                          id: asset.id,
                           type: asset.type,
                           description: asset.description,
-                          space_id: space.space_id,
+                          id: space.id,
                           Spaces: {
-                            space_id: space.space_id,
+                            id: space.id,
                             name: space.name,
                           },
                         },
@@ -478,9 +478,9 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           // Pre-select ONLY the accessible spaces and assets for this job
           accessibleAssets.forEach((item: any) => {
             console.log("Pre-selecting accessible asset for job:", item);
-            if (item.Assets && item.Assets.space_id) {
-              newSectionSelection.spaces[item.Assets.space_id] = true;
-              newSectionSelection.assets[item.asset_id] = true;
+            if (item.Assets && item.Assets.id) {
+              newSectionSelection.spaces[item.Assets.id] = true;
+              newSectionSelection.assets[item.id] = true;
             }
           });
 
@@ -567,31 +567,34 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   // Handle basic section toggles (General Info, Plans & Documents)
   const handleSectionToggle = (
     type: "generalInfo" | "plans",
-    checked: boolean
+    checked: boolean | "indeterminate"
   ) => {
-    setSectionSelection((prev) => ({ ...prev, [type]: checked }));
+    setSectionSelection((prev) => ({ ...prev, [type]: checked === true }));
   };
 
   // Handle space (room/area) selection with cascading logic
   // When unchecking a space, automatically uncheck all its child assets
-  const handleSpaceToggle = (spaceId: string, checked: boolean) => {
+
+  const handleSpaceToggle = (spaceId: string, checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
     setSectionSelection((prev) => {
       const newSelection = {
         ...prev,
-        spaces: { ...prev.spaces, [spaceId]: checked },
+        spaces: { ...prev.spaces, [spaceId]: isChecked },
+        assets: { ...prev.assets }, // Start with existing assets
       };
 
-      // Cascade: If unchecking a space, also uncheck all its assets
-      if (!checked && displayProperty?.spaces) {
+      // Find the specific space being toggled
+      if (displayProperty?.spaces) {
         const space = displayProperty.spaces.find(
-          (s: any) => s.space_id === spaceId
+          (s: any) => s.id === spaceId
         );
+        
         if (space?.assets) {
-          const newAssets = { ...prev.assets };
+          // Only update assets for THIS space
           space.assets.forEach((asset: any) => {
-            newAssets[asset.asset_id] = false;
+            newSelection.assets[asset.id] = isChecked;
           });
-          newSelection.assets = newAssets;
         }
       }
 
@@ -601,26 +604,24 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
   // Handle asset (feature) selection with intelligent parent-child relationships
   // Automatically manages parent space selection based on child asset states
-  const handleAssetToggle = (assetId: string, checked: boolean) => {
+  const handleAssetToggle = (assetId: string, checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
     setSectionSelection((prev) => {
-      const newAssets = { ...prev.assets, [assetId]: checked };
+      const newAssets = { ...prev.assets, [assetId]: isChecked };
       const newSpaces = { ...prev.spaces };
 
-      // Find which space this asset belongs to and manage parent relationship
       if (displayProperty?.spaces) {
         for (const space of displayProperty.spaces) {
-          if (space.assets?.some((asset: any) => asset.asset_id === assetId)) {
-            if (checked) {
-              // Auto-select parent space when selecting any child asset
-              newSpaces[space.space_id] = true;
+          if (space.assets?.some((asset: any) => asset.id === assetId)) {
+            if (isChecked) {
+              newSpaces[space.id] = true;
             } else {
-              // Only unselect parent space if no other child assets are selected
               const otherAssetsSelected = space.assets.some(
                 (asset: any) =>
-                  asset.asset_id !== assetId && newAssets[asset.asset_id]
+                  asset.id !== assetId && newAssets[asset.id]
               );
               if (!otherAssetsSelected) {
-                newSpaces[space.space_id] = false;
+                newSpaces[space.id] = false;
               }
             }
             break;
@@ -641,28 +642,30 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     propertyImages.length > 0 &&
     selectedImages.length === propertyImages.length;
 
-  const handleSelectAllImages = (checked: boolean) => {
-    setSelectedImages(checked ? propertyImages.map((img) => img.url) : []);
+  const handleSelectAllImages = (checked: boolean | "indeterminate") => {
+    setSelectedImages(checked === true ? propertyImages.map((img) => img.url) : []);
   };
 
   // Check if all spaces are currently selected (using displayProperty for job filtering)
   const allSpacesSelected =
     displayProperty?.spaces &&
-    Object.values(sectionSelection.spaces).filter(Boolean).length ===
-      displayProperty.spaces.length;
+    displayProperty.spaces.length > 0 &&
+    displayProperty.spaces.every((space: any) => 
+      sectionSelection.spaces[space.id]
+    );
 
   // Bulk select/deselect all spaces and their assets
   // Maintains parent-child relationships during bulk operations
-  const handleSelectAllSpaces = (checked: boolean) => {
+  const handleSelectAllSpaces = (checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
     if (!displayProperty?.spaces) return;
     const newSpaces: { [spaceId: string]: boolean } = {};
     const newAssets: { [assetId: string]: boolean } = {};
 
     displayProperty.spaces.forEach((space: any) => {
-      newSpaces[space.space_id] = checked;
-      // Also select/deselect all assets in each space
+      newSpaces[space.id] = isChecked;
       (space.assets || []).forEach((asset: any) => {
-        newAssets[asset.asset_id] = checked;
+        newAssets[asset.id] = isChecked;
       });
     });
 
@@ -676,13 +679,15 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
   // Check if all assets across all spaces are selected (using displayProperty for job filtering)
   const allAssetsSelected =
     displayProperty?.spaces &&
+    displayProperty.spaces.length > 0 &&
     displayProperty.spaces
       .flatMap((space: any) => space.assets || [])
-      .every((asset: any) => sectionSelection.assets[asset.asset_id]);
+      .every((asset: any) => sectionSelection.assets[asset.id]);
 
   // Bulk select/deselect all assets with intelligent space management
   // When selecting assets, auto-select their parent spaces
-  const handleSelectAllAssets = (checked: boolean) => {
+  const handleSelectAllAssets = (checked: boolean | "indeterminate") => {
+    const isChecked = checked === true;
     if (!displayProperty?.spaces) return;
     const newAssets: { [assetId: string]: boolean } = {};
     const newSpaces: { [spaceId: string]: boolean } = {};
@@ -690,11 +695,10 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     displayProperty.spaces.forEach((space: any) => {
       let hasSelectedAsset = false;
       (space.assets || []).forEach((asset: any) => {
-        newAssets[asset.asset_id] = checked;
-        if (checked) hasSelectedAsset = true;
+        newAssets[asset.id] = isChecked;
+        if (isChecked) hasSelectedAsset = true;
       });
-      // Auto-select space if any of its assets are selected
-      newSpaces[space.space_id] = hasSelectedAsset;
+      newSpaces[space.id] = hasSelectedAsset;
     });
 
     setSectionSelection((prev) => ({
@@ -770,8 +774,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={sectionSelection.generalInfo}
-                  onCheckedChange={(e: boolean) =>
-                    handleSectionToggle("generalInfo", e)
+                  onCheckedChange={(e) =>
+                    handleSectionToggle("generalInfo", e as boolean)
                   }
                 />{" "}
                 General Information
@@ -779,8 +783,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={sectionSelection.plans}
-                  onCheckedChange={(e: boolean) =>
-                    handleSectionToggle("plans", e)
+                  onCheckedChange={(e) =>
+                    handleSectionToggle("plans", e as boolean)
                   }
                 />{" "}
                 Plans & Documents
@@ -810,7 +814,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
           {propertyImages.length > 0 && (
             <div className="space-y-2">
               <Label className="block mb-1">Property Images</Label>
-              <div className="flex items-center mb-2">
+              <div className="flex items-center mb-2 gap-2">
                 <Checkbox
                   checked={allImagesSelected}
                   onCheckedChange={(e: boolean) => handleSelectAllImages(e)}
@@ -818,7 +822,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                 />
                 <Label
                   htmlFor="selectAllImages"
-                  className="ml-2 text-sm cursor-pointer"
+                  className="ml-2 text-sm cursor-pointer font-medium"
                 >
                   Select All Images
                 </Label>
@@ -906,10 +910,17 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
 
               <div className="flex items-center gap-4 mb-2">
                 <Checkbox
-                  checked={allSpacesSelected && allAssetsSelected}
-                  onCheckedChange={(e: boolean) => {
-                    handleSelectAllSpaces(e); // Select all rooms
-                    handleSelectAllAssets(e); // Select all features
+                  checked={
+                    allSpacesSelected && allAssetsSelected 
+                      ? true 
+                      : (Object.values(sectionSelection.spaces).some(Boolean) || 
+                        Object.values(sectionSelection.assets).some(Boolean))
+                      ? "indeterminate"
+                      : false
+                  }
+                  onCheckedChange={(checked) => {
+                    handleSelectAllSpaces(checked as boolean);
+                    handleSelectAllAssets(checked as boolean);
                   }}
                   id="selectEverything"
                 />
@@ -921,12 +932,12 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
               </div>
               <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
                 {displayProperty.spaces.map((space: any) => (
-                  <div key={space.space_id} className="mb-1">
+                  <div key={space.id} className="mb-1">
                     <label className="flex items-center gap-2 font-medium">
                       <Checkbox
-                        checked={!!sectionSelection.spaces[space.space_id]}
+                        checked={!!sectionSelection.spaces[space.id]}
                         onCheckedChange={(e: boolean) =>
-                          handleSpaceToggle(space.space_id, e)
+                          handleSpaceToggle(space.id, e)
                         }
                       />
                       {space.name}
@@ -940,13 +951,13 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                     <div className="ml-6 flex flex-col gap-1">
                       {(space.assets || []).map((asset: any) => (
                         <label
-                          key={asset.asset_id}
+                          key={asset.id}
                           className="flex items-center gap-2 text-sm"
                         >
                           <Checkbox
-                            checked={!!sectionSelection.assets[asset.asset_id]}
+                            checked={!!sectionSelection.assets[asset.id]}
                             onCheckedChange={(e: boolean) =>
-                              handleAssetToggle(asset.asset_id, e)
+                              handleAssetToggle(asset.id, e)
                             }
                           />
                           {asset.type}
@@ -1337,8 +1348,8 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
             {
               /* Each space is wrapped in pdf-space-section for page-break protection */
               displayProperty?.spaces?.map((space: any) =>
-                sectionSelection.spaces[space.space_id] ? (
-                  <div className="pdf-space-section" key={space.space_id}>
+                sectionSelection.spaces[space.id] ? (
+                  <div className="pdf-space-section" key={space.id}>
                     <div className="pdf-space-content">
                       <div className="pdf-section-title">{space.name}</div>
                       {selectedJob &&
@@ -1359,10 +1370,10 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                         space.assets
                           .filter(
                             (asset: any) =>
-                              sectionSelection.assets[asset.asset_id]
+                              sectionSelection.assets[asset.id]
                           )
                           .map((asset: any) => (
-                            <div className="pdf-sub" key={asset.asset_id}>
+                            <div className="pdf-sub" key={asset.id}>
                               <span className="pdf-label">{asset.type}:</span>
                               {asset.description || "No description available"}
                               {selectedJob &&
