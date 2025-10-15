@@ -180,3 +180,43 @@ export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[
     throw error;
   }
 }
+
+
+
+
+// export const approveEdit = async (id: string) => {
+//     const { data, error } = await supabase
+//       .from("ChangeLog")
+//       .update({ status: "ACCEPTED" })
+//       .eq("id", id);
+
+//     if (error) {
+//       console.error("Error updating change log status:", error);
+//     } else {
+//       console.log(`Approved edit ${id}`);
+//       setRequests(prev =>
+//       prev.map(r =>
+//         r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+//       )
+//       );
+
+//     }
+//   };
+
+// export const rejectEdit = async (id: string) => {
+//     const { data, error } = await supabase
+//       .from("ChangeLog")
+//       .update({ status: "DECLINED" })
+//       .eq("id", id);
+
+//     if (error) {
+//       console.error("Error updating change log status:", error);
+//     } else {
+//       console.log(`Declined edit ${id}`);
+//       setRequests(prev =>
+//       prev.map(r =>
+//         r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+//       )
+//       );
+//     }
+//   }

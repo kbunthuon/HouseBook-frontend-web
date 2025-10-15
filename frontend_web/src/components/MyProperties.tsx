@@ -9,12 +9,12 @@ import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
 
 interface MyPropertiesProps {
-  ownerEmail: string;
+  ownerId: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
-export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
+export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +127,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.property_id}>
+                  <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -154,7 +154,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.property_id)}
+                            onClick={() => onViewProperty(property.propertyId)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />
