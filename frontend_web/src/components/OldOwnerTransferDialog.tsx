@@ -17,7 +17,14 @@ interface OldOwnerTransferDialogProps {
   onOpenChange: (open: boolean) => void;
   userID: string;
   onViewTransfer?: (propertyId: string) => void;
+  onInitiateTransfer?: (
+    propertyId: string,
+    invitedOwners: InvitedOwner[],
+    currentOwners: InvitedOwner[]
+  ) => void;
+
 }
+
 
 interface InvitedOwner {
   email: string;
@@ -31,7 +38,8 @@ export default function OldOwnerTransferDialog({
   open,
   onOpenChange,
   userID,
-  onViewTransfer
+  onViewTransfer,
+  onInitiateTransfer,
 }: OldOwnerTransferDialogProps) {
   const [propertyId, setPropertyId] = React.useState<string>("");
   const [inviteEmail, setInviteEmail] = React.useState("");
@@ -379,7 +387,29 @@ export default function OldOwnerTransferDialog({
         </div>
 
         <Separator className="my-2" />
+        <div className="flex justify-end gap-2 p-4">
+          <Button
+            onClick={() => {
+              if (!propertyId) {
+                toast.error("Please select a property first");
+                return;
+              }
+              if (invitedOwners.length === 0) {
+                toast.error("Please add at least one new owner to transfer to");
+                return;
+              }
 
+              onInitiateTransfer?.(propertyId, invitedOwners, currentOwners); // ✅ send current owners too
+              toast.success("Transfer initiated");
+              onOpenChange(false);
+            }}
+            disabled={!propertyId || invitedOwners.length === 0}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Initiate Transfer
+          </Button>
+
+        </div>
         {/* How to transfer */}
         <div className="rounded-lg bg-muted/40 p-4">
           <p className="font-semibold mb-2">How to transfer:</p>

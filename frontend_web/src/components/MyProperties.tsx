@@ -22,6 +22,18 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  
+  const [transferProperties, setTransferProperties] = useState<
+  {
+      propertyId: string;
+      name?: string;
+      address?: string;
+      currentOwners?: string[];
+      invitedOwners: { email: string; firstName?: string; lastName?: string }[];
+      createdAt: Date;
+      status: "PENDING" | "APPROVED" | "REJECTED";
+    }[]
+  >([]);
 
   const navigate = useNavigate();
 
@@ -214,6 +226,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           <div className="flex justify-between items-center">
             <CardTitle>Transfer Property List</CardTitle>
             <div className="flex items-center space-x-2">
+              {/*
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search my properties..."
@@ -221,59 +234,107 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="max-w-sm"
               />
+              */ }
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {filteredProperties.length > 0 ? (
+          {transferProperties.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Property</TableHead>
-                  <TableHead>Current Owner</TableHead>
-                  {/* <TableHead>Status</TableHead>
-                  <TableHead>Completion</TableHead> */}
-                  <TableHead>New Owner</TableHead>
+                  <TableHead>Current Owner(s)</TableHead>
+                  <TableHead>New Owner(s)</TableHead>
                   <TableHead>Created at</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProperties.map((property) => (
+                {transferProperties.map((property) => (
                   <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
-                        <div className="text-sm text-muted-foreground">{property.address}</div>
+                        {property.address && (
+                          <div className="text-sm text-muted-foreground">{property.address}</div>
+                        )}
                       </div>
                     </TableCell>
-                    {/* COME BACK HERE */}
-                    <TableCell>Lisa Brown, Aaron Brown</TableCell>
-                    <TableCell>Joe Brown</TableCell>
-                    {/* <TableCell>
-                      <Badge variant={getStatusColor(property.status)}>
+
+                    <TableCell>
+                      {property.currentOwners?.length
+                        ? property.currentOwners.join(", ")
+                        : "Unknown"}
+                    </TableCell>
+
+                    <TableCell>
+                      {property.invitedOwners.map((owner, i) => (
+                        <div key={i} className="text-sm">
+                          {owner.firstName && owner.lastName
+                            ? `${owner.firstName} ${owner.lastName}`
+                            : owner.email}
+                        </div>
+                      ))}
+                    </TableCell>
+
+                    <TableCell>{property.createdAt.toLocaleString()}</TableCell>
+
+                    <TableCell>
+                      <span
+                        className={`text-sm font-medium ${
+                          property.status === "PENDING"
+                            ? "text-yellow-600"
+                            : property.status === "APPROVED"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
                         {property.status}
-                      </Badge>
-                    </TableCell> */}
-                    {/* <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-sm font-medium ${getCompletionColor(property.completionStatus)}`}>
-                          {property.completionStatus}%
-                        </span>
-                      </div>
-                    </TableCell> */}
-                    <TableCell>{new Date(property.lastUpdated).toLocaleString()}</TableCell>
-                    <TableCell>PENDING</TableCell>
+                      </span>
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" title="Edit Property">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="View Property"
+                          onClick={() => console.log("View", property.propertyId)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" title="Access Codes">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Approve"
+                          onClick={() =>
+                            setTransferProperties((prev) =>
+                              prev.map((p) =>
+                                p.propertyId === property.propertyId
+                                  ? { ...p, status: "APPROVED" }
+                                  : p
+                              )
+                            )
+                          }
+                        >
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         </Button>
-                        <Button variant="ghost" size="sm" title="Generate Report">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Reject"
+                          onClick={() =>
+                            setTransferProperties((prev) =>
+                              prev.map((p) =>
+                                p.propertyId === property.propertyId
+                                  ? { ...p, status: "REJECTED" }
+                                  : p
+                              )
+                            )
+                          }
+                        >
                           <XCircle className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
@@ -285,23 +346,38 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           ) : (
             <div className="text-center py-12">
               <div className="text-muted-foreground">
-                {searchTerm ? "No properties match your search." : "You haven't added any properties yet."}
+                You haven’t initiated any property transfers yet.
               </div>
-              {!searchTerm && onAddProperty && (
-                <Button className="mt-4" onClick={setOpen}>
-                  Transfer a Property
-                </Button>
-              )}
+              <Button className="mt-4" onClick={() => setOpen(true)}>
+                Transfer a Property
+              </Button>
             </div>
           )}
         </CardContent>
+
       </Card>
 
       <OldOwnerTransferDialog
         open={open}
         onOpenChange={setOpen}
         userID={userID}
-        onViewTransfer={handleViewTransfer}  
+        onInitiateTransfer={(propertyId, invitedOwners, currentOwners) => {
+          const property = myProperties.find((p) => p.propertyId === propertyId);
+          setTransferProperties((prev) => [
+            ...prev,
+            {
+              propertyId,
+              name: property?.name ?? "Unknown Property",
+              address: property?.address ?? "",
+              invitedOwners,
+              currentOwners: currentOwners.map((o) =>
+                o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
+              ),
+              createdAt: new Date(),
+              status: "PENDING",
+            },
+          ]);
+        }}
       />
 
     </div>
