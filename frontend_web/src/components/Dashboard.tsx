@@ -32,11 +32,20 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
         try {
           
           const properties = await getAdminProperty(userId, userType);
-          setOwnerProperties(properties ?? []);
+          // Remove duplicate properties by propertyId
+          const uniquePropertiesMap = new Map();
+          properties?.forEach((p: any) => {
+            if (!uniquePropertiesMap.has(p.propertyId)) {
+              uniquePropertiesMap.set(p.propertyId, p);
+            }
+          });
+      
+          const uniqueProperties = Array.from(uniquePropertiesMap.values());
+          setOwnerProperties(uniqueProperties ?? []);
           
-          console.log(properties);
-          if (properties && properties.length > 0) {
-          const propertyIds = [...new Set(properties.map((p: any) => p.propertyId))];
+          console.log(uniqueProperties);
+          if (uniqueProperties && uniqueProperties.length > 0) {
+          const propertyIds = [...new Set(uniqueProperties.map((p: any) => p.propertyId))];
           const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
