@@ -520,6 +520,21 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Transfer methods
+  async getTransfersByProperty(propertyId: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.TRANSFER.GET_BY_PROPERTY(propertyId)
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch transfers for property");
+    }
+
+    const data = response.json();
+    return data;
+  }
 }
 
 // Export singleton instance

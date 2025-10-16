@@ -64,6 +64,14 @@ export const API_ROUTES = {
         propertyIds.join(",")
       )}`,
   },
+
+  // Transfer Routes
+  // Transfer Routes
+  TRANSFER: {
+    GET_BY_PROPERTY: (propertyId: string) => 
+      `${BASE_URL}/getTransfersByProperty?propertyId=${encodeURIComponent(propertyId)}`,
+  }
+
 } as const;
 
 // Type definitions for route parameters

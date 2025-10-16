@@ -51,6 +51,12 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       setMyProperties(properties || []);
       setLoading(false);
     };
+    const loadTransfers = async () => {
+      setLoading(true);
+      const transfers = await apiClient.getTransfersByProperty(); 
+      setMyProperties(properties || []);
+      setLoading(false);
+    };
 
     if (userID) {
       loadProperties();
