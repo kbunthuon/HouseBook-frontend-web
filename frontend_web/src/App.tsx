@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -48,12 +48,24 @@ export default function App() {
     setUserId(user_id);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserType("owner");
-    setUserEmail("");
-    setUserId("");
-    apiClient.logout();
+  const handleLogout = async () => {
+    try {
+      // First, logout from backend and clear all sessions/tokens
+      await apiClient.logout();
+
+      // Then clear local state
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Still clear local state even if logout fails
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    }
   };
 
   {/*
@@ -81,6 +93,38 @@ export default function App() {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   };
+
+  // Add cleanup on page unload/close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Optional: Only logout if user wants session to end on browser close
+      // For now, we'll just ensure any pending operations are completed
+      // You can uncomment the lines below to force logout on page close
+
+      // Note: This will NOT work reliably due to browser restrictions
+      // Modern browsers don't allow async operations in beforeunload
+      // But we can at least clear localStorage synchronously
+
+      // Uncomment to force session clear on browser close:
+      // localStorage.clear();
+    };
+
+    const handleVisibilityChange = () => {
+      // When the page becomes hidden (tab switch, minimize, etc.)
+      // we don't want to logout, but we can log for debugging
+      if (document.hidden) {
+        console.log('Page hidden - session maintained');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   return (
     <BrowserRouter>

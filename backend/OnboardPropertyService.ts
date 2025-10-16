@@ -6,10 +6,10 @@ import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
 import { apiClient } from "../frontend_web/src/api/wrappers";
 
 export async function ownerOnboardProperty(userId: string, formData: FormData, spaces: SpaceInt[]) {
-  // const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   // const userId = session?.user.id;
   // if (!userId) throw Error("Session not found");
-  // console.log('session in ownerOnboardProperty', session);
+  console.log('session in ownerOnboardProperty', session);
   // console.log('userId in ownerOnboardProperty', userId);
 
   const ownerId = await getOwnerId(userId);
@@ -194,8 +194,8 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
         console.log(`Asset inserted successfully with ID: ${assetId}`);
 
         // 3. Insert ChangeLog entry
-        // For owner onboarding, automatically approve the changes
-        const changelogStatus = isOwnerOnboarding ? 'APPROVED' : 'PENDING';
+        // For owner onboarding, automatically accept the changes (use ACCEPTED not APPROVED)
+        const changelogStatus = isOwnerOnboarding ? 'ACCEPTED' : 'PENDING';
 
         const { error: changelogError } = await supabase
           .from("ChangeLog")

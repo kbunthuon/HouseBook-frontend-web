@@ -4,9 +4,8 @@ import { ChangeLog } from "@housebookgroup/shared-types";
 
 export enum ChangeLogStatus {
   PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  ACCEPTED = 'ACCEPTED'
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED'
 }
 
 export enum ChangeLogAction {
