@@ -203,7 +203,8 @@ export function OwnerPropertyOnboarding({userId}: {userId: string}) {
     return (
       formData.propertyName.trim() !== "" &&        // Property name not null
       formData.propertyDescription.trim() !== "" && // Property description not null
-      formData.address.trim() !== ""                // Property address not null 
+      formData.address.trim() !== "" &&             // Property address not null
+      formData.totalFloorArea > 0                   // Total floor area must be greater than 0
     );
   };
 
@@ -235,7 +236,7 @@ export function OwnerPropertyOnboarding({userId}: {userId: string}) {
       case 1:
         return (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <Label htmlFor="propertyName">Property Name</Label>
                 <Input
@@ -250,6 +251,17 @@ export function OwnerPropertyOnboarding({userId}: {userId: string}) {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalFloorArea">Total Floor Area (m²)</Label>
+                <Input
+                  id="totalFloorArea"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.totalFloorArea || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, totalFloorArea: parseFloat(e.target.value) || 0})}
                 />
               </div>
             </div>

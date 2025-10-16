@@ -31,6 +31,7 @@ const initialFormData: FormData = {
     propertyName: "",
     propertyDescription: "",
     address: "",
+    totalFloorArea: 0,
     floorPlans: [] as File[],
     buildingPlans: [] as File[]
 };

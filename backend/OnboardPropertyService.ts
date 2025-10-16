@@ -71,23 +71,25 @@ export async function adminOnboardProperty(ownerData: Owner, formData: FormData,
 
 }
 
-const checkOwnerExists = async (owner: Owner) => {
-  const { data, error } = await supabase
-    .from("User")
-    .select("user_id")
-    .eq("firstName", owner.firstName)
-    .eq("lastName", owner.lastName)
-    .eq("phone", owner.phone)
-    .eq("email", owner.email)
-    .maybeSingle();
+export async function checkOwnerExists(email: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("User")
+      .select("user_id")
+      .eq("email", email)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error checking owner:", error);
+    if (error) {
+      console.error("Error checking owner:", error);
+      return false;
+    }
+
+    return !!data; // true if owner exists, false otherwise
+  } catch (error) {
+    console.error("Error in checkOwnerExists:", error);
     return false;
   }
-
-  return !!data; // true if owner exists, false otherwise
-};
+}
 
 const saveProperty = async (formData: FormData, ownerId: string) => {
   try {
@@ -98,7 +100,8 @@ const saveProperty = async (formData: FormData, ownerId: string) => {
         {
           name: formData.propertyName,
           description: formData.propertyDescription,
-          address: formData.address
+          address: formData.address,
+          total_floor_area: formData.totalFloorArea
         }
       ])
       .select("property_id")

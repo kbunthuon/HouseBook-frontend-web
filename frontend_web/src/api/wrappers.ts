@@ -321,6 +321,17 @@ class ApiClient {
     return response.json();
   }
 
+  async checkOwnerExists(email: string): Promise<boolean> {
+    const { checkOwnerExists } = await import("../../../backend/OnboardPropertyService");
+    try {
+      const exists = await checkOwnerExists(email);
+      return exists;
+    } catch (error) {
+      console.error("Error checking owner exists:", error);
+      throw new Error("Failed to verify owner");
+    }
+  }
+
   async ownerOnboardProperty(params: OwnerOnboardParams) {
     const response = await this.authenticatedRequest(
       API_ROUTES.OWNER.ONBOARD_PROPERTY,
