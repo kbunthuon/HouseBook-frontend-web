@@ -392,8 +392,9 @@ class ApiClient {
       const error = await response.json();
       throw new Error(error.error || "Failed to update splash image");
     }
-
-    return response.json(); // { result: ... }
+    const data = response.json();
+      console.log("updatePropertySplashImage response data:", data);
+    return data; // { result: ... }
   }
 
 

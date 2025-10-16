@@ -15,6 +15,7 @@ export async function fetchAssetTypes(): Promise<AssetType[]> {
     console.error("Error fetching asset types:", error.message);
     return [];
   }
+  console.log(data);
   return data || [];
 };
 

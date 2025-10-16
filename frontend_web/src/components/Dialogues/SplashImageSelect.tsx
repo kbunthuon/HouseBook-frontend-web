@@ -25,6 +25,7 @@ export default function SplashImageDialog({
   property,
   onSplashImageSet,
 }: SplashImageDialogProps) {
+  console.log("Rendering SplashImageDialog with property:", property);
   const [selectedSplash, setSelectedSplash] = useState<string | null>(
     property?.splashImage || null
   );

@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download } from "lucide-react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download, CheckCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
@@ -87,10 +87,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedImagesToDelete, setSelectedImagesToDelete] = useState<string[]>([]);
   const [isImageConfirmOpen, setIsImageConfirmOpen] = useState(false);
-  const [imageAction, setImageAction] = useState<'upload' | 'delete' | null>(null);
+  const [imageAction, setImageAction] = useState<'upload' | 'delete' | 'setSplash'| null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSplashDialogOpen, setIsSplashDialogOpen] = useState(false);
+  const [selectedSplashImage, setSelectedSplashImage] = useState<string | null>(null);
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -549,9 +550,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     );
   };
 
-  const handleConfirmImageAction = () => {
+  const handleConfirmImageAction = (action: 'upload' | 'delete' | 'setSplash') => {
+    setImageAction(action);
     setIsImageUploadDialogOpen(false);
     setIsImageDeleteDialogOpen(false);
+    setIsSplashDialogOpen(false);
     setIsImageConfirmOpen(true);
   };
 
@@ -559,6 +562,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     setIsImageConfirmOpen(false);
     
     try {
+      console.log("Performing image action:", imageAction, "selectedSplashImage:", selectedSplashImage);
       if (imageAction === 'upload' && selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           await apiClient.uploadPropertyImage(propertyId, file);
@@ -570,6 +574,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         await apiClient.deletePropertyImages(selectedImagesToDelete);
         toast.success(`${selectedImagesToDelete.length} image(s) deleted successfully`);
         setSelectedImagesToDelete([]);
+      } else if (imageAction === 'setSplash' && selectedSplashImage) {
+        await apiClient.updatePropertySplashImage(selectedSplashImage);
+        toast.success(`Splash image updated successfully`);
       }
       
       await fetchData();
@@ -579,6 +586,17 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       toast.error(`Failed: ${error.message || 'Unknown error'}`);
     }
   };
+
+  const handleOpenSplashDialog = () => {
+    // Pre-select the current splash image when the dialog opens
+    setSelectedSplashImage(property?.splashImage || null);
+    setIsSplashDialogOpen(true);
+  };
+
+  const handleCloseSplashDialog = () => {
+    setIsSplashDialogOpen(false);
+  };
+
 
   const formatSpecifications = (specs: Record<string, any>) => {
     if (!specs || typeof specs !== 'object') return null;
@@ -1175,6 +1193,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Images
             </Button>
+            <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!property?.images || property.images.length === 0}>
+              <Plus className="h-4 w-4 mr-2" />
+              Select splash image
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="w-full max-w-full overflow-hidden">
@@ -1444,7 +1466,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               <X className="h-4 w-4 mr-2" />Cancel
             </Button>
             <Button 
-              onClick={() => { setImageAction('upload'); handleConfirmImageAction(); }} 
+              onClick={() => { setImageAction('upload'); handleConfirmImageAction('upload'); }} 
               disabled={selectedFiles.length === 0}
             >
               <Save className="h-4 w-4 mr-2" />
@@ -1503,7 +1525,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
             <Button 
               variant="destructive"
-              onClick={() => { setImageAction('delete'); handleConfirmImageAction(); }} 
+              onClick={() => { setImageAction('delete'); handleConfirmImageAction('delete'); }} 
               disabled={selectedImagesToDelete.length === 0}
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -1514,33 +1536,101 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </Dialog>
 
       {/* Splash image selection*/}
-      <SplashImageDialog
-        open={isSplashDialogOpen}
-        onOpenChange={setIsSplashDialogOpen}
-        property={property}
-        onSplashImageSet={(url) => {
-          setProperty((prev) => (prev ? { ...prev, splashImage: url } : prev));
-        }}
-      />
+      <Dialog open={isSplashDialogOpen} onOpenChange={setIsSplashDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Splash Image</DialogTitle>
+            <DialogDescription>Choose an image to use as the main property splash image</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {property?.images && property.images.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {property.images.map((imgUrl, idx) => (
+                  <div
+                    key={imgUrl} // use url as key for uniqueness
+                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      selectedSplashImage === imgUrl
+                        ? 'border-primary ring-2 ring-primary'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => setSelectedSplashImage(imgUrl)}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`Property Image ${idx + 1}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    {selectedSplashImage === imgUrl && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <div className="bg-primary text-white rounded-full p-2">
+                          <CheckCircle className="h-6 w-6" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No images available
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSplashDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              // Calls the handler, explicitly passing the 'setSplash' action.
+              onClick={() => handleConfirmImageAction('setSplash')} 
+              disabled={!selectedSplashImage}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Set as Splash Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Image Action Confirmation Dialog */}
       <AlertDialog open={isImageConfirmOpen} onOpenChange={setIsImageConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {imageAction === 'upload' ? 'Confirm Upload' : 'Confirm Deletion'}
+              {/* CORRECTED TITLE LOGIC */}
+              {imageAction === 'upload'
+                ? 'Confirm Image Upload'
+                : imageAction === 'delete'
+                ? 'Confirm Image Deletion'
+                : 'Confirm Splash Image Change'}
             </AlertDialogTitle>
+            
             <AlertDialogDescription>
-              {imageAction === 'upload' 
+              {/* CORRECTED DESCRIPTION LOGIC */}
+              {imageAction === 'upload'
                 ? `Are you sure you want to upload ${selectedFiles.length} image(s)?`
-                : `Are you sure you want to delete ${selectedImagesToDelete.length} image(s)? This action cannot be undone.`
-              }
+                : imageAction === 'delete'
+                ? `Are you sure you want to delete ${selectedImagesToDelete.length} image(s)? This action cannot be undone.`
+                : 'Are you sure you want to set the selected image as the new property splash image?'} 
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
           <AlertDialogFooter>
+            {/* Retain the setImageAction(null) on Cancel to clear the state */}
             <AlertDialogCancel onClick={() => setImageAction(null)}>Cancel</AlertDialogCancel>
+            
             <AlertDialogAction onClick={handleFinalImageAction}>
-              {imageAction === 'upload' ? 'Upload' : 'Delete'}
+              {/* CORRECTED ACTION BUTTON TEXT */}
+              {imageAction === 'upload'
+                ? 'Upload'
+                : imageAction === 'delete'
+                ? 'Delete'
+                : imageAction === 'setSplash'
+                ? 'Set Splash Image' // User-friendly text
+                : 'Confirm'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
