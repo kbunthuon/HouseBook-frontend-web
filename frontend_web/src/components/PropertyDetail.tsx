@@ -1176,17 +1176,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardHeader>
         <CardContent className="w-full max-w-full overflow-hidden">
           {property?.images && property.images.length > 0 ? (
-            <div className="flex flex-row gap-3 overflow-x-auto w-full max-h-[35vh] py-2">
+            <div className="flex flex-row gap-3 overflow-x-auto w-full py-2" style={{ height: '320px' }}>
               {property.images.map((url, idx) => (
                 <div
                   key={idx}
-                  className="flex-shrink-0 w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
+                  className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
+                  style={{ width: '320px', height: '320px' }}
                   onClick={() => setSelectedImage(url)}
                 >
                   <img
                     src={url}
                     alt={`Property Image ${idx + 1}`}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full"
+                    style={{ objectFit: 'contain' }}
                   />
                 </div>
               ))}
