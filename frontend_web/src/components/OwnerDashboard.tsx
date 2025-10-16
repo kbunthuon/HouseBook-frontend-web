@@ -10,7 +10,8 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { Property } from "../types/serverTypes.ts";
+import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { Property, ChangeLog} from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 import { apiClient } from "../api/wrappers.ts";
@@ -23,18 +24,6 @@ interface OwnerDashboardProps {
   onViewProperty?: (propertyId: string) => void;
   
 }
-
-interface ChangeLog {
-  property_id: string;
-  changelogId: string;
-  changelog_specifications: Record<string, any>;
-  changelog_description: string;
-  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-  changelog_created_at: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
-}
-
 
 export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
@@ -63,11 +52,15 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
             return;
           }
   
-            // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
-              ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
-            }));
+            // Normalize changes with user info
+            const normalizedChanges = (changes ?? []).map((c: any) => {
+              return {
+                ...c,
+                changedByUserFirstName: c.user?.first_name,
+                changedByUserLastName: c.user?.last_name,
+                changedByUserEmail: c.user?.email,
+              };
+            });
   
             setRequests(normalizedChanges);
             console.log("normalized requests", requests)
@@ -135,7 +128,7 @@ const approveEdit = async (id: string) => {
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -154,7 +147,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -223,26 +216,26 @@ return (
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
               requests
-              .filter((r) => r.changelog_status !== "ACCEPTED")
+              .filter((r) => r.status !== "ACCEPTED")
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelogId}>
+                <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.user_first_name || request.user_last_name
-                      ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                    {request.changedByUserFirstName || request.changedByUserLastName
+                      ? `${request.changedByUserFirstName ?? ""} ${request.changedByUserLastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
-                  <TableCell>{request.changelog_description}</TableCell>
-                  <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  <TableCell>{request.changeDescription}</TableCell>
+                  <TableCell>{formatDate(request.created_at)}</TableCell>
                   <TableCell>
-                    <Badge variant={getEditStatusColor(request.changelog_status)}>
-                      {request.changelog_status}
+                    <Badge variant={getEditStatusColor(request.status)}>
+                      {request.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -271,24 +264,24 @@ return (
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} 
+                                  value={`${request.changedByUserFirstNAme ?? ""} ${request.changedByUserLastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>
                               <div>
                                 <Label>Request Time</Label>
-                                <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                <Input value={formatDateTime(request.created_at)} readOnly />
                               </div>
                             </div>
                             <div>
                               <Label>Change Description</Label>
-                              <Input value={request.changelog_description} readOnly />
+                              <Input value={request.changeDescription} readOnly />
                             </div>
                             <div>
                               <Label>Field Specification</Label>
                               <div className="p-4 border rounded-lg bg-gray-50">
                                 <ul className="text-sm space-y-1">
-                                  {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                  {Object.entries(request.specifications).map(([key, value]) => (
                                     <li key={key}>
                                       <strong>{key}:</strong> {String(value)}
                                     </li>
@@ -299,12 +292,12 @@ return (
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelogId)}
+                                onClick={() => rejectEdit(request.id)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelogId)}>
+                              <Button onClick={() => approveEdit(request.id)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>

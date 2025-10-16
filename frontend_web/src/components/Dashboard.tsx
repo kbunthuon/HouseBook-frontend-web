@@ -10,7 +10,7 @@ import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from
 import { useState, useEffect} from "react";
 import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
-import { Property, Owner } from "../types/serverTypes.ts";
+import { Property, Owner, ChangeLog} from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { apiClient } from "../api/wrappers.ts";
 
@@ -20,18 +20,6 @@ interface DashboardProps {
   userType: string;
   onAddProperty?: () => void;
   onViewProperty?: (propertyId: string) => void;
-}
-
-
-interface ChangeLog {
-  propertyId: string;
-  changelogId: string;
-  changelog_specifications: Record<string, any>;
-  changelog_description: string;
-  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-  changelog_created_at: string;
-  user_firstName: string | null;
-  user_lastName: string | null;
 }
 
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
@@ -45,13 +33,21 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
         try {
           
           const properties = await getAdminProperty(userId, userType);
-          setOwnerProperties(properties ?? []);
+          // Remove duplicate properties by propertyId
+          const uniquePropertiesMap = new Map();
+          properties?.forEach((p: any) => {
+            if (!uniquePropertiesMap.has(p.propertyId)) {
+              uniquePropertiesMap.set(p.propertyId, p);
+            }
+          });
+      
+          const uniqueProperties = Array.from(uniquePropertiesMap.values());
+          setOwnerProperties(uniqueProperties ?? []);
           
-          console.log(properties);
-          if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-
-          const changes = await apiClient.getChangeLogs(propertyIds);
+          console.log(uniqueProperties);
+          if (uniqueProperties && uniqueProperties.length > 0) {
+          const propertyIds = [...new Set(uniqueProperties.map((p: any) => p.propertyId))];
+          const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
@@ -129,7 +125,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -148,7 +144,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -293,11 +289,11 @@ function formatDateTime(timestamp: string | number | Date) {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="max-h-[300px] overflow-y-auto border rounded-lg">
-              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
               requests
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelogId}>
+                <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
                       (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
@@ -307,11 +303,11 @@ function formatDateTime(timestamp: string | number | Date) {
                       ? `${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
-                  <TableCell>{request.changelog_description}</TableCell>
-                  <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  <TableCell>{request.changeDescription}</TableCell>
+                  <TableCell>{formatDate(request.created_at)}</TableCell>
                   <TableCell>
-                    <Badge variant={getEditStatusColor(request.changelog_status)}>
-                      {request.changelog_status}
+                    <Badge variant={getEditStatusColor(request.status)}>
+                      {request.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -346,18 +342,18 @@ function formatDateTime(timestamp: string | number | Date) {
                               </div>
                               <div>
                                 <Label>Request Time</Label>
-                                <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                <Input value={formatDateTime(request.created_at)} readOnly />
                               </div>
                             </div>
                             <div>
                               <Label>Change Description</Label>
-                              <Input value={request.changelog_description} readOnly />
+                              <Input value={request.changeDescription} readOnly />
                             </div>
                             <div>
                               <Label>Field Specification</Label>
                               <div className="p-4 border rounded-lg bg-gray-50">
                                 <ul className="text-sm space-y-1">
-                                  {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                  {Object.entries(request.specifications).map(([key, value]) => (
                                     <li key={key}>
                                       <strong>{key}:</strong> {String(value)}
                                     </li>
@@ -368,12 +364,12 @@ function formatDateTime(timestamp: string | number | Date) {
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelogId)}
+                                onClick={() => rejectEdit(request.id)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelogId)}>
+                              <Button onClick={() => approveEdit(request.id)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>

@@ -1,28 +1,128 @@
 import supabase from "../config/supabaseClient";
-import { Property, Space, Asset, Owner } from "@housebookgroup/shared-types";
+import { Property, Space, Asset, Owner, AssetType, ChangeLog, ChangeLogAction, ChangeLogStatus } from "@housebookgroup/shared-types";
 
-export const getChangeLogs = async (propertyIds: string[]) => {
-  const { data: changes, error } = await supabase
-    .from("changelog_property_view")
-    .select(`
-      changelog_id,
-      changelog_specifications,
-      changelog_description,
-      changelog_created_at,
-      changelog_status,
-      user_first_name,
-      user_last_name,
-      property_id
-    `)
-    .in("property_id", propertyIds)
-    .order("changelog_created_at", { ascending: false });
+// Takes in userId
+// Returns the OwnerId if it exists, otherwise return null
+export const getOwnerId = async (userId: string): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from("Owner")
+    .select("owner_id")
+    .eq("user_id", userId)
+    .maybeSingle();
 
   if (error) {
-    console.error("Error fetching change log:", error);
+    console.error("Error fetching owner id:", error.message);
     return null;
   }
 
-  return changes;
+  return data?.owner_id || null;
+};
+
+// Takes in userId
+// Returns property objects that the user owns
+export const getProperty = async (userID: string): Promise<Property[]> => {
+  const { data, error } = await supabase
+    .from("owner_property_view")
+    .select(`
+      address,
+      description,
+      pin,
+      property_name, 
+      property_id,
+      property_created_at,
+      type,
+      status,
+      last_updated,
+      completion_status,
+      total_floor_area,
+      splash_image
+    `)
+    .eq("user_id", userID)
+    .order("property_created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching property id:", error.message);
+    return [];
+  }
+
+  const properties: Property[] = data.map((row) => {
+    const splashImageUrl = row.splash_image
+      ? supabase.storage
+          .from("PropertyImage")
+          .getPublicUrl(row.splash_image)
+          .data?.publicUrl ?? ""
+      : "";
+
+    return {
+      propertyId: row.property_id,
+      name: row.property_name,
+      address: row.address,
+      description: row.description,
+      pin: row.pin,
+      createdAt: row.property_created_at,
+      type: row.type,
+      status: row.status,
+      lastUpdated: row.last_updated,
+      completionStatus: row.completion_status,
+      totalFloorArea: row.total_floor_area,
+      spaces: [],
+      images: [], 
+      splashImage: splashImageUrl,
+    };
+  });
+
+  return properties;
+};
+
+export const getChangeLogs = async (propertyIds: string[]) => {
+  const { data: changes, error } = await supabase
+    .from("changelog_with_assets")
+    .select(`
+      id,
+      asset_id,
+      specifications,
+      change_description,
+      status,
+      changed_by_user_id,
+      created_at,
+      actions,
+      asset_description,
+      space_name,
+      property_id,
+      user:User!changed_by_user_id (
+        first_name,
+        last_name,
+        email
+      )
+    `)
+    .in("property_id", propertyIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching changelogs:", error.message);
+    return null;
+  }
+
+  const changelogs: ChangeLog[] = changes.map((row: any) => ({
+    id: row.id,
+    assetId: row.asset_id,
+    specifications: row.specifications,
+    changeDescription: row.change_description,
+    changedByUserId: row.changed_by_user_id,
+    created_at: row.created_at,
+    status: row.status as ChangeLogStatus,
+    actions: row.actions as ChangeLogAction,
+    deleted: false, 
+    assetName: row.asset_description,
+    spaceName: row.space_name,
+    propertyId: row.property_id,
+
+    userFirstName: row.user?.[0]?.first_name,
+    userLastName: row.user?.[0]?.last_name,
+    userEmail: row.user?.[0]?.email,
+  }));
+
+  return changelogs;
 };
 
 export const getPropertyDetails = async (propertyId: string): Promise<Property | null> => {
