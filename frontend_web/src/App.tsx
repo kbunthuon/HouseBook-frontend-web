@@ -19,6 +19,7 @@ import { PropertyManagement } from "./components/PropertyManagement";
 import { PropertyDetail } from "./components/PropertyDetail";
 import { AdminFunctions } from "./components/AdminFunctions";
 import { Reports } from "./components/Reports";
+
 import { AdminRequests } from "./components/AdminRequests";
 import { UserManagementPage } from "./components/UserManagement";
 
@@ -202,7 +203,7 @@ function DashboardPage({ userId, userType}: { userId: string, userType: string }
     <Dashboard
       userId={userId}
       userType={userType}
-      onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
+      onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
       onAddProperty={() => navigate(ADMIN_ROUTES.properties.add)}
     />
   );

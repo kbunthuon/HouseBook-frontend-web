@@ -25,7 +25,7 @@ interface OwnerDashboardProps {
 }
 
 interface ChangeLog {
-  propertyId: string;
+  property_id: string;
   changelogId: string;
   changelog_specifications: Record<string, any>;
   changelog_description: string;
@@ -70,6 +70,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
             }));
   
             setRequests(normalizedChanges);
+            console.log("normalized requests", requests)
           } else {
             setRequests([]);
           }
@@ -230,7 +231,7 @@ return (
                 <TableRow key={request.changelogId}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
                     {request.user_first_name || request.user_last_name
@@ -262,7 +263,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>

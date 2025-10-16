@@ -1,12 +1,21 @@
-import { API_ROUTES, LoginParams, OwnerOnboardParams, AdminOnboardParams } from './routes';
-import { SignupData } from '@housebookgroup/shared-types';
+import {
+  API_ROUTES,
+  LoginParams,
+  OwnerOnboardParams,
+  AdminOnboardParams,
+} from "./routes";
+import { SignupData } from "@housebookgroup/shared-types";
 
 // Token management
 class TokenManager {
-  private static ACCESS_TOKEN_KEY = 'housebook_access_token';
-  private static EXPIRES_AT_KEY = 'housebook_expires_at';
+  private static ACCESS_TOKEN_KEY = "housebook_access_token";
+  private static EXPIRES_AT_KEY = "housebook_expires_at";
 
-  static setTokens(accessToken: string, refreshToken: string, expiresAt?: number) {
+  static setTokens(
+    accessToken: string,
+    refreshToken: string,
+    expiresAt?: number
+  ) {
     localStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
     if (expiresAt) {
       localStorage.setItem(this.EXPIRES_AT_KEY, expiresAt.toString());
@@ -41,23 +50,20 @@ class ApiClient {
   private async refreshAccessToken(): Promise<boolean> {
     try {
       const response = await fetch(API_ROUTES.AUTH.REFRESH, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include', // Include cookies for refresh token
+        credentials: "include", // Include cookies for refresh token
       });
 
       if (!response.ok) return false;
 
       const data = await response.json();
-      TokenManager.setTokens(
-        data.access_token,
-        data.expires_at
-      );
+      TokenManager.setTokens(data.access_token, data.expires_at);
       return true;
     } catch (error) {
-      console.error('Failed to refresh token:', error);
+      console.error("Failed to refresh token:", error);
       return false;
     }
   }
@@ -72,18 +78,18 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        throw new Error('Session expired. Please login again.');
+        throw new Error("Session expired. Please login again.");
       }
     }
 
     const accessToken = TokenManager.getAccessToken();
     if (!accessToken) {
-      throw new Error('No access token found. Please login.');
+      throw new Error("No access token found. Please login.");
     }
 
     const headers = {
       ...options.headers,
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
     };
 
     const response = await fetch(url, {
@@ -100,12 +106,12 @@ class ApiClient {
           ...options,
           headers: {
             ...options.headers,
-            'Authorization': `Bearer ${newAccessToken}`,
+            Authorization: `Bearer ${newAccessToken}`,
           },
         });
       }
       TokenManager.clearTokens();
-      throw new Error('Session expired. Please login again.');
+      throw new Error("Session expired. Please login again.");
     }
 
     return response;
@@ -114,19 +120,19 @@ class ApiClient {
   // Authentication methods
   async login(params: LoginParams) {
     const response = await fetch(API_ROUTES.AUTH.LOGIN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: 'include',
+      credentials: "include",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.details || error.error || 'Login failed');
+      throw new Error(error.details || error.error || "Login failed");
     }
 
     const data = await response.json();
-    
+
     // Store tokens
     TokenManager.setTokens(
       data.user.accessToken,
@@ -139,19 +145,19 @@ class ApiClient {
 
   async signup(params: SignupData) {
     const response = await fetch(API_ROUTES.AUTH.SIGNUP, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: 'include',
+      credentials: "include",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.details || error.error || 'Signup failed');
+      throw new Error(error.details || error.error || "Signup failed");
     }
 
     const data = await response.json();
-    
+
     // Store tokens
     TokenManager.setTokens(
       data.user.accessToken,
@@ -161,13 +167,12 @@ class ApiClient {
 
     return data.user;
   }
-  
 
   async verifyAuth() {
     const response = await this.authenticatedRequest(API_ROUTES.AUTH.VERIFY);
-    
+
     if (!response.ok) {
-      throw new Error('Token verification failed');
+      throw new Error("Token verification failed");
     }
 
     return response.json();
@@ -175,21 +180,21 @@ class ApiClient {
 
   async logout() {
     const response = await fetch(API_ROUTES.AUTH.LOGOUT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // include HttpOnly refresh token cookie
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // include HttpOnly refresh token cookie
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Logout failed');
+      throw new Error(error.error || "Logout failed");
     }
 
     // Clear access token from localStorage
     TokenManager.clearTokens();
 
     return true; // optional, indicates logout success
-    }
+  }
 
   // User methods
   async getUserInfoByEmail(email: string) {
@@ -199,7 +204,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch user info');
+      throw new Error(error.error || "Failed to fetch user info");
     }
 
     return response.json();
@@ -213,7 +218,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch owner ID');
+      throw new Error(error.error || "Failed to fetch owner ID");
     }
 
     return response.json();
@@ -223,15 +228,15 @@ class ApiClient {
     const response = await this.authenticatedRequest(
       API_ROUTES.OWNER.ONBOARD_PROPERTY,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       }
     );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to onboard property');
+      throw new Error(error.error || "Failed to onboard property");
     }
 
     return response.json();
@@ -242,15 +247,15 @@ class ApiClient {
     const response = await this.authenticatedRequest(
       API_ROUTES.ADMIN.ONBOARD_PROPERTY,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       }
     );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to onboard property as admin');
+      throw new Error(error.error || "Failed to onboard property as admin");
     }
 
     return response.json();
@@ -264,7 +269,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch properties');
+      throw new Error(error.error || "Failed to fetch properties");
     }
 
     return response.json();
@@ -277,7 +282,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch property owners');
+      throw new Error(error.error || "Failed to fetch property owners");
     }
 
     return response.json();
@@ -290,7 +295,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch property details');
+      throw new Error(error.error || "Failed to fetch property details");
     }
 
     return response.json();
@@ -304,35 +309,59 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch images');
+      throw new Error(error.error || "Failed to fetch images");
     }
 
     return response.json();
   }
 
-  async uploadPropertyImage(propertyId: string, file: File, description?: string) {
+  async uploadPropertyImage(
+    propertyId: string,
+    file: File,
+    description?: string
+  ) {
     const formData = new FormData();
-    formData.append('propertyId', propertyId);
-    formData.append('file', file);
+    formData.append("propertyId", propertyId);
+    formData.append("file", file);
     if (description) {
-      formData.append('description', description);
+      formData.append("description", description);
     }
 
+    const response = await this.authenticatedRequest(API_ROUTES.IMAGES.UPLOAD, {
+      method: "POST",
+      body: formData,
+      // Don't set Content-Type header, let browser set it with boundary
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload image");
+    }
+
+    return response.json();
+  }
+
+  // deletes image based on signed URL
+  async deletePropertyImages(signedUrls: string | string[]) {
+    const body = { signedUrls };
+
     const response = await this.authenticatedRequest(
-      API_ROUTES.IMAGES.UPLOAD,
+      API_ROUTES.IMAGES.DELETE, // make sure you have this route defined
       {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type header, let browser set it with boundary
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       }
     );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to upload image');
+      throw new Error(error.error || "Failed to delete images");
     }
 
-    return response.json();
+    return response.json(); // returns array of results from backend
   }
 
   // Changelog methods
@@ -344,7 +373,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch change logs');
+      throw new Error(error.error || "Failed to fetch change logs");
     }
 
     return response.json();

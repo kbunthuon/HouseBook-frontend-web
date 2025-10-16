@@ -46,7 +46,8 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full bg-background">
+      {/* Fixed height viewport, prevent overflow */}
+      <div className="flex h-screen w-full overflow-hidden bg-background">
         <FixedSidebarTrigger />
 
         <Sidebar collapsible="offcanvas">
@@ -91,9 +92,10 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset className="flex-1">
-          <div className="h-full w-full overflow-auto">
-            <div className="p-8 w-full">{children}</div>
+        {/* SidebarInset with constrained height and independent scrolling */}
+        <SidebarInset className="flex flex-col h-screen overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-8">{children}</div>
           </div>
         </SidebarInset>
       </div>

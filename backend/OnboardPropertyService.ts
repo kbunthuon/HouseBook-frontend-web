@@ -26,7 +26,7 @@ export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[
 
 export async function adminOnboardProperty(ownerData: Owner, formData: FormData, spaces: SpaceInt[]) {
   // Check if this user account exists
-  // const exists = await checkOwnerExists(ownerData);
+  // const exists = await checkOwnerExists(owner);
   // if (!exists) {
   //   alert("Error fetching credentials. Credentials may not exist.");
   //   return;

@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Home, Building, FileText, Plus, LogOut, UserPen } from "lucide-react";
-import { NavLink, Outlet, Routes, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { ROUTES } from "../Routes";
 import {
   Sidebar,
@@ -72,7 +72,6 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
                     to={to}
                     end={end}
                     className={() => {
-                      // Custom highlight logic for "My Properties": Highlight for all sub-routes EXCEPT "Add Property"
                       if (label === "My Properties") {
                         return location.pathname.startsWith(ROUTES.properties.list) &&
                           location.pathname !== ROUTES.properties.add
@@ -80,7 +79,6 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
                           : "block w-full rounded-md px-3 py-2 text-left flex items-center hover:bg-accent";
                       }
 
-                      // Default behavior
                       const isActive = location.pathname === to;
                       return `block w-full rounded-md px-3 py-2 text-left flex items-center ${
                         isActive ? "bg-secondary text-secondary-foreground" : "hover:bg-accent"
