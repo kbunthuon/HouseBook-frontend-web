@@ -21,10 +21,10 @@ export async function signupUser(signupData: SignupData) {
   // 2. Insert into main User table
   const { error: insertError } = await supabase.from("User").insert([
     {
-      user_id: userId,
+      userId: userId,
       email: signupData.email,
-      first_name: signupData.first_name,
-      last_name: signupData.last_name,
+      firstName: signupData.firstName,
+      lastName: signupData.lastName,
       phone: signupData.phone,
     },
   ]);
@@ -94,10 +94,10 @@ export const validateSignup = async (signupData: SignupData) => {
   newErrors.password = [];
   // First name and last name allows Unicode characters for accent mark and so on, no numbers or special characters except from dashes
   // or apostrophe and so on.
-  if (!signupData.first_name.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u))
-    newErrors.first_name.push("Invalid first name.");
-  if (!signupData.last_name.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u)) 
-    newErrors.last_name.push("Invalid last name.");
+  if (!signupData.firstName.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u))
+    newErrors.firstName.push("Invalid first name.");
+  if (!signupData.lastName.trim().match(/^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u)) 
+    newErrors.lastName.push("Invalid last name.");
 
   // Match email so that it matches string@string.string format
   const valid = await validateEmail(signupData.email);

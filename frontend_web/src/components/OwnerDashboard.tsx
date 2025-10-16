@@ -10,9 +10,10 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import { Property } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
+
+import { apiClient } from "../api/wrappers.ts";
 
 
 
@@ -25,7 +26,7 @@ interface OwnerDashboardProps {
 
 interface ChangeLog {
   property_id: string;
-  changelog_id: string;
+  changelogId: string;
   changelog_specifications: Record<string, any>;
   changelog_description: string;
   changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
@@ -44,16 +45,17 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
     const getOwnerProps = async () => {
       try {
         // Get owner id
-        const ownerId = await getOwnerId(userId);
+        const ownerId = await apiClient.getOwnerId(userId);
         if (!ownerId) throw Error("Owner ID not found");
         
-        const properties = await getProperty(userId);
+        const properties = await apiClient.getPropertyList(userId);
         setOwnerProperties(properties ?? []);
 
 
         if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.property_id);
-          const changes = await getChangeLogs(propertyIds);
+          const propertyIds = properties.map((p: any) => p.propertyId);
+          console.log("Fetching change logs for properties:", propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -68,6 +70,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
             }));
   
             setRequests(normalizedChanges);
+            console.log("normalized requests", requests)
           } else {
             setRequests([]);
           }
@@ -132,7 +135,7 @@ const approveEdit = async (id: string) => {
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -151,7 +154,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -206,6 +209,7 @@ return (
         <CardTitle>Pending Edit Requests</CardTitle>
       </CardHeader>
       <CardContent>
+        
         <div className="max-h-[300px] overflow-y-auto border rounded-lg">
           <Table>
             <TableHeader>
@@ -219,11 +223,15 @@ return (
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.slice(0, 15).map((request) => (
-                <TableRow key={request.changelog_id}>
+              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              requests
+              .filter((r) => r.changelog_status !== "ACCEPTED")
+              .slice(0, 15)
+              .map((request) => (
+                <TableRow key={request.changelogId}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
                     {request.user_first_name || request.user_last_name
@@ -255,7 +263,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.property_id === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -291,12 +299,12 @@ return (
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelog_id)}
+                                onClick={() => rejectEdit(request.changelogId)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelog_id)}>
+                              <Button onClick={() => approveEdit(request.changelogId)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
@@ -307,8 +315,19 @@ return (
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
+              ))
+            ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mb-2" />
+                  <p className="font-medium">No pending requests</p>
+                  <p className="text-sm">All edit requests have been processed</p>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
           </Table>
         </div>
       </CardContent>
@@ -330,16 +349,16 @@ return (
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
                 <div 
-                  key={property.property_id} 
+                  key={property.propertyId} 
                   className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
                   style={{ minWidth: '320px', maxWidth: '320px'}}
-                  onClick={() => onViewProperty && onViewProperty(property.property_id)}
+                  onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
                   {/* property image */}
                   <div className="w-full flex-1 bg-muted flex items-center justify-center">
-                    {property.splash_image ? (
+                    {property.splashImage ? (
                       <img
-                        src={property.splash_image}
+                        src={property.splashImage}
                         alt={`${property.address} splash`}
                         className="max-h-full max-w-full object-contain"
                       />

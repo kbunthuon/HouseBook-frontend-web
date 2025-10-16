@@ -1077,8 +1077,12 @@
     max-width: var(--skeleton-width);
   }
 
-  .max-w-\[95vh\] {
-    max-width: 95vh;
+  .max-w-\[95vw\] {
+    max-width: 95vw;
+  }
+  
+  .max-w-\[100vw\] {
+    max-width: 100vw;
   }
 
   .max-w-2xl {

@@ -2,52 +2,38 @@
 /// <reference types="vite/client" />
 import supabase from "../config/supabaseClient";
 
-// Possible job statuses
-export enum JobStatus {
-  PENDING = "PENDING",
-  ACCEPTED = "ACCEPTED",
-  REVOKED = "REVOKED",
-  DELETED = "DELETED",
-}
-
-export type JobAsset = {
+export interface JobAsset {
   asset_id: string;
   job_id: string;
-};
+}
 
 // Shape of a job record
 export interface Job {
   id: string | null;        // May be null before insert
-  property_id: string;
-  tradie_id: string | null; // May be null at creation of Job
+  propertyId: string;
   title: string;
-  status: JobStatus;
-  created_at: string;       // ISOString
-  end_time: string | null;  // ISOString
+  createdAt: string;       // ISOString
+  endTime: string | null;  // ISOString
   expired: boolean;
   pin: string;
 }
 
 // Input filters for the query
 export interface FetchJobInfoParams {
-  property_id: string; // required
-  tradie_id?: string | null;
-  status?: JobStatus | null;
+  propertyId: string; // required
   expired?: boolean | null;
   last?: number | null;
 }
 
 /**
  * Fetches jobs for a given property with optional filters.
- * @param property_id - ID of the property (required).
- * @param tradie_id - (Optional) Filter by tradie ID.
- * @param status - (Optional) Filter by job status.
+ * @param propertyId - ID of the property (required).
  * @param expired - (Optional) Filter by expired flag.
  * @param last - (Optional) Limit the number of jobs returned (most recent first).
  * @returns A list of Job list and JobAsset list
  */
-export async function fetchJobsInfo({ property_id, tradie_id = null, status = null, expired = null, last = null }: FetchJobInfoParams): Promise<[Job[], JobAsset[]]> {
-  const allJobs = await fetchJobsTable({ property_id, tradie_id, status, expired, last });
+export async function fetchJobsInfo({ propertyId, expired = null, last = null }: FetchJobInfoParams): Promise<[Job[], JobAsset[]]> {
+  const allJobs = await fetchJobsTable({ propertyId, expired, last });
 
   // Fetch assets for all jobs
   const allJobAssets: JobAsset[] = [];
@@ -66,22 +52,12 @@ export async function fetchJobsInfo({ property_id, tradie_id = null, status = nu
 /**
  * Fetches jobs for a given property with optional filters.
  * @param property_id - ID of the property (required).
- * @param tradie_id - (Optional) Filter by tradie ID.
- * @param status - (Optional) Filter by job status.
  * @param expired - (Optional) Filter by expired flag.
  * @param last - (Optional) Limit the number of jobs returned (most recent first).
  * @returns A list of jobs matching the filters, ordered by creation time (newest first).
  */
-export async function fetchJobsTable({ property_id, tradie_id = null, status = null, expired = null, last = null }: FetchJobInfoParams): Promise<Job[]> {
-  let query = supabase.from("Jobs").select("*").eq("property_id", property_id);
-
-  if (tradie_id) {
-    query = query.eq("tradie_id", tradie_id);
-  }
-
-  if (status) {
-    query = query.eq("status", status);
-  }
+export async function fetchJobsTable({ propertyId, expired = null, last = null }: FetchJobInfoParams): Promise<Job[]> {
+  let query = supabase.from("Jobs").select("*").eq("property_id", propertyId);
 
   if (expired !== null) {
     query = query.eq("expired", expired);
@@ -100,7 +76,17 @@ export async function fetchJobsTable({ property_id, tradie_id = null, status = n
     throw new Error(error.message);
   }
 
-  return data as Job[];
+  const jobs = (data ?? []).map((j: any) => ({
+    id: j.id,
+    propertyId: j.property_id,
+    title: j.title,
+    createdAt: j.created_at,
+    endTime: j.end_time,
+    expired: j.expired,
+    pin: j.pin,
+  }));
+
+  return jobs;
 }
 
 /**
@@ -128,17 +114,16 @@ export async function insertJobAssetsTable(jobId: string, assetIds: string[]): P
  */
 export async function insertJobsTable(job: Job): Promise<Job | null> {
   // Validate required fields
-  if (!job.property_id) throw new Error(`Missing "property_id".`);
+  if (!job.propertyId) throw new Error(`Missing "propertyId".`);
   if (!job.title) throw new Error(`Missing "title".`);
   if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);
 
   // Insert job
   const { data, error } = await supabase.from("Jobs").insert([
     {
-      property_id: job.property_id,
+      property_id: job.propertyId,
       title: job.title,
-      status: JobStatus.PENDING, // Start off a job with PENDING status
-      end_time: job.end_time ? new Date(job.end_time).toISOString() : oneHourFromNowISO(),
+      end_time: job.endTime ? new Date(job.endTime).toISOString() : oneHourFromNowISO(),
       expired: false, // Just created, cannot be expired
     } 
   ]).select(); // returns the inserted row
@@ -152,7 +137,7 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
 
 /**
  * Frontend-friendly function to create a job AND its associated assets.
- * @param job - Job data (title, property_id, end_time etc.)
+ * @param job - Job data (title, propertyId, endTime etc.)
  * @param assetIds - Array of selected asset IDs
  */
 export async function insertJobsInfo(job: Job, assetIds: string[]): Promise<[Job, JobAsset[] | null]> {
@@ -227,10 +212,8 @@ export async function updateJobTable(job: Job): Promise<Job> {
   const { data, error } = await supabase
     .from("Jobs")
     .update({
-      tradie_id: job.tradie_id,
       title: job.title,
-      status: job.status,
-      end_time: job.end_time ? new Date(job.end_time).toISOString() : null,
+      endTime: job.endTime ? new Date(job.endTime).toISOString() : null,
       expired: job.expired,
       pin: job.pin,
     })

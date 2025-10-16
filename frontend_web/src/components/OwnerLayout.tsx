@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Home, Building, FileText, Plus, LogOut, UserPen } from "lucide-react";
-import { NavLink, Outlet, Routes, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { ROUTES } from "../Routes";
 import {
   Sidebar,
@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarTrigger,
+  SidebarInset,
   useSidebar,
 } from "./ui/sidebar";
 
@@ -27,7 +28,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
 
   const menu = [
     { to: ROUTES.dashboard, label: "My Dashboard", icon: Home, end: true },
-    { to: ROUTES.properties.list, label: "My Properties", icon: Building, },
+    { to: ROUTES.properties.list, label: "My Properties", icon: Building},
     { to: ROUTES.properties.add, label: "Add Property", icon: Plus, end: true },
     { to: ROUTES.reports, label: "Reports", icon: FileText, end: false },
     { to: ROUTES.requests, label: "Requests", icon: UserPen, end: true },
@@ -45,7 +46,7 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <FixedSidebarTrigger />
 
         <Sidebar collapsible="offcanvas">
@@ -71,7 +72,6 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
                     to={to}
                     end={end}
                     className={() => {
-                      // Custom highlight logic for "My Properties": Highlight for all sub-routes EXCEPT "Add Property"
                       if (label === "My Properties") {
                         return location.pathname.startsWith(ROUTES.properties.list) &&
                           location.pathname !== ROUTES.properties.add
@@ -79,7 +79,6 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
                           : "block w-full rounded-md px-3 py-2 text-left flex items-center hover:bg-accent";
                       }
 
-                      // Default behavior
                       const isActive = location.pathname === to;
                       return `block w-full rounded-md px-3 py-2 text-left flex items-center ${
                         isActive ? "bg-secondary text-secondary-foreground" : "hover:bg-accent"
@@ -105,10 +104,12 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
-
-        <div className="flex-1 overflow-auto">
-          <div className="p-8">{children}</div>
-        </div>
+        
+        <SidebarInset className="flex-1">
+          <div className="h-full w-full overflow-auto">
+            <div className="p-8 w-full">{children}</div>
+          </div>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );

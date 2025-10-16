@@ -1,22 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
 import { Badge } from "./ui/badge.tsx";
-import { Progress } from "./ui/progress.tsx";
 import { Input } from "./ui/input.tsx";
-import { Textarea } from "./ui/textarea.tsx";
 import { Label } from "./ui/label.tsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
-import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { Property } from "../types/serverTypes.ts";
+import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
+import { Property, Owner } from "../types/serverTypes.ts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { apiClient } from "../api/wrappers.ts";
 
-
-interface OwnerRequestsProps {
+interface AdminRequestProps {
   userId: string;
+  userType: string;
 }
 
 
@@ -31,25 +31,27 @@ interface ChangeLog {
   user_last_name: string | null;
 }
 
-export function OwnerRequests({ userId }: OwnerRequestsProps) {
+export function AdminRequests({ userId, userType}: AdminRequestProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
       const getOwnerProps = async () => {
         try {
-          // Get owner id
-          const ownerId = await apiClient.getOwnerId(userId);
-          if (!ownerId) throw Error("Owner ID not found");
           
-          const properties = await apiClient.getPropertyList(userId);
+          const properties = await getAdminProperty(userId, userType);
           setOwnerProperties(properties ?? []);
-  
+          
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
+          console.log("property", propertyIds);
           const changes = await apiClient.getChangeLogs(propertyIds);
+
+          const ownersResults = await getAllOwners();
+          setOwners(ownersResults);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -78,8 +80,8 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
       };
   
       getOwnerProps();
-  
     },[userId])
+
 
 
 const approveEdit = async (id: string) => {
@@ -88,7 +90,6 @@ const approveEdit = async (id: string) => {
       .update({ status: "ACCEPTED" })
       .eq("id", id);
 
-    console.log("data", data);
     if (error) {
       console.error("Error updating change log status:", error);
     } else {
@@ -158,9 +159,9 @@ function formatDateTime(timestamp: string | number | Date) {
   return (
     <div className="space-y-8">
       <div>
-        <h1>My Dashboard</h1>
+        <h1>Requests</h1>
         <p className="text-muted-foreground">
-          Overview of your property portfolio
+          All requests are displayed here.
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-1">

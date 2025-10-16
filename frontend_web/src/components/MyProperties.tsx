@@ -5,19 +5,19 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft, Eye, CheckCircle, XCircle } from "lucide-react";
-import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
 import OldOwnerTransferDialog from "./OldOwnerTransferDialog";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../Routes";
+import { apiClient } from "../api/wrappers";
 
 interface MyPropertiesProps {
-  ownerEmail: string;
+  ownerId: string;
   onViewProperty?: (propertyId: string) => void;
   onAddProperty?: () => void;
 }
 
-export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
+export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
   useEffect(() => {
     const loadProperties = async () => {
       setLoading(true);
-      const properties = await getProperty(userID); 
+      const properties = await apiClient.getPropertyList(userID); 
       setMyProperties(properties || []);
       setLoading(false);
     };
@@ -146,7 +146,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.property_id}>
+                  <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -173,7 +173,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onViewProperty(property.property_id)}
+                            onClick={() => onViewProperty(property.propertyId)}
                             title="View Property Details"
                           >
                             <ExternalLink className="h-4 w-4" />
@@ -241,7 +241,7 @@ export function MyProperties({ ownerEmail: userID, onViewProperty, onAddProperty
               </TableHeader>
               <TableBody>
                 {filteredProperties.map((property) => (
-                  <TableRow key={property.property_id}>
+                  <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>

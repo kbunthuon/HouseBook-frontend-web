@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchAssetTypesGroupedByDiscipline } from "../../../backend/FetchAssetTypes";
-import { insertJobsInfo, updateJobInfo, Job, JobStatus, fetchJobAssets } from "../../../backend/JobService";
+import { insertJobsInfo, updateJobInfo, Job, fetchJobAssets } from "../../../backend/JobService";
 import { Property } from "../types/serverTypes";
 
 interface PinManagementDialogProps {
@@ -28,12 +28,10 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
   const [assetTypeMap, setAssetTypeMap] = useState<Record<string, string[]>>({});
   const [jobData, setJobData] = useState<Job>({
     id: null,
-    property_id: propertyId,
-    tradie_id: null,
+    propertyId: propertyId,
     title: "",
-    status: JobStatus.PENDING,
-    created_at: "",
-    end_time: null,
+    createdAt: "",
+    endTime: null,
     expired: false,
     pin: "",
   });
@@ -73,12 +71,10 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
       } else if (!job) {
         setJobData({
           id: null,
-          property_id: propertyId,
-          tradie_id: null,
+          propertyId: propertyId,
           title: "",
-          status: JobStatus.PENDING,
-          created_at: "",
-          end_time: null,
+          createdAt: "",
+          endTime: null,
           expired: false,
           pin: "",
         });
@@ -109,11 +105,11 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
 
   type PropertySection = { name: string; assets: { id: string; type: string }[]; };
   const propertySections: PropertySection[] =
-    (property?.Spaces ?? []).map(s => ({
+    (property?.spaces ?? []).map(s => ({
       name: s.name,
-      assets: (s.Assets ?? []).map(a => ({
+      assets: (s.assets ?? []).map(a => ({
         id: a.id,
-        type: a.type ?? a.AssetTypes?.name ?? "", // ✅ fallback
+        type: a.type ?? a.assetTypes?.name ?? "", // ✅ fallback
       })),
     }));
 
@@ -303,7 +299,7 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
     try {
       setSaving(true);
 
-      const payload = { ...jobData, property_id: propertyId };
+      const payload = { ...jobData, propertyId: propertyId };
 
       if (isEdit && job?.id) {
         const [updatedJob, updatedAssets] = await updateJobInfo(payload, selectedAssets);
@@ -357,8 +353,8 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
               type="datetime-local"
               className="mt-1 w-full rounded-md border px-3 py-2"
               min={localInputValue()}
-              value={jobData.end_time ? jobData.end_time.slice(0, 16) : ""}
-              onChange={(e) => updateJobData("end_time", e.target.value)}
+              value={jobData.endTime ? jobData.endTime.slice(0, 16) : ""}
+              onChange={(e) => updateJobData("endTime", e.target.value)}
             />
           </div>
 
