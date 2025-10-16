@@ -26,6 +26,7 @@ export const API_ROUTES = {
   OWNER: {
     GET_ID: (userId: string) => `${BASE_URL}/owner?userId=${userId}`,
     ONBOARD_PROPERTY: `${BASE_URL}/owner/onboard`,
+    GET_OWNER_ID_BY_USER: (userId: string) => `${BASE_URL}/owner/id?userId=${userId}`,
   },
 
   // Admin Routes
@@ -71,6 +72,10 @@ export const API_ROUTES = {
       `${BASE_URL}/transfer?action=${params.action}&${params.action === "byOwner" ? `userId=${params.id}` : `propertyId=${params.id}`}`,
 
     INITIATE: `${BASE_URL}/transfer`,
+    APPROVE: (transferId: string, ownerId: string) =>
+      `${BASE_URL}/transfer?action=approve&transferId=${transferId}&ownerId=${ownerId}`,
+    REJECT: (transferId: string, ownerId: string) =>
+      `${BASE_URL}/transfer?action=reject&transferId=${transferId}&ownerId=${ownerId}`,
     GET_BY_PROPERTY: (propertyId: string) => `${BASE_URL}/transfer?propertyId=${encodeURIComponent(propertyId)}`,
     GET_BY_USER: (userId: string) => `${BASE_URL}/transfer?userId=${encodeURIComponent(userId)}`,
   },

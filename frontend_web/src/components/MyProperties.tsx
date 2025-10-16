@@ -4,12 +4,16 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft, Eye, CheckCircle, XCircle } from "lucide-react";
 import { Property } from "../types/serverTypes";
 import OldOwnerTransferDialog from "./OldOwnerTransferDialog";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
+import { toast } from "sonner";
+import { approveTransfer, rejectTransfer } from "../../../backend/TransferService";
+import { getOwnerId } from "../../../backend/FetchData";
 
 interface MyPropertiesProps {
   ownerId: string;
@@ -22,7 +26,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  
+
   const [transferProperties, setTransferProperties] = useState<
     {
       transferId: string;
@@ -32,10 +36,13 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       currentOwners: string[];
       invitedOwners: { email: string; firstName?: string; lastName?: string }[];
       createdAt: Date;
-      status: "PENDING" | "APPROVED" | "REJECTED";
+      transferStatus: "PENDING" | "ACCEPTED" | "DECLINED";
+      userStatus: "PENDING" | "ACCEPTED" | "REJECTED";
     }[]
   >([]);
 
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transferId: string; propertyName: string } | null>(null);
 
   const navigate = useNavigate();
 
@@ -62,7 +69,8 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         lastName: o.lastName,
       })),
       createdAt: new Date(t.transferCreatedAt),
-      status: t.transferStatus,
+      transferStatus: t.transferStatus, // Overall transfer status
+      userStatus: t.userStatus, // This user's individual status
       transferId: t.transferId,
     }));
     setTransferProperties(mappedTransfers);
@@ -85,7 +93,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       loadProperties();
       loadTransfers();
     }
-  }, [userID]);
+  }, [userID, myProperties]);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,6 +117,42 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
     if (percentage >= 90) return "text-green-600";
     if (percentage >= 70) return "text-yellow-600";
     return "text-red-600";
+  };
+
+  const handleApproveClick = (transferId: string, propertyName: string) => {
+    setConfirmAction({ type: 'approve', transferId, propertyName });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleRejectClick = (transferId: string, propertyName: string) => {
+    setConfirmAction({ type: 'reject', transferId, propertyName });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+
+    try {
+      // Get owner ID from user ID
+      const ownerId = await getOwnerId(userID);
+
+      if (confirmAction.type === 'approve') {
+        await approveTransfer(confirmAction.transferId, ownerId);
+        toast.success("Transfer approved successfully");
+      } else {
+        await rejectTransfer(confirmAction.transferId, ownerId);
+        toast.success("Transfer rejected");
+      }
+
+      // Refresh transfers
+      await loadTransfers();
+    } catch (err: any) {
+      console.error("Failed to process transfer:", err);
+      toast.error(err.message || "Failed to process transfer");
+    } finally {
+      setConfirmDialogOpen(false);
+      setConfirmAction(null);
+    }
   };
 
   return (
@@ -175,18 +219,19 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         </CardHeader>
         <CardContent>
           {filteredProperties.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Type</TableHead>
-                  {/* <TableHead>Status</TableHead>
-                  <TableHead>Completion</TableHead> */}
-                  <TableHead>Last Updated</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Type</TableHead>
+                    {/* <TableHead>Status</TableHead>
+                    <TableHead>Completion</TableHead> */}
+                    <TableHead>Last Updated</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredProperties.map((property) => (
                   <TableRow key={property.propertyId}>
                     <TableCell>
@@ -236,6 +281,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                 ))}
               </TableBody>
             </Table>
+            </div>
           ) : (
             <div className="text-center py-12">
               <div className="text-muted-foreground">
@@ -270,18 +316,20 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         </CardHeader>
         <CardContent>
           {transferProperties.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Current Owner(s)</TableHead>
-                  <TableHead>New Owner(s)</TableHead>
-                  <TableHead>Created at</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Current Owner(s)</TableHead>
+                    <TableHead>New Owner(s)</TableHead>
+                    <TableHead>Created at</TableHead>
+                    <TableHead>Transfer Status</TableHead>
+                    <TableHead>Your Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {transferProperties.map((property) => (
                   <TableRow key={property.transferId}>
                     <TableCell>
@@ -314,14 +362,28 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                     <TableCell>
                       <span
                         className={`text-sm font-medium ${
-                          property.status === "PENDING"
+                          property.transferStatus === "PENDING"
                             ? "text-yellow-600"
-                            : property.status === "APPROVED"
+                            : property.transferStatus === "ACCEPTED"
                             ? "text-green-600"
                             : "text-red-600"
                         }`}
                       >
-                        {property.status}
+                        {property.transferStatus}
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      <span
+                        className={`text-sm font-medium ${
+                          property.userStatus === "PENDING"
+                            ? "text-yellow-600"
+                            : property.userStatus === "ACCEPTED"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {property.userStatus}
                       </span>
                     </TableCell>
 
@@ -339,15 +401,8 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                           variant="ghost"
                           size="sm"
                           title="Approve"
-                          onClick={() =>
-                            setTransferProperties((prev) =>
-                              prev.map((p) =>
-                                p.transferId === property.transferId
-                                  ? { ...p, status: "APPROVED" }
-                                  : p
-                              )
-                            )
-                          }
+                          onClick={() => handleApproveClick(property.transferId, property.name)}
+                          disabled={property.userStatus !== "PENDING" || property.transferStatus !== "PENDING"}
                         >
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         </Button>
@@ -355,15 +410,8 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                           variant="ghost"
                           size="sm"
                           title="Reject"
-                          onClick={() =>
-                            setTransferProperties((prev) =>
-                              prev.map((p) =>
-                                p.transferId === property.transferId
-                                  ? { ...p, status: "REJECTED" }
-                                  : p
-                              )
-                            )
-                          }
+                          onClick={() => handleRejectClick(property.transferId, property.name)}
+                          disabled={property.userStatus !== "PENDING" || property.transferStatus !== "PENDING"}
                         >
                           <XCircle className="h-4 w-4 text-red-600" />
                         </Button>
@@ -372,12 +420,12 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                   </TableRow>
                 ))}
               </TableBody>
-
             </Table>
+            </div>
           ) : (
             <div className="text-center py-12">
               <div className="text-muted-foreground">
-                You haven’t initiated any property transfers yet.
+                You haven't initiated any property transfers yet.
               </div>
               <Button className="mt-4" onClick={() => setOpen(true)}>
                 Transfer a Property
@@ -392,17 +440,9 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         open={open}
         onOpenChange={setOpen}
         userID={userID}
-        onInitiateTransfer={async (propertyId, invitedOwners, currentOwners) => {
+        onInitiateTransfer={async (propertyId, allOldOwnerIds, newOwnerStateIds) => {
           try {
-            const oldOwnerUserIds = currentOwners
-              .map(o => o.userId)
-              .filter((id): id is string => !!id);
-
-            const newOwnerUserIds = invitedOwners
-              .map(o => o.userId)
-              .filter((id): id is string => !!id);
-
-            await apiClient.initiateTransfer(propertyId, oldOwnerUserIds, newOwnerUserIds);
+            await apiClient.initiateTransfer(propertyId, allOldOwnerIds, newOwnerStateIds);
 
             // Refresh transfers from API
             await loadTransfers();
@@ -413,6 +453,32 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           }
         }}
       />
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'approve' ? 'Approve Transfer' : 'Reject Transfer'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === 'approve'
+                ? `Are you sure you want to approve the transfer for "${confirmAction.propertyName}"? This action cannot be undone once all parties approve.`
+                : `Are you sure you want to reject the transfer for "${confirmAction?.propertyName}"? This will cancel the entire transfer process for all parties.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setConfirmDialogOpen(false);
+              setConfirmAction(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAction}>
+              {confirmAction?.type === 'approve' ? 'Approve' : 'Reject'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
