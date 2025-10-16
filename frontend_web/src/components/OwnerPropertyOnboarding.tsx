@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, CheckCircle, Building } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { UNSAFE_getTurboStreamSingleFetchDataStrategy, useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
@@ -19,11 +19,9 @@ import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
 import { useFormContext } from "./FormContext";
 
-export function OwnerPropertyOnboarding() {
+export function OwnerPropertyOnboarding({userId}: {userId: string}) {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  
-
   const navigate = useNavigate();
 
   const {
@@ -41,15 +39,14 @@ export function OwnerPropertyOnboarding() {
       const types = await fetchSpaceEnum();
       setSpaceTypes(types);
     };
-    getEnums();
-  }, []);
 
-  useEffect(() => {
     const getAssetTypes = async () => {
       const types = await fetchAssetTypes();
       setAssetTypes(types);
     };
+
     getAssetTypes();
+    getEnums();
   }, []);
 
   const steps = [
@@ -65,16 +62,23 @@ export function OwnerPropertyOnboarding() {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
       try {
-        const propertyId = await ownerOnboardProperty(formData, spaces);
-        console.log(propertyId);
-        
+        console.log("Starting property onboarding...");
+        console.log("Form data:", formData);
+        console.log("Spaces data:", spaces);
+
+        const propertyId = await ownerOnboardProperty(userId, formData, spaces);
+        console.log("Property onboarded successfully with ID:", propertyId);
+
         // Reset the form data after successful submission
         resetForm();
-        
+
+        // Navigate to the property details page
+        console.log("Navigating to property details page:", ROUTES.properties.detail(propertyId));
         navigate(ROUTES.properties.detail(propertyId));
       } catch (error) {
         console.error("Failed to onboard property:", error);
-        // Handle error (maybe show a toast or error message)
+        // Show error message to user
+        alert(`Failed to onboard property: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the console for more details.`);
       }
     }
   };

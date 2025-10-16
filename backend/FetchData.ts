@@ -9,19 +9,21 @@ interface OwnerChangeLog {
 
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
-export const getOwnerId = async (userId: string): Promise<string | null> => {
+export const getOwnerId = async (userId: string): Promise<string> => {
+  console.log("userId in getOwnerId in FetchData", userId);
   const { data, error } = await supabase
     .from("Owner")
     .select("owner_id")
     .eq("user_id", userId)
     .maybeSingle();
 
+  console.log("data in getOwnerId in FetchData", data);
   if (error) {
     console.error("Error fetching owner id:", error.message);
-    return null;
+    return "";
   }
 
-  return data?.owner_id || null;
+  return data?.owner_id || "";
 };
 
 // Takes in userId

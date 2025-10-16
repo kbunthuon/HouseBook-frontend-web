@@ -33,13 +33,14 @@ import { OwnerRequests } from "./components/OwnerRequests";
 import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
 import { FormProvider, AdminFormProvider } from "./components/FormContext";
+import { apiClient } from "./api/wrappers";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
-
+  
   const handleLogin = (email: string, type: "admin" | "owner", user_id: string) => {
     setIsAuthenticated(true);
     setUserType(type);
@@ -52,6 +53,7 @@ export default function App() {
     setUserType("owner");
     setUserEmail("");
     setUserId("");
+    apiClient.logout();
   };
 
   {/*
@@ -129,7 +131,7 @@ export default function App() {
           <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
           <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
-          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports userId={userId} userType={userType} />} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
           <Route path={ADMIN_ROUTES.requests} element={<AdminRequests userId={userId} userType={userType} />} />
           <Route path={ADMIN_ROUTES.users} element={<UserManagementPage />} />
@@ -158,7 +160,7 @@ export default function App() {
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
           <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} />} />
-          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
+          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding userId={userId} />} />
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
           <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />

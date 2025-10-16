@@ -1,16 +1,26 @@
 import supabase from "../config/supabaseClient";
+import { getOwnerId } from "./FetchData";
 
 // Setting what OwnerData looks like
 import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
 import { apiClient } from "../frontend_web/src/api/wrappers";
 
-export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) throw new Error("User ID not returned from signup");
-  const userId = user.id;
-  
-  const ownerId = await apiClient.getOwnerId(userId);
+export async function ownerOnboardProperty(userId: string, formData: FormData, spaces: SpaceInt[]) {
+  // const { data: { session } } = await supabase.auth.getSession();
+  // const userId = session?.user.id;
+  // if (!userId) throw Error("Session not found");
+  // console.log('session in ownerOnboardProperty', session);
+  // console.log('userId in ownerOnboardProperty', userId);
+
+  const ownerId = await getOwnerId(userId);
+  if (!ownerId) {
+    throw new Error("Owner ID not found for user");
+  }
+
   const propertyId = await saveProperty(formData, ownerId);
+  if (!propertyId) {
+    throw new Error("Failed to save property");
+  }
 
   // Upload property images
   for (const file of (formData.floorPlans)) {
@@ -20,8 +30,11 @@ export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[
     await apiClient.uploadPropertyImage(propertyId, file);
   }
 
-
-  await saveDetails(spaces, propertyId, userId, true);
+  // Save spaces, assets, and changelog - throw error if it fails
+  const detailsSaved = await saveDetails(spaces, propertyId, userId, true);
+  if (!detailsSaved) {
+    throw new Error("Failed to save property details (spaces, assets, or changelog)");
+  }
 
   return propertyId;
 }
@@ -33,18 +46,28 @@ export async function adminOnboardProperty(ownerData: Owner, formData: FormData,
   if (!userId) throw new Error("User ID not returned from signup");
   console.log("userId:");
   console.log(userId);
-  
+
   // Get the owner id
   const ownerId = await apiClient.getOwnerId(userId);
+  if (!ownerId) {
+    throw new Error("Owner ID not found for user");
+  }
 
   // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);
+  if (!propertyId) {
+    throw new Error("Failed to save property");
+  }
 
   // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
   // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
-  await saveDetails(spaces, propertyId, userId);
+  // For admin onboarding, changes are set to PENDING status (not auto-approved)
+  const detailsSaved = await saveDetails(spaces, propertyId, userId, false);
+  if (!detailsSaved) {
+    throw new Error("Failed to save property details (spaces, assets, or changelog)");
+  }
 
-  return propertyId || null;
+  return propertyId;
 
 }
 
@@ -107,7 +130,13 @@ const saveProperty = async (formData: FormData, ownerId: string) => {
 
 const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: string, isOwnerOnboarding: boolean = true) => {
   try {
-    for (const space of spaces) {
+    console.log(`Starting saveDetails for propertyId: ${propertyId}, userId: ${userId}, isOwnerOnboarding: ${isOwnerOnboarding}`);
+    console.log(`Number of spaces to insert: ${spaces.length}`);
+
+    for (let i = 0; i < spaces.length; i++) {
+      const space = spaces[i];
+      console.log(`Processing space ${i + 1}/${spaces.length}: ${space.name} (${space.type})`);
+
       // 1. Insert Space
       const { data: insertedSpace, error: spaceError } = await supabase
         .from("Spaces")
@@ -121,11 +150,18 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
         .select("id")
         .single();
 
-      if (spaceError) throw spaceError;
+      if (spaceError) {
+        console.error(`Error inserting space "${space.name}":`, spaceError);
+        throw spaceError;
+      }
 
       const spaceId = insertedSpace.id;
+      console.log(`Space inserted successfully with ID: ${spaceId}`);
 
-      for (const asset of space.assets) {
+      for (let j = 0; j < space.assets.length; j++) {
+        const asset = space.assets[j];
+        console.log(`Processing asset ${j + 1}/${space.assets.length} in space "${space.name}": ${asset.name}`);
+
         // Build specifications object from features
         const specifications: Record<string, string> = {};
         if (asset.features && asset.features.length > 0) {
@@ -133,6 +169,7 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
             specifications[feature.name] = feature.value;
           });
         }
+        console.log(`Asset specifications:`, specifications);
 
         // 2. Insert Asset with current_specifications
         const { data: insertedAsset, error: assetError } = await supabase
@@ -148,14 +185,18 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
           .select("id")
           .single();
 
-        if (assetError) throw assetError;
+        if (assetError) {
+          console.error(`Error inserting asset "${asset.name}":`, assetError);
+          throw assetError;
+        }
 
         const assetId = insertedAsset.id;
+        console.log(`Asset inserted successfully with ID: ${assetId}`);
 
         // 3. Insert ChangeLog entry
         // For owner onboarding, automatically approve the changes
         const changelogStatus = isOwnerOnboarding ? 'APPROVED' : 'PENDING';
-        
+
         const { error: changelogError } = await supabase
           .from("ChangeLog")
           .insert([
@@ -169,13 +210,19 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
             },
           ]);
 
-        if (changelogError) throw changelogError;
+        if (changelogError) {
+          console.error(`Error inserting changelog for asset "${asset.name}" (ID: ${assetId}):`, changelogError);
+          throw changelogError;
+        }
+
+        console.log(`ChangeLog entry inserted successfully for asset ID: ${assetId}`);
       }
     }
-    console.log("All spaces, assets, and features saved successfully.");
+    console.log("All spaces, assets, and changelogs saved successfully.");
     return true;
   } catch (err) {
-    console.error("Error saving details", err);
-    return null;
+    console.error("Error saving details:", err);
+    // Re-throw the error so it can be caught by the calling function
+    throw err;
   }
 };

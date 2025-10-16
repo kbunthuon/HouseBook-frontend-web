@@ -78,6 +78,7 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
+        console.log('✅ Tokens cleared from localStorage');
         throw new Error("Session expired. Please login again.");
       }
     }
