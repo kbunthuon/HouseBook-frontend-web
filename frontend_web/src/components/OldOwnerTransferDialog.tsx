@@ -392,6 +392,7 @@ export default function OldOwnerTransferDialog({
           </ol>
         </div>
 
+        {/* 
         <div className="flex gap-2 px-4">
           <Button
             variant="ghost"
@@ -404,6 +405,7 @@ export default function OldOwnerTransferDialog({
             View Property
           </Button>
         </div>
+        */}
       </DialogContent>
     </Dialog>
   );
