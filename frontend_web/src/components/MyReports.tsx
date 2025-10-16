@@ -138,15 +138,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const { user_id, first_name, last_name, phone } =
-          await apiClient.getUserInfoByEmail(ownerEmail);
-        console.log("Fetched userId for email", ownerEmail, user_id);
-        if (!user_id) {
+        const userInfo = await apiClient.getUserInfoByEmail(ownerEmail);
+        
+        if (!userInfo || !userInfo.userId) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
-        const props = await apiClient.getPropertyList(user_id);
+        
+        const { userId, firstName, lastName, phone } = userInfo;
+        console.log("Fetched userId for email", ownerEmail, userId);
+        
+        const props = await apiClient.getPropertyList(userId);
         if (props && Array.isArray(props)) {
           setMyProperties(
             props.map((p) => ({ id: p.propertyId, name: p.name }))
