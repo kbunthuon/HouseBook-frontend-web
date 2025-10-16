@@ -163,6 +163,8 @@ export default function App() {
           <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} />} />
           <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
+          <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
+          <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
           <Route path={ROUTES.propertyTransfer} element={<TransferRequestRoute userId={userId} />} />
           <Route path={ROUTES.propertyTransferSubmitted} element={<TransferSubmittedPage />} />
           {/* <Route path={ROUTES.reports} element={<MyReports userId={userId} />} />

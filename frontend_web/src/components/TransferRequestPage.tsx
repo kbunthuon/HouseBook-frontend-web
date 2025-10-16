@@ -5,10 +5,10 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { useState, useEffect } from "react";
-import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
 import { Property, Owner } from "../types/serverTypes";
 import { validateLogin } from "../../../backend/AuthService"
 import { Card, CardContent } from "./ui/card";
+import { apiClient } from "../api/wrappers";
 
 // // --- replace with real APIs ---
 // async function fetchPropertyName(propertyId: string) {
@@ -65,7 +65,7 @@ export default function TransferRequestPage({
         console.log("user id: ", {userId});
         console.log("property id: ", {propertyId});
 
-        const result = await getPropertyDetails(propertyId);
+        const result = await apiClient.getPropertyDetails(propertyId);
         if (result) setProperty(result);
         else setError("Property not found");
 

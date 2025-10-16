@@ -8,10 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 import { Copy, Send, ExternalLink } from "lucide-react";
-import { getProperty } from "../../../backend/FetchData";
 import { ROUTES } from "../Routes";
 import { Link } from "react-router-dom";
-
+import { apiClient } from "../api/wrappers";
 interface OldOwnerTransferDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,7 +43,7 @@ export default function OldOwnerTransferDialog({
           return;
         }
         // Fetch properties from backend
-        const props = await getProperty(userID);
+        const props = await apiClient.getPropertyList(userID);
         if (props && Array.isArray(props)) {
           setMyProperties(props.map((p) => ({ id: p.property_id, name: p.name })));
         } else {
