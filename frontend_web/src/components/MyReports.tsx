@@ -138,15 +138,18 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
     const fetchProperties = async () => {
       setLoadingProperties(true);
       try {
-        const { user_id, first_name, last_name, phone } =
-          await apiClient.getUserInfoByEmail(ownerEmail);
-        console.log("Fetched userId for email", ownerEmail, user_id);
-        if (!user_id) {
+        const userInfo = await apiClient.getUserInfoByEmail(ownerEmail);
+        
+        if (!userInfo || !userInfo.userId) {
           setMyProperties([]);
           setLoadingProperties(false);
           return;
         }
-        const props = await apiClient.getPropertyList(user_id);
+        
+        const { userId, firstName, lastName, phone } = userInfo;
+        console.log("Fetched userId for email", ownerEmail, userId);
+        
+        const props = await apiClient.getPropertyList(userId);
         if (props && Array.isArray(props)) {
           setMyProperties(
             props.map((p) => ({ id: p.propertyId, name: p.name }))
@@ -341,7 +344,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
       setLoadingJobs(true);
       try {
         const [jobs, assets] = await fetchJobsInfo({
-          property_id: reportConfig.propertyId,
+          propertyId: reportConfig.propertyId,
         });
         setPropertyJobs(jobs);
         setJobAssets(assets);
@@ -897,7 +900,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                       <strong>PIN:</strong> {selectedJob.pin}
                     </div>
                     <div>
-                      <strong>Status:</strong> {selectedJob.status}
+                      <strong>Status:</strong> {selectedJob.expired ? "Expired" : "Active"}
                     </div>
                     <div>
                       <strong>Accessible Sections:</strong>{" "}
@@ -929,7 +932,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                     : "Select Everything"}
                 </Label>
               </div>
-              <div className="flex flex-col gap-2 bg-muted/50 rounded-lg p-3">
+              <div className="flex flex-col gap-1 bg-muted/50 rounded-lg p-3">
                 {displayProperty.spaces.map((space: any) => (
                   <div key={space.id} className="mb-1">
                     <label className="flex items-center gap-2 font-medium">
@@ -947,7 +950,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                           </Badge>
                         )}
                     </label>
-                    <div className="ml-6 flex flex-col gap-1">
+                    <div className="ml-6 flex flex-col gap-1 p-6 rounded border border-gray-200">
                       {(space.assets || []).map((asset: any) => (
                         <label
                           key={asset.id}
@@ -1216,7 +1219,7 @@ export function MyReports({ ownerEmail }: MyReportsProps) {
                     </div>
                     <div className="pdf-sub">
                       <span className="pdf-label">Job Status:</span>
-                      {selectedJob.status}
+                      {selectedJob.expired ? "Expired" : "Active"}
                     </div>
                     <div className="pdf-sub">
                       <span className="pdf-label">Accessible Sections:</span>

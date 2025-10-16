@@ -201,13 +201,25 @@ class ApiClient {
     const response = await this.authenticatedRequest(
       API_ROUTES.USER.INFO_BY_EMAIL(email)
     );
-
+    
+    if (response.status === 404) {
+      return null;
+    }
+    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to fetch user info");
     }
-
-    return response.json();
+    
+    const data = await response.json();
+    
+    // Transform snake_case to camelCase
+    return {
+      userId: data.user_id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      phone: data.phone
+    };
   }
 
   // Owner methods
@@ -363,6 +375,28 @@ class ApiClient {
 
     return response.json(); // returns array of results from backend
   }
+
+  // Updates the property's splash image
+  async updatePropertySplashImage(signedUrl: string) {
+    const body = { signedUrl };
+
+    const response = await this.authenticatedRequest(API_ROUTES.IMAGES.PATCH, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update splash image");
+    }
+    const data = response.json();
+      console.log("updatePropertySplashImage response data:", data);
+    return data; // { result: ... }
+  }
+
 
   // Changelog methods
   async getChangeLogs(propertyIds: string[]) {

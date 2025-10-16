@@ -36,6 +36,12 @@ export function OwnerPropertyOnboarding() {
     resetForm
   } = useFormContext();
 
+  formData.floorPlans = formData.floorPlans || [];
+  formData.buildingPlans = formData.buildingPlans || [];
+  formData.propertyName = formData.propertyName || "";
+  formData.propertyDescription = formData.propertyDescription || "";
+  formData.address = formData.address || "";
+
   useEffect(() => {
     const getEnums = async () => {
       const types = await fetchSpaceEnum();
@@ -48,6 +54,7 @@ export function OwnerPropertyOnboarding() {
     const getAssetTypes = async () => {
       const types = await fetchAssetTypes();
       setAssetTypes(types);
+      console.log("Fetched asset types:", types);
     };
     getAssetTypes();
   }, []);

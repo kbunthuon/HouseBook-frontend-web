@@ -4,9 +4,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
-// import { getProperty } from "../../../backend/FetchData";
+import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft, Eye, CheckCircle, XCircle } from "lucide-react";
 import { Property } from "../types/serverTypes";
+import OldOwnerTransferDialog from "./OldOwnerTransferDialog";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 
 interface MyPropertiesProps {
@@ -19,6 +21,16 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   const [searchTerm, setSearchTerm] = useState("");
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  const handleViewTransfer = (pid: string) => {
+    if (!pid) return;
+    navigate(ROUTES.propertyTransferPath(pid)); 
+  };
+
+  
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -66,10 +78,16 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
             Manage your property portfolio
           </p>
         </div>
+        <div className="space-x-3">
+        <Button onClick={() => setOpen(true)}>
+          <ArrowRightLeft className="mr-2 h-4 w-4" />
+          Transfer Property
+        </Button>
         <Button onClick={onAddProperty}>
           <Settings className="mr-2 h-4 w-4" />
           Add New Property
         </Button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -190,6 +208,102 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Transfer Property List</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search my properties..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredProperties.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Property</TableHead>
+                  <TableHead>Current Owner</TableHead>
+                  {/* <TableHead>Status</TableHead>
+                  <TableHead>Completion</TableHead> */}
+                  <TableHead>New Owner</TableHead>
+                  <TableHead>Created at</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProperties.map((property) => (
+                  <TableRow key={property.propertyId}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{property.name}</div>
+                        <div className="text-sm text-muted-foreground">{property.address}</div>
+                      </div>
+                    </TableCell>
+                    {/* COME BACK HERE */}
+                    <TableCell>Lisa Brown, Aaron Brown</TableCell>
+                    <TableCell>Joe Brown</TableCell>
+                    {/* <TableCell>
+                      <Badge variant={getStatusColor(property.status)}>
+                        {property.status}
+                      </Badge>
+                    </TableCell> */}
+                    {/* <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${getCompletionColor(property.completionStatus)}`}>
+                          {property.completionStatus}%
+                        </span>
+                      </div>
+                    </TableCell> */}
+                    <TableCell>{new Date(property.lastUpdated).toLocaleString()}</TableCell>
+                    <TableCell>PENDING</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="ghost" size="sm" title="Edit Property">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" title="Access Codes">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" title="Generate Report">
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground">
+                {searchTerm ? "No properties match your search." : "You haven't added any properties yet."}
+              </div>
+              {!searchTerm && onAddProperty && (
+                <Button className="mt-4" onClick={setOpen}>
+                  Transfer a Property
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <OldOwnerTransferDialog
+        open={open}
+        onOpenChange={setOpen}
+        userID={userID}
+        onViewTransfer={handleViewTransfer}  
+      />
+
     </div>
   );
 }

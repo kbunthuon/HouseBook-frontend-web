@@ -57,6 +57,7 @@ export async function fetchJobsInfo({ propertyId, expired = null, last = null }:
  * @returns A list of jobs matching the filters, ordered by creation time (newest first).
  */
 export async function fetchJobsTable({ propertyId, expired = null, last = null }: FetchJobInfoParams): Promise<Job[]> {
+  console.log("Fetching jobs with params:", { propertyId, expired, last });
   let query = supabase.from("Jobs").select("*").eq("property_id", propertyId);
 
   if (expired !== null) {
