@@ -37,6 +37,7 @@ import {
 import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { apiClient } from "../api/wrappers";
+import SplashImageDialog from "./Dialogues/SplashImageSelect";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -88,6 +89,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [isImageConfirmOpen, setIsImageConfirmOpen] = useState(false);
   const [imageAction, setImageAction] = useState<'upload' | 'delete' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isSplashDialogOpen, setIsSplashDialogOpen] = useState(false);
 
   // New space creation state
   const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
@@ -1509,6 +1512,16 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Splash image selection*/}
+      <SplashImageDialog
+        open={isSplashDialogOpen}
+        onOpenChange={setIsSplashDialogOpen}
+        property={property}
+        onSplashImageSet={(url) => {
+          setProperty((prev) => (prev ? { ...prev, splashImage: url } : prev));
+        }}
+      />
 
       {/* Image Action Confirmation Dialog */}
       <AlertDialog open={isImageConfirmOpen} onOpenChange={setIsImageConfirmOpen}>

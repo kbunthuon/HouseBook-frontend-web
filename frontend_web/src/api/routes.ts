@@ -54,6 +54,7 @@ export const API_ROUTES = {
     },
     UPLOAD: `${BASE_URL}/images`,
     DELETE: `${BASE_URL}/images`,
+    PATCH: `${BASE_URL}/images`,
   },
 
   // Changelog Routes

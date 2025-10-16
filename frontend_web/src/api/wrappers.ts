@@ -376,6 +376,27 @@ class ApiClient {
     return response.json(); // returns array of results from backend
   }
 
+  // Updates the property's splash image
+  async updatePropertySplashImage(signedUrl: string) {
+    const body = { signedUrl };
+
+    const response = await this.authenticatedRequest(API_ROUTES.IMAGES.PATCH, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update splash image");
+    }
+
+    return response.json(); // { result: ... }
+  }
+
+
   // Changelog methods
   async getChangeLogs(propertyIds: string[]) {
     console.log("propertyIds being sent:", propertyIds);

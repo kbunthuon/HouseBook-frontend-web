@@ -35,6 +35,7 @@ import { OwnerRequests } from "./components/OwnerRequests";
 import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
 import { FormProvider, AdminFormProvider } from "./components/FormContext";
+import { apiClient } from "./api/wrappers";
 //import { TransferRequestPage } from "./components/TransferRequestPage";
 
 export default function App() {
@@ -55,6 +56,7 @@ export default function App() {
     setUserType("owner");
     setUserEmail("");
     setUserId("");
+    apiClient.logout()
   };
 
   {/*
