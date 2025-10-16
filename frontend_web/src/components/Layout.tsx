@@ -82,7 +82,7 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
             <SidebarFooter className="mt-auto p-4">
               <Button
                 variant="ghost"
-                className="justify-start text-destructive hover:text-destructive !important"
+                className="w-full justify-start text-destructive hover:!text-destructive hover:!bg-destructive/10 cursor-pointer"
                 onClick={onLogout}
               >
                 <LogOut className="mr-3 h-4 w-4" />

@@ -48,7 +48,7 @@ export async function adminOnboardProperty(ownerData: Owner, formData: FormData,
   console.log(userId);
 
   // Get the owner id
-  const ownerId = await apiClient.getOwnerId(userId);
+  const ownerId = await apiClient.getOwnerId(userId.userId);
   if (!ownerId) {
     throw new Error("Owner ID not found for user");
   }
@@ -62,7 +62,7 @@ export async function adminOnboardProperty(ownerData: Owner, formData: FormData,
   // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
   // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
   // For admin onboarding, changes are set to PENDING status (not auto-approved)
-  const detailsSaved = await saveDetails(spaces, propertyId, userId, false);
+  const detailsSaved = await saveDetails(spaces, propertyId, userId.userId, false);
   if (!detailsSaved) {
     throw new Error("Failed to save property details (spaces, assets, or changelog)");
   }

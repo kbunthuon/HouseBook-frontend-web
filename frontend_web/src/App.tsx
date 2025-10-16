@@ -19,6 +19,8 @@ import { PropertyManagement } from "./components/PropertyManagement";
 import { PropertyDetail } from "./components/PropertyDetail";
 import { AdminFunctions } from "./components/AdminFunctions";
 import { Reports } from "./components/Reports";
+import TransferRequestPage from "./components/TransferRequestPage";
+import TransferSubmittedPage from "./components/TransferSubmittedPage";
 
 import { AdminRequests } from "./components/AdminRequests";
 import { UserManagementPage } from "./components/UserManagement";
@@ -208,6 +210,10 @@ export default function App() {
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
           <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
+          <Route path={ROUTES.propertyTransfer} element={<TransferRequestRoute userId={userId} />} />
+          <Route path={ROUTES.propertyTransferSubmitted} element={<TransferSubmittedPage />} />
+          {/* <Route path={ROUTES.reports} element={<MyReports userId={userId} />} />
+          <Route path={ROUTES.requests} element={<OwnerRequests />} /> */}
         </Route>
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
@@ -317,6 +323,20 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
     />
   );
 }
+
+function TransferRequestRoute({ userId }: { userId: string }) {
+  const { id = "" } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  return (
+    <TransferRequestPage
+      propertyId={id}
+      userId={userId}
+      onViewTransfer={(pid) => navigate(ROUTES.propertyTransferPath(pid))} // use the *builder*
+    />
+  );
+}
+
+
 
 
 /** ---------- 404 ---------- */
