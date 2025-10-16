@@ -8,12 +8,17 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
-import { Property, Owner } from "../types/serverTypes.ts";
+import { Property, Owner, ChangeLog} from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { apiClient } from "../api/wrappers.ts";
 
+interface OwnerChangeLog extends ChangeLog {
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+}
 
 interface DashboardProps {
   userId: string;
@@ -22,22 +27,10 @@ interface DashboardProps {
   onViewProperty?: (propertyId: string) => void;
 }
 
-
-interface ChangeLog {
-  propertyId: string;
-  changelogId: string;
-  changelog_specifications: Record<string, any>;
-  changelog_description: string;
-  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-  changelog_created_at: string;
-  user_firstName: string | null;
-  user_lastName: string | null;
-}
-
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
@@ -45,13 +38,21 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
         try {
           
           const properties = await getAdminProperty(userId, userType);
-          setOwnerProperties(properties ?? []);
+          // Remove duplicate properties by propertyId
+          const uniquePropertiesMap = new Map();
+          properties?.forEach((p: any) => {
+            if (!uniquePropertiesMap.has(p.propertyId)) {
+              uniquePropertiesMap.set(p.propertyId, p);
+            }
+          });
+      
+          const uniqueProperties = Array.from(uniquePropertiesMap.values());
+          setOwnerProperties(uniqueProperties ?? []);
           
-          console.log(properties);
-          if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-
-          const changes = await apiClient.getChangeLogs(propertyIds);
+          console.log(uniqueProperties);
+          if (uniqueProperties && uniqueProperties.length > 0) {
+          const propertyIds = [...new Set(uniqueProperties.map((p: any) => p.propertyId))];
+          const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
@@ -129,7 +130,7 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -148,7 +149,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -211,32 +212,33 @@ function formatDateTime(timestamp: string | number | Date) {
           <div className="overflow-x-auto py-4">
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
-                <div 
-                  key={property.propertyId} 
-                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                  style={{ minWidth: '320px', maxWidth: '320px'}}
+                <div
+                  key={property.propertyId}
+                  className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                  style={{ width: '320px', height: '320px' }}
                   onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
-                  {/* property image */}
-                  <div className="w-full flex-1 bg-muted flex items-center justify-center">
+                  {/* property image - fixed 188px height (320px - 132px for info section) */}
+                  <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '188px' }}>
                     {property.splashImage ? (
                       <img
                         src={property.splashImage}
                         alt={`${property.address} splash`}
-                        className="max-h-full max-w-full object-contain"
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
                       />
                     ) : (
                       <Building className="h-12 w-12 text-muted-foreground" />
                     )}
                   </div>
 
-                  {/* property info */}
-                  <div className="h-32 flex-shrink-0 flex flex-col justify-end text-center" >
-                    <div className="font-semibold text-md truncate px-4">
+                  {/* property info - fixed 132px height */}
+                  <div className="shrink-0 flex flex-col justify-center text-center px-4" style={{ height: '132px' }}>
+                    <div className="font-semibold text-md truncate">
                       {property.name || 'N/A'}
                     </div>
-                    <div className="font-muted text-md truncate px-4">
-                      {property.address} 
+                    <div className="text-muted-foreground text-sm truncate">
+                      {property.address}
                     </div>
                   </div>
                 </div>
@@ -293,25 +295,25 @@ function formatDateTime(timestamp: string | number | Date) {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="max-h-[300px] overflow-y-auto border rounded-lg">
-              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
               requests
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelogId}>
+                <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
                       (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.user_firstName || request.user_lastName
-                      ? `${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`.trim()
+                    {request.userFirstName || request.userLastName
+                      ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
-                  <TableCell>{request.changelog_description}</TableCell>
-                  <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  <TableCell>{request.changeDescription}</TableCell>
+                  <TableCell>{formatDate(request.created_at)}</TableCell>
                   <TableCell>
-                    <Badge variant={getEditStatusColor(request.changelog_status)}>
-                      {request.changelog_status}
+                    <Badge variant={getEditStatusColor(request.status)}>
+                      {request.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -340,24 +342,24 @@ function formatDateTime(timestamp: string | number | Date) {
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`} 
+                                  value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>
                               <div>
                                 <Label>Request Time</Label>
-                                <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                <Input value={formatDateTime(request.created_at)} readOnly />
                               </div>
                             </div>
                             <div>
                               <Label>Change Description</Label>
-                              <Input value={request.changelog_description} readOnly />
+                              <Input value={request.changeDescription} readOnly />
                             </div>
                             <div>
                               <Label>Field Specification</Label>
                               <div className="p-4 border rounded-lg bg-gray-50">
                                 <ul className="text-sm space-y-1">
-                                  {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                  {Object.entries(request.specifications).map(([key, value]) => (
                                     <li key={key}>
                                       <strong>{key}:</strong> {String(value)}
                                     </li>
@@ -368,12 +370,12 @@ function formatDateTime(timestamp: string | number | Date) {
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelogId)}
+                                onClick={() => rejectEdit(request.id)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelogId)}>
+                              <Button onClick={() => approveEdit(request.id)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>

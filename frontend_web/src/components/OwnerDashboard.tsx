@@ -10,12 +10,18 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { Property } from "../types/serverTypes.ts";
+import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { Property, ChangeLog } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 import { apiClient } from "../api/wrappers.ts";
 
 
+interface OwnerChangeLog extends ChangeLog {
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
+}
 
 interface OwnerDashboardProps {
   userId: string;
@@ -24,22 +30,10 @@ interface OwnerDashboardProps {
   
 }
 
-interface ChangeLog {
-  property_id: string;
-  changelogId: string;
-  changelog_specifications: Record<string, any>;
-  changelog_description: string;
-  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-  changelog_created_at: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
-}
-
-
 export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
 
   useEffect (() => {
     const getOwnerProps = async () => {
@@ -55,25 +49,31 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
           console.log("Fetching change logs for properties:", propertyIds);
-          const changes = await apiClient.getChangeLogs(propertyIds);
-  
-            if (!changes) {
+          const changes = await getChangeLogs(propertyIds);
+          
+          if (!changes) {
             console.error("Error fetching change logs.");
             setLoading(false);
             return;
           }
+
+          // setRequests(changes);
   
-            // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
+          // Normalize changes with user info
+          const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => {
+            return {
               ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
-            }));
-  
-            setRequests(normalizedChanges);
-            console.log("normalized requests", requests)
-          } else {
-            setRequests([]);
-          }
+              changedByUserFirstName: c.user?.first_name,
+              changedByUserLastName: c.user?.last_name,
+              changedByUserEmail: c.user?.email,
+            };
+          });
+          
+          setRequests(normalizedChanges);
+          console.log("Changes in OwnerDashboard", normalizedChanges)
+        } else {
+          setRequests([]);
+        }
 
       } catch (error) {
         console.error(error);
@@ -135,7 +135,7 @@ const approveEdit = async (id: string) => {
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -154,7 +154,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelogId === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -223,26 +223,26 @@ return (
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.filter((request) => request.changelog_status !== "ACCEPTED").length > 0 ? (
+              {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
               requests
-              .filter((r) => r.changelog_status !== "ACCEPTED")
+              .filter((r) => r.status !== "ACCEPTED")
               .slice(0, 15)
               .map((request) => (
-                <TableRow key={request.changelogId}>
+                <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
-                      (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
+                      (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.user_first_name || request.user_last_name
-                      ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                    {request.userFirstName || request.userLastName
+                      ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
-                  <TableCell>{request.changelog_description}</TableCell>
-                  <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                  <TableCell>{request.changeDescription}</TableCell>
+                  <TableCell>{formatDate(request.created_at)}</TableCell>
                   <TableCell>
-                    <Badge variant={getEditStatusColor(request.changelog_status)}>
-                      {request.changelog_status}
+                    <Badge variant={getEditStatusColor(request.status)}>
+                      {request.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -263,7 +263,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -271,24 +271,24 @@ return (
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} 
+                                  value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>
                               <div>
                                 <Label>Request Time</Label>
-                                <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                <Input value={formatDateTime(request.created_at)} readOnly />
                               </div>
                             </div>
                             <div>
                               <Label>Change Description</Label>
-                              <Input value={request.changelog_description} readOnly />
+                              <Input value={request.changeDescription} readOnly />
                             </div>
                             <div>
                               <Label>Field Specification</Label>
                               <div className="p-4 border rounded-lg bg-gray-50">
                                 <ul className="text-sm space-y-1">
-                                  {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                  {Object.entries(request.specifications).map(([key, value]) => (
                                     <li key={key}>
                                       <strong>{key}:</strong> {String(value)}
                                     </li>
@@ -299,12 +299,12 @@ return (
                             <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
-                                onClick={() => rejectEdit(request.changelogId)}
+                                onClick={() => rejectEdit(request.id)}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.changelogId)}>
+                              <Button onClick={() => approveEdit(request.id)}>
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
@@ -348,32 +348,33 @@ return (
           <div className="overflow-x-auto py-4">
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
-                <div 
-                  key={property.propertyId} 
-                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                  style={{ minWidth: '320px', maxWidth: '320px'}}
+                <div
+                  key={property.propertyId}
+                  className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                  style={{ width: '320px', height: '320px' }}
                   onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
-                  {/* property image */}
-                  <div className="w-full flex-1 bg-muted flex items-center justify-center">
+                  {/* property image - fixed 188px height (320px - 132px for info section) */}
+                  <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '188px' }}>
                     {property.splashImage ? (
                       <img
                         src={property.splashImage}
                         alt={`${property.address} splash`}
-                        className="max-h-full max-w-full object-contain"
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
                       />
                     ) : (
                       <Building className="h-12 w-12 text-muted-foreground" />
                     )}
                   </div>
 
-                  {/* property info */}
-                  <div className="h-32 flex-shrink-0 flex flex-col justify-end text-center" >
-                    <div className="font-semibold text-md truncate px-4">
+                  {/* property info - fixed 132px height */}
+                  <div className="shrink-0 flex flex-col justify-center text-center px-4" style={{ height: '132px' }}>
+                    <div className="font-semibold text-md truncate">
                       {property.name || 'N/A'}
                     </div>
-                    <div className="font-muted text-md truncate px-4">
-                      {property.address} 
+                    <div className="text-muted-foreground text-sm truncate">
+                      {property.address}
                     </div>
                   </div>
                 </div>

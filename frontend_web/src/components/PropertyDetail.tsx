@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download, CheckCircle } from "lucide-react";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
@@ -79,6 +79,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
 
   // Image management states
@@ -154,6 +155,26 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     loadAssetTypes();
     loadSpaceTypes();
   }, [propertyId]);
+
+  // Keyboard navigation for image viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedImage || !property?.images) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateToPreviousImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateToNextImage();
+      } else if (e.key === 'Escape') {
+        closeImageViewer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImage, selectedImageIndex, property?.images]);
 
   const fetchData = async () => {
     try {
@@ -520,6 +541,31 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     }
   };
 
+  // Image viewer navigation handlers
+  const openImageViewer = (url: string, index: number) => {
+    setSelectedImage(url);
+    setSelectedImageIndex(index);
+  };
+
+  const closeImageViewer = () => {
+    setSelectedImage(null);
+    setSelectedImageIndex(-1);
+  };
+
+  const navigateToNextImage = () => {
+    if (!property?.images || selectedImageIndex === -1) return;
+    const nextIndex = (selectedImageIndex + 1) % property.images.length;
+    setSelectedImageIndex(nextIndex);
+    setSelectedImage(property.images[nextIndex]);
+  };
+
+  const navigateToPreviousImage = () => {
+    if (!property?.images || selectedImageIndex === -1) return;
+    const prevIndex = selectedImageIndex === 0 ? property.images.length - 1 : selectedImageIndex - 1;
+    setSelectedImageIndex(prevIndex);
+    setSelectedImage(property.images[prevIndex]);
+  };
+
   // Image management handlers
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -700,7 +746,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     if (dialogContext.mode === 'property') {
       return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="w-[80vw] max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent
+            className="overflow-y-auto"
+            style={{
+              width: 'clamp(400px, 33vw, 600px)',
+              height: 'clamp(350px, 33vh, 500px)',
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Edit Property Details</DialogTitle>
             </DialogHeader>
@@ -1199,22 +1251,29 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="w-full max-w-full overflow-hidden">
+        <CardContent>
           {property?.images && property.images.length > 0 ? (
-            <div className="flex flex-row gap-3 overflow-x-auto w-full max-h-[35vh] py-2">
-              {property.images.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="flex-shrink-0 w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
-                  onClick={() => setSelectedImage(url)}
-                >
-                  <img
-                    src={url}
-                    alt={`Property Image ${idx + 1}`}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ))}
+            <div className="overflow-x-auto py-4">
+              <div className="flex gap-6 w-max">
+                {property.images.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                    style={{ width: '320px', height: '320px' }}
+                    onClick={() => openImageViewer(url, idx)}
+                  >
+                    {/* property image - fixed 320px height (full card) */}
+                    <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
+                      <img
+                        src={url}
+                        alt={`Property Image ${idx + 1}`}
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
@@ -1224,21 +1283,97 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogOverlay className="bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
-        <DialogContent
-          hideCloseButton
-          className="bg-transparent border-none shadow-none p-0 flex items-center justify-center data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
+      {/* Custom Image Viewer Overlay */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            animation: 'fadeIn 0.2s ease-in-out',
+          }}
+          onClick={closeImageViewer}
         >
-          {selectedImage && (
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes imageZoom {
+              from { transform: scale(0.95); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+
+          {/* Navigation Button - Previous */}
+          {property?.images && property.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToPreviousImage();
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+          )}
+
+          {/* Image Container */}
+          <div
+            className="relative flex items-center justify-center p-4"
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              animation: 'imageZoom 0.3s ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
               src={selectedImage}
-              alt="Enlarged Property"
-              className="max-w-max max-h-max object-contain rounded-xl shadow-xl"
+              alt="Property Image"
+              className="max-w-full max-h-full object-contain shadow-2xl"
+              style={{
+                borderRadius: '16px',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+              }}
             />
+          </div>
+
+          {/* Navigation Button - Next */}
+          {property?.images && property.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToNextImage();
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
           )}
-        </DialogContent>
-      </Dialog>
+
+          {/* Close Button */}
+          <button
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all z-10"
+            style={{ backdropFilter: 'blur(10px)' }}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Image Counter */}
+          {property?.images && property.images.length > 1 && (
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-2 rounded-full text-sm z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              {selectedImageIndex + 1} / {property.images.length}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Spaces & Assets</h2>

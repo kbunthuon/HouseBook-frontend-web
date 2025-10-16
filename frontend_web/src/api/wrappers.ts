@@ -5,6 +5,7 @@ import {
   AdminOnboardParams,
 } from "./routes";
 import { SignupData } from "@housebookgroup/shared-types";
+import supabase from "../../../config/supabaseClient";
 
 // Token management
 class TokenManager {
@@ -78,6 +79,7 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
+        console.log('✅ Tokens cleared from localStorage');
         throw new Error("Session expired. Please login again.");
       }
     }
@@ -119,6 +121,21 @@ class ApiClient {
 
   // Authentication methods
   async login(params: LoginParams) {
+    // Clear any existing sessions/tokens first to ensure fresh login
+    try {
+      await supabase.auth.signOut();
+      TokenManager.clearTokens();
+      // Clear all app-related localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.warn("Error clearing previous session:", error);
+      // Continue with login even if cleanup fails
+    }
+
     const response = await fetch(API_ROUTES.AUTH.LOGIN, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -133,17 +150,52 @@ class ApiClient {
 
     const data = await response.json();
 
-    // Store tokens
+    // Store new tokens in our custom TokenManager
     TokenManager.setTokens(
       data.user.accessToken,
       data.user.refreshToken,
       data.user.expiresAt
     );
 
+    // IMPORTANT: Restore Supabase session with the tokens we received
+    // This is necessary for Supabase RLS policies to work correctly
+    try {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: data.user.accessToken,
+        refresh_token: data.user.refreshToken,
+      });
+
+      if (setSessionError) {
+        console.error("Error setting Supabase session:", setSessionError);
+        throw new Error("Failed to restore Supabase session");
+      }
+
+      console.log('✅ New session created for:', data.user.email, data);
+      console.log('✅ Supabase session restored');
+    } catch (error) {
+      console.error("Failed to set Supabase session:", error);
+      throw error;
+    }
+
     return data.user;
   }
 
   async signup(params: SignupData) {
+    // Clear any existing sessions/tokens first to ensure fresh signup
+    try {
+      await supabase.auth.signOut();
+      TokenManager.clearTokens();
+      // Clear all app-related localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.warn("Error clearing previous session:", error);
+      // Continue with signup even if cleanup fails
+    }
+
     const response = await fetch(API_ROUTES.AUTH.SIGNUP, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -158,12 +210,32 @@ class ApiClient {
 
     const data = await response.json();
 
-    // Store tokens
+    // Store new tokens in our custom TokenManager
     TokenManager.setTokens(
       data.user.accessToken,
       data.user.refreshToken,
       data.user.expiresAt
     );
+
+    // IMPORTANT: Restore Supabase session with the tokens we received
+    // This is necessary for Supabase RLS policies to work correctly
+    try {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: data.user.accessToken,
+        refresh_token: data.user.refreshToken,
+      });
+
+      if (setSessionError) {
+        console.error("Error setting Supabase session:", setSessionError);
+        throw new Error("Failed to restore Supabase session");
+      }
+
+      console.log('✅ New session created for:', data.user.email);
+      console.log('✅ Supabase session restored');
+    } catch (error) {
+      console.error("Failed to set Supabase session:", error);
+      throw error;
+    }
 
     return data.user;
   }
@@ -179,21 +251,46 @@ class ApiClient {
   }
 
   async logout() {
-    const response = await fetch(API_ROUTES.AUTH.LOGOUT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // include HttpOnly refresh token cookie
-    });
+    try {
+      // 1. Sign out from Supabase first to clear auth session
+      const { error: supabaseError } = await supabase.auth.signOut();
+      if (supabaseError) {
+        console.error("Supabase signOut error:", supabaseError);
+      }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Logout failed");
+      // 2. Call backend logout endpoint
+      const response = await fetch(API_ROUTES.AUTH.LOGOUT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // include HttpOnly refresh token cookie
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Logout failed");
+      }
+
+      // 3. Clear all tokens and session data from localStorage
+      TokenManager.clearTokens();
+
+      // 4. Clear any other app-specific data that might be cached
+      localStorage.removeItem('supabase.auth.token');
+
+      // Clear all localStorage items related to the app (be careful not to clear third-party data)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if logout fails, still clear local data
+      TokenManager.clearTokens();
+      localStorage.clear(); // Nuclear option: clear everything
+      throw error;
     }
-
-    // Clear access token from localStorage
-    TokenManager.clearTokens();
-
-    return true; // optional, indicates logout success
   }
 
   // User methods
@@ -234,6 +331,17 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  async checkOwnerExists(email: string): Promise<boolean> {
+    const { checkOwnerExists } = await import("../../../backend/OnboardPropertyService");
+    try {
+      const exists = await checkOwnerExists(email);
+      return exists;
+    } catch (error) {
+      console.error("Error checking owner exists:", error);
+      throw new Error("Failed to verify owner");
+    }
   }
 
   async ownerOnboardProperty(params: OwnerOnboardParams) {

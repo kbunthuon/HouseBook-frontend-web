@@ -4,9 +4,8 @@ import { ChangeLog } from "@housebookgroup/shared-types";
 
 export enum ChangeLogStatus {
   PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  ACCEPTED = 'ACCEPTED'
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED'
 }
 
 export enum ChangeLogAction {
@@ -147,6 +146,43 @@ export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
  */
 export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[]> {
   try {
+    // Step 1: Get all spaces for this property (including soft-deleted)
+    const { data: spaces, error: spacesError } = await supabase
+      .from("Spaces")
+      .select("id")
+      .eq("property_id", propertyId);
+
+    if (spacesError) {
+      console.error("Error fetching spaces for property:", spacesError);
+      throw new Error(`Failed to fetch spaces for property: ${spacesError.message}`);
+    }
+
+    const spaceIds = (spaces || []).map((s: any) => s.id).filter(Boolean);
+
+    if (spaceIds.length === 0) {
+      console.log("No spaces found for property:", propertyId);
+      return [];
+    }
+
+    // Step 2: Get all assets for those spaces (including soft-deleted)
+    const { data: assets, error: assetsError } = await supabase
+      .from("Assets")
+      .select("id")
+      .in("space_id", spaceIds);
+
+    if (assetsError) {
+      console.error("Error fetching assets for spaces:", assetsError);
+      throw new Error(`Failed to fetch assets for spaces: ${assetsError.message}`);
+    }
+
+    const assetIds = (assets || []).map((a: any) => a.id).filter(Boolean);
+
+    if (assetIds.length === 0) {
+      console.log("No assets found for property:", propertyId);
+      return [];
+    }
+
+    // Step 3: Get all changelog entries for those assets
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
@@ -155,8 +191,8 @@ export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[
           id,
           description,
           deleted,
-          AssetTypes!inner(name),
-          Spaces!inner(
+          AssetTypes(name),
+          Spaces(
             id,
             name,
             property_id,
@@ -164,17 +200,19 @@ export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[
           )
         )
       `)
-      .eq("Assets.Spaces.property_id", propertyId)
+      .in("asset_id", assetIds)
       .eq("status", ChangeLogStatus.ACCEPTED)
       .order("created_at", { ascending: false });
-      
-      console.log("getPropertyHistory: ", data, propertyId);
+
+    console.log("getPropertyHistory result:", data?.length, "entries for property:", propertyId);
+
     if (error) {
       console.error("Error fetching property history:", error);
       throw new Error(`Failed to fetch property history: ${error.message}`);
     }
 
-    return data || [];
+    // Filter out any entries where Assets relation could not be joined
+    return (data || []).filter((entry: any) => entry.Assets !== null);
   } catch (error) {
     console.error("Error in getPropertyHistory:", error);
     throw error;

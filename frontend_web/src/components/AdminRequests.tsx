@@ -8,9 +8,9 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
-import { Property, Owner } from "../types/serverTypes.ts";
+import { Property, Owner, ChangeLog } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { apiClient } from "../api/wrappers.ts";
 
@@ -19,22 +19,16 @@ interface AdminRequestProps {
   userType: string;
 }
 
-
-interface ChangeLog {
-  property_id: string;
-  changelog_id: string;
-  changelog_specifications: Record<string, any>;
-  changelog_description: string;
-  changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-  changelog_created_at: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
+interface OwnerChangeLog extends ChangeLog {
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
 }
 
 export function AdminRequests({ userId, userType}: AdminRequestProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
@@ -48,7 +42,7 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
           console.log("property", propertyIds);
-          const changes = await apiClient.getChangeLogs(propertyIds);
+          const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
@@ -60,12 +54,21 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
           }
   
             // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
+            // const normalizedChanges = (changes ?? []).map((c: any) => ({
+            //   ...c,
+            //   user: c.user && c.user.length > 0 ? c.user[0] : null,
+            //   userFirstName: c.user?.[0]?.first_name || 'Unknown',
+            //   userLastName: c.user?.[0]?.last_name || 'Unknown',
+            //   userEmail: c.user?.[0]?.email || '',
+            // }));
+
+            const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
               ...c,
               user: c.user && c.user.length > 0 ? c.user[0] : null,
             }));
   
             setRequests(normalizedChanges);
+            console.log("requests in AdminRequests:", changes);
           } else {
             setRequests([]);
           }
@@ -96,7 +99,7 @@ const approveEdit = async (id: string) => {
       console.log(`Approved edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "ACCEPTED" } : r
+        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
       )
       );
 
@@ -115,7 +118,7 @@ const rejectEdit = async (id: string) => {
       console.log(`Declined edit ${id}`);
       setRequests(prev =>
       prev.map(r =>
-        r.changelog_id === id ? { ...r, changelog_status: "DECLINED" } : r
+        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
       )
       );
     }
@@ -184,21 +187,21 @@ function formatDateTime(timestamp: string | number | Date) {
                 </TableHeader>
                 <TableBody className="overflow-y:auto height:200px">
                   {requests.map((request) => (
-                    <TableRow key={request.changelog_id}>
+                    <TableRow key={request.id}>
                       <TableCell className="font-medium">
                         {myProperties.find(
-                          (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"}
+                          (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
-                        {request.user_first_name || request.user_last_name
-                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                        {request.userFirstName || request.userLastName
+                          ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                           : "Unknown User"}
                       </TableCell>
-                      <TableCell>{request.changelog_description}</TableCell>
-                      <TableCell>{formatDate(request.changelog_created_at)}</TableCell>
+                      <TableCell>{request.changeDescription}</TableCell>
+                      <TableCell>{formatDate(request.created_at)}</TableCell>
                       <TableCell>
-                        <Badge variant={getEditStatusColor(request.changelog_status)}>
-                          {request.changelog_status}
+                        <Badge variant={getEditStatusColor(request.status)}>
+                          {request.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -218,27 +221,27 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div>
                                   <Label>Property</Label>
                                   <Input value={myProperties.find(
-                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} readOnly />
+                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} readOnly />
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
+                                    <Input value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>
-                                    <Input value={formatDateTime(request.changelog_created_at)} readOnly />
+                                    <Input value={formatDateTime(request.created_at)} readOnly />
                                   </div>
                                 </div>
                                 <div>
                                     <Label>Change Description</Label>
-                                    <Input value={request.changelog_description} readOnly />
+                                    <Input value={request.changeDescription} readOnly />
                                   </div>
                                 <div>
                                   <Label>Field Specification</Label>
                                   <td className="px-4 py-2">
                                     <ul className="text-xs space-y-1">
-                                      {Object.entries(request.changelog_specifications).map(([key, value]) => (
+                                      {Object.entries(request.specifications).map(([key, value]) => (
                                         <li key={key}>
                                           <strong>{key}:</strong> {String(value)}
                                         </li>
@@ -249,12 +252,12 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="flex justify-end space-x-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => rejectEdit(request.changelog_id)}
+                                    onClick={() => rejectEdit(request.id)}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.changelog_id)}>
+                                  <Button onClick={() => approveEdit(request.id)}>
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>

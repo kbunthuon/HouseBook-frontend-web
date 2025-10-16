@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -36,14 +36,13 @@ import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
 import { FormProvider, AdminFormProvider } from "./components/FormContext";
 import { apiClient } from "./api/wrappers";
-//import { TransferRequestPage } from "./components/TransferRequestPage";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
-
+  
   const handleLogin = (email: string, type: "admin" | "owner", user_id: string) => {
     setIsAuthenticated(true);
     setUserType(type);
@@ -51,12 +50,24 @@ export default function App() {
     setUserId(user_id);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserType("owner");
-    setUserEmail("");
-    setUserId("");
-    apiClient.logout()
+  const handleLogout = async () => {
+    try {
+      // First, logout from backend and clear all sessions/tokens
+      await apiClient.logout();
+
+      // Then clear local state
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Still clear local state even if logout fails
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    }
   };
 
   {/*
@@ -84,6 +95,38 @@ export default function App() {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   };
+
+  // Add cleanup on page unload/close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Optional: Only logout if user wants session to end on browser close
+      // For now, we'll just ensure any pending operations are completed
+      // You can uncomment the lines below to force logout on page close
+
+      // Note: This will NOT work reliably due to browser restrictions
+      // Modern browsers don't allow async operations in beforeunload
+      // But we can at least clear localStorage synchronously
+
+      // Uncomment to force session clear on browser close:
+      // localStorage.clear();
+    };
+
+    const handleVisibilityChange = () => {
+      // When the page becomes hidden (tab switch, minimize, etc.)
+      // we don't want to logout, but we can log for debugging
+      if (document.hidden) {
+        console.log('Page hidden - session maintained');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   return (
     <BrowserRouter>
@@ -131,10 +174,10 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage userId={userId} userType={userType} />} />
-          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
+          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
-          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
           <Route path={ADMIN_ROUTES.requests} element={<AdminRequests userId={userId} userType={userType} />} />
           <Route path={ADMIN_ROUTES.users} element={<UserManagementPage />} />
@@ -163,7 +206,7 @@ export default function App() {
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
           <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} />} />
-          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
+          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding userId={userId} />} />
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
           <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
@@ -218,10 +261,12 @@ function DashboardPage({ userId, userType}: { userId: string, userType: string }
   );
 }
 
-function AdminPropertiesPage() {
+function AdminPropertiesPage({ userId, userType}: { userId: string, userType:string}) {
   const navigate = useNavigate();
   return (
     <PropertyManagement
+      userId={userId}
+      userType={userType}
       onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
     />
   );
