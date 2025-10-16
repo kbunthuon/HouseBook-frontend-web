@@ -8,7 +8,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property, Owner, ChangeLog } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -19,22 +19,16 @@ interface AdminRequestProps {
   userType: string;
 }
 
-
-// interface ChangeLog {
-//   property_id: string;
-//   id: string;
-//   specifications: Record<string, any>;
-//   changeDescription: string;
-//   changelog_status: "ACCEPTED" | "DECLINED" | "PENDING";
-//   created_at: string;
-//   user_first_name: string | null;
-//   user_last_name: string | null;
-// }
+interface OwnerChangeLog extends ChangeLog {
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
+}
 
 export function AdminRequests({ userId, userType}: AdminRequestProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
@@ -48,7 +42,7 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
           console.log("property", propertyIds);
-          const changes = await apiClient.getChangeLogs(propertyIds);
+          const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
@@ -60,15 +54,21 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
           }
   
             // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
+            // const normalizedChanges = (changes ?? []).map((c: any) => ({
+            //   ...c,
+            //   user: c.user && c.user.length > 0 ? c.user[0] : null,
+            //   userFirstName: c.user?.[0]?.first_name || 'Unknown',
+            //   userLastName: c.user?.[0]?.last_name || 'Unknown',
+            //   userEmail: c.user?.[0]?.email || '',
+            // }));
+
+            const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
               ...c,
               user: c.user && c.user.length > 0 ? c.user[0] : null,
-              user_first_name: c.user?.[0]?.first_name || 'Unknown',
-              user_last_name: c.user?.[0]?.last_name || 'Unknown',
-              user_email: c.user?.[0]?.email || '',
             }));
   
             setRequests(normalizedChanges);
+            console.log("requests in AdminRequests:", changes);
           } else {
             setRequests([]);
           }
@@ -193,8 +193,8 @@ function formatDateTime(timestamp: string | number | Date) {
                           (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                       </TableCell>
                       <TableCell>
-                        {request.user_first_name || request.user_last_name
-                          ? `${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`.trim()
+                        {request.userFirstName || request.userLastName
+                          ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                           : "Unknown User"}
                       </TableCell>
                       <TableCell>{request.changeDescription}</TableCell>
@@ -226,7 +226,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                 <div className="grid gap-4 md:grid-cols-1">
                                   <div>
                                     <Label>Requested By</Label>
-                                    <Input value={`${request.user_first_name ?? ""} ${request.user_last_name ?? ""}`} readOnly />
+                                    <Input value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} readOnly />
                                   </div>
                                   <div>
                                     <Label>Request Time</Label>

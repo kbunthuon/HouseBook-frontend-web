@@ -1,6 +1,12 @@
 import supabase from "../config/supabaseClient";
 import { Property, Space, Asset, Owner, AssetType, ChangeLog, ChangeLogAction, ChangeLogStatus } from "@housebookgroup/shared-types";
 
+interface OwnerChangeLog {
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
+}
+
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
 export const getOwnerId = async (userId: string): Promise<string | null> => {
@@ -103,7 +109,7 @@ export const getChangeLogs = async (propertyIds: string[]) => {
     return null;
   }
 
-  const changelogs: ChangeLog[] = changes.map((row: any) => ({
+  const changelogs: OwnerChangeLog[] = changes.map((row: any) => ({
     id: row.id,
     assetId: row.asset_id,
     specifications: row.specifications,
@@ -117,11 +123,10 @@ export const getChangeLogs = async (propertyIds: string[]) => {
     spaceName: row.space_name,
     propertyId: row.property_id,
 
-    userFirstName: row.user?.[0]?.first_name,
-    userLastName: row.user?.[0]?.last_name,
-    userEmail: row.user?.[0]?.email,
+    userFirstName: row.user?.first_name,
+    userLastName: row.user?.last_name,
+    userEmail: row.user?.email,
   }));
-
   return changelogs;
 };
 

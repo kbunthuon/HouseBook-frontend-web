@@ -8,12 +8,17 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners } from "../../../backend/FetchData.ts";
+import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property, Owner, ChangeLog} from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { apiClient } from "../api/wrappers.ts";
 
+interface OwnerChangeLog extends ChangeLog {
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+}
 
 interface DashboardProps {
   userId: string;
@@ -25,7 +30,7 @@ interface DashboardProps {
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
@@ -299,8 +304,8 @@ function formatDateTime(timestamp: string | number | Date) {
                       (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.user_firstName || request.user_lastName
-                      ? `${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`.trim()
+                    {request.userFirstName || request.userLastName
+                      ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
                   <TableCell>{request.changeDescription}</TableCell>
@@ -336,7 +341,7 @@ function formatDateTime(timestamp: string | number | Date) {
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.user_firstName ?? ""} ${request.user_lastName ?? ""}`} 
+                                  value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>

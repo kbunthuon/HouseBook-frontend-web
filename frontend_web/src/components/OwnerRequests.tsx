@@ -16,6 +16,12 @@ import supabase from "../../../config/supabaseClient.ts"
 import { apiClient } from "../api/wrappers.ts";
 
 
+interface OwnerChangeLog extends ChangeLog {
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+}
+
 interface OwnerRequestsProps {
   userId: string;
 }
@@ -23,7 +29,7 @@ interface OwnerRequestsProps {
 export function OwnerRequests({ userId }: OwnerRequestsProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
 
   useEffect (() => {
       const getOwnerProps = async () => {
@@ -179,8 +185,8 @@ function formatDateTime(timestamp: string | number | Date) {
                     (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                 </TableCell>
                 <TableCell>
-                  {request.changedByUserFirstName || request.changedByUserLastName
-                    ? `${request.changedByUserFirstName ?? ""} ${request.changedByUserLastName ?? ""}`.trim()
+                  {request.userFirstName || request.userLastName
+                    ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                     : "Unknown User"}
                 </TableCell>
                 <TableCell>{request.changeDescription}</TableCell>
@@ -216,7 +222,7 @@ function formatDateTime(timestamp: string | number | Date) {
                             <div>
                               <Label>Requested By</Label>
                               <Input 
-                                value={`${request.changedByUserFirstName ?? ""} ${request.changedByUserLastName ?? ""}`.trim() || "Unknown User"} 
+                                value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim() || "Unknown User"} 
                                 readOnly 
                               />
                             </div>

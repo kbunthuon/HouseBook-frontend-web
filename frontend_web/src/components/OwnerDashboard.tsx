@@ -11,12 +11,17 @@ import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } fro
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
 import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
-import { Property, ChangeLog} from "../types/serverTypes.ts";
+import { Property, ChangeLog } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 import { apiClient } from "../api/wrappers.ts";
 
 
+interface OwnerChangeLog extends ChangeLog {
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
+}
 
 interface OwnerDashboardProps {
   userId: string;
@@ -28,7 +33,7 @@ interface OwnerDashboardProps {
 export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerDashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<ChangeLog[]>([]);
+  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
 
   useEffect (() => {
     const getOwnerProps = async () => {
@@ -44,29 +49,31 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
         if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
           console.log("Fetching change logs for properties:", propertyIds);
-          const changes = await apiClient.getChangeLogs(propertyIds);
-  
-            if (!changes) {
+          const changes = await getChangeLogs(propertyIds);
+          
+          if (!changes) {
             console.error("Error fetching change logs.");
             setLoading(false);
             return;
           }
+
+          // setRequests(changes);
   
-            // Normalize changes with user info
-            const normalizedChanges = (changes ?? []).map((c: any) => {
-              return {
-                ...c,
-                changedByUserFirstName: c.user?.first_name,
-                changedByUserLastName: c.user?.last_name,
-                changedByUserEmail: c.user?.email,
-              };
-            });
-  
-            setRequests(normalizedChanges);
-            console.log("normalized requests", requests)
-          } else {
-            setRequests([]);
-          }
+          // Normalize changes with user info
+          const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => {
+            return {
+              ...c,
+              changedByUserFirstName: c.user?.first_name,
+              changedByUserLastName: c.user?.last_name,
+              changedByUserEmail: c.user?.email,
+            };
+          });
+          
+          setRequests(normalizedChanges);
+          console.log("Changes in OwnerDashboard", normalizedChanges)
+        } else {
+          setRequests([]);
+        }
 
       } catch (error) {
         console.error(error);
@@ -227,8 +234,8 @@ return (
                       (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"}
                   </TableCell>
                   <TableCell>
-                    {request.changedByUserFirstName || request.changedByUserLastName
-                      ? `${request.changedByUserFirstName ?? ""} ${request.changedByUserLastName ?? ""}`.trim()
+                    {request.userFirstName || request.userLastName
+                      ? `${request.userFirstName ?? ""} ${request.userLastName ?? ""}`.trim()
                       : "Unknown User"}
                   </TableCell>
                   <TableCell>{request.changeDescription}</TableCell>
@@ -256,7 +263,7 @@ return (
                               <Label>Property</Label>
                               <Input 
                                 value={myProperties.find(
-                                  (p) => p.propertyId === request.property_id)?.address ?? "Unknown Property"} 
+                                  (p) => p.propertyId === request.propertyId)?.address ?? "Unknown Property"} 
                                 readOnly 
                               />
                             </div>
@@ -264,7 +271,7 @@ return (
                               <div>
                                 <Label>Requested By</Label>
                                 <Input 
-                                  value={`${request.changedByUserFirstNAme ?? ""} ${request.changedByUserLastName ?? ""}`} 
+                                  value={`${request.userFirstName ?? ""} ${request.userLastName ?? ""}`} 
                                   readOnly 
                                 />
                               </div>
