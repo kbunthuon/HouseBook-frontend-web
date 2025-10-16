@@ -1,5 +1,5 @@
 import supabase from "../config/supabaseClient";
-import { Property, Space, Asset, Owner, AssetType } from "@housebookgroup/shared-types";
+import { Property, Space, Asset, Owner, AssetType, ChangeLog, ChangeLogAction, ChangeLogStatus } from "@housebookgroup/shared-types";
 
 // Takes in userId
 // Returns the OwnerId if it exists, otherwise return null
@@ -76,26 +76,53 @@ export const getProperty = async (userID: string): Promise<Property[]> => {
 
 export const getChangeLogs = async (propertyIds: string[]) => {
   const { data: changes, error } = await supabase
-    .from("changelog_property_view")
+    .from("changelog_with_assets")
     .select(`
-      changelog_id,
-      changelog_specifications,
-      changelog_description,
-      changelog_created_at,
-      changelog_status,
-      user_first_name,
-      user_last_name,
-      property_id
+      id,
+      asset_id,
+      specifications,
+      change_description,
+      status,
+      changed_by_user_id,
+      created_at,
+      actions,
+      asset_description,
+      space_name,
+      property_id,
+      user:User!changed_by_user_id (
+        first_name,
+        last_name,
+        email
+      )
     `)
     .in("property_id", propertyIds)
-    .order("changelog_created_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching change log:", error);
+    console.error("Error fetching changelogs:", error.message);
     return null;
   }
 
-  return changes;
+  const changelogs: ChangeLog[] = changes.map((row: any) => ({
+    id: row.id,
+    assetId: row.asset_id,
+    specifications: row.specifications,
+    changeDescription: row.change_description,
+    changedByUserId: row.changed_by_user_id,
+    created_at: row.created_at,
+    status: row.status as ChangeLogStatus,
+    actions: row.actions as ChangeLogAction,
+    deleted: false, 
+    assetName: row.asset_description,
+    spaceName: row.space_name,
+    propertyId: row.property_id,
+
+    userFirstName: row.user?.[0]?.first_name,
+    userLastName: row.user?.[0]?.last_name,
+    userEmail: row.user?.[0]?.email,
+  }));
+
+  return changelogs;
 };
 
 export const getPropertyDetails = async (propertyId: string): Promise<Property | null> => {
