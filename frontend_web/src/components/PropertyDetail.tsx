@@ -1174,24 +1174,29 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="w-full max-w-full overflow-hidden">
+        <CardContent>
           {property?.images && property.images.length > 0 ? (
-            <div className="flex flex-row gap-3 overflow-x-auto w-full py-2" style={{ height: '320px' }}>
-              {property.images.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
-                  style={{ width: '320px', height: '320px' }}
-                  onClick={() => setSelectedImage(url)}
-                >
-                  <img
-                    src={url}
-                    alt={`Property Image ${idx + 1}`}
-                    className="w-full h-full"
-                    style={{ objectFit: 'contain' }}
-                  />
-                </div>
-              ))}
+            <div className="overflow-x-auto py-4">
+              <div className="flex gap-6 w-max">
+                {property.images.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                    style={{ width: '320px', height: '320px' }}
+                    onClick={() => setSelectedImage(url)}
+                  >
+                    {/* property image - fixed 320px height (full card) */}
+                    <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
+                      <img
+                        src={url}
+                        alt={`Property Image ${idx + 1}`}
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">

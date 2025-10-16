@@ -212,32 +212,33 @@ function formatDateTime(timestamp: string | number | Date) {
           <div className="overflow-x-auto py-4">
             <div className="flex gap-6 w-max">
               {myProperties.map((property) => (
-                <div 
-                  key={property.propertyId} 
-                  className="w-80 h-80 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                  style={{ minWidth: '320px', maxWidth: '320px'}}
+                <div
+                  key={property.propertyId}
+                  className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                  style={{ width: '320px', height: '320px' }}
                   onClick={() => onViewProperty && onViewProperty(property.propertyId)}
                 >
-                  {/* property image */}
-                  <div className="w-full flex-1 bg-muted flex items-center justify-center">
+                  {/* property image - fixed 188px height (320px - 132px for info section) */}
+                  <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '188px' }}>
                     {property.splashImage ? (
                       <img
                         src={property.splashImage}
                         alt={`${property.address} splash`}
-                        className="max-h-full max-w-full object-contain"
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
                       />
                     ) : (
                       <Building className="h-12 w-12 text-muted-foreground" />
                     )}
                   </div>
 
-                  {/* property info */}
-                  <div className="h-32 flex-shrink-0 flex flex-col justify-end text-center" >
-                    <div className="font-semibold text-md truncate px-4">
+                  {/* property info - fixed 132px height */}
+                  <div className="shrink-0 flex flex-col justify-center text-center px-4" style={{ height: '132px' }}>
+                    <div className="font-semibold text-md truncate">
                       {property.name || 'N/A'}
                     </div>
-                    <div className="font-muted text-md truncate px-4">
-                      {property.address} 
+                    <div className="text-muted-foreground text-sm truncate">
+                      {property.address}
                     </div>
                   </div>
                 </div>
