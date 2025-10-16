@@ -5,32 +5,28 @@ import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
 import { apiClient } from "../frontend_web/src/api/wrappers";
 
 export async function ownerOnboardProperty(formData: FormData, spaces: SpaceInt[]) {
-  // Get the user id
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw new Error("User ID not returned from signup");
   const userId = user.id;
   
-  // Get the owner id
   const ownerId = await apiClient.getOwnerId(userId);
-
-  // Insert to Property table and OwnerProperty Table
   const propertyId = await saveProperty(formData, ownerId);
 
-  // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
-  // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
-  await saveDetails(spaces, propertyId, userId);
+  // Upload property images
+  for (const file of (formData.floorPlans)) {
+    await apiClient.uploadPropertyImage(propertyId, file);
+  }
+  for (const file of (formData.buildingPlans)) {
+    await apiClient.uploadPropertyImage(propertyId, file);
+  }
 
-  return propertyId || null;
 
+  await saveDetails(spaces, propertyId, userId, true);
+
+  return propertyId;
 }
 
 export async function adminOnboardProperty(ownerData: Owner, formData: FormData, spaces: SpaceInt[]) {
-  // Check if this user account exists
-  // const exists = await checkOwnerExists(owner);
-  // if (!exists) {
-  //   alert("Error fetching credentials. Credentials may not exist.");
-  //   return;
-  // }
 
   // Get the user id using the owner's email
   const userId = await apiClient.getUserInfoByEmail(ownerData.email);
@@ -109,7 +105,7 @@ const saveProperty = async (formData: FormData, ownerId: string) => {
   }
 };
 
-const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: string) => {
+const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: string, isOwnerOnboarding: boolean = true) => {
   try {
     for (const space of spaces) {
       // 1. Insert Space
@@ -130,14 +126,23 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
       const spaceId = insertedSpace.id;
 
       for (const asset of space.assets) {
-        // 2. Insert Asset
+        // Build specifications object from features
+        const specifications: Record<string, string> = {};
+        if (asset.features && asset.features.length > 0) {
+          asset.features.forEach((feature) => {
+            specifications[feature.name] = feature.value;
+          });
+        }
+
+        // 2. Insert Asset with current_specifications
         const { data: insertedAsset, error: assetError } = await supabase
           .from("Assets")
           .insert([
             {
               space_id: spaceId,
               asset_type_id: asset.typeId,
-              name: asset.description,
+              description: asset.description || null,
+              current_specifications: specifications,
             },
           ])
           .select("id")
@@ -147,26 +152,24 @@ const saveDetails = async (spaces: SpaceInt[], propertyId: string, userId: strin
 
         const assetId = insertedAsset.id;
 
-        // 3. Insert Asset Features into ChangeLog as JSON
-        if (asset.features && asset.features.length > 0) {
-          const specifications: Record<string, string> = {};
-          asset.features.forEach((feature) => {
-            specifications[feature.name] = feature.value;
-          });
+        // 3. Insert ChangeLog entry
+        // For owner onboarding, automatically approve the changes
+        const changelogStatus = isOwnerOnboarding ? 'APPROVED' : 'PENDING';
+        
+        const { error: changelogError } = await supabase
+          .from("ChangeLog")
+          .insert([
+            {
+              asset_id: assetId,
+              specifications: specifications,
+              change_description: "Onboarding",
+              changed_by_user_id: userId,
+              status: changelogStatus,
+              actions: 'CREATED', // New asset created during onboarding
+            },
+          ]);
 
-          const { error: changelogError } = await supabase
-            .from("ChangeLog")
-            .insert([
-              {
-                asset_id: assetId,
-                specifications: specifications,
-                change_description: "Onboarding",
-                changed_by_user_id: userId,
-              },
-            ]);
-
-          if (changelogError) throw changelogError;
-        }
+        if (changelogError) throw changelogError;
       }
     }
     console.log("All spaces, assets, and features saved successfully.");
