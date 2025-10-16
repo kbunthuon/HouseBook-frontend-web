@@ -66,11 +66,14 @@ export const API_ROUTES = {
   },
 
   // Transfer Routes
-  // Transfer Routes
   TRANSFER: {
-    GET_BY_PROPERTY: (propertyId: string) => 
-      `${BASE_URL}/getTransfersByProperty?propertyId=${encodeURIComponent(propertyId)}`,
-  }
+    GET: (params: { action: "byOwner" | "byProperty"; id: string }) =>
+      `${BASE_URL}/transfer?action=${params.action}&${params.action === "byOwner" ? `userId=${params.id}` : `propertyId=${params.id}`}`,
+
+    INITIATE: `${BASE_URL}/transfer`,
+    GET_BY_PROPERTY: (propertyId: string) => `${BASE_URL}/transfer?propertyId=${encodeURIComponent(propertyId)}`,
+    GET_BY_USER: (userId: string) => `${BASE_URL}/transfer?userId=${encodeURIComponent(userId)}`,
+  },
 
 } as const;
 

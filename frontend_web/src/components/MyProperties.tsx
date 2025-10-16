@@ -24,16 +24,18 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   const [open, setOpen] = useState(false);
   
   const [transferProperties, setTransferProperties] = useState<
-  {
+    {
+      transferId: string;
       propertyId: string;
-      name?: string;
+      name: string;
       address?: string;
-      currentOwners?: string[];
+      currentOwners: string[];
       invitedOwners: { email: string; firstName?: string; lastName?: string }[];
       createdAt: Date;
       status: "PENDING" | "APPROVED" | "REJECTED";
     }[]
   >([]);
+
 
   const navigate = useNavigate();
 
@@ -42,7 +44,33 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
     navigate(ROUTES.propertyTransferPath(pid)); 
   };
 
-  
+  const loadTransfers = async () => {
+  setLoading(true);
+  try {
+    const res = await apiClient.getTransfersByUser(userID);
+    // Map API response to the format used by the table
+    const mappedTransfers = (res.transfers || []).map((t: any) => ({
+      propertyId: t.propertyId,
+      name: t.propertyName,
+      address: t.propertyAddress,
+      currentOwners: t.oldOwners.map((o: any) =>
+        o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
+      ),
+      invitedOwners: t.newOwners.map((o: any) => ({
+        email: o.email,
+        firstName: o.firstName,
+        lastName: o.lastName,
+      })),
+      createdAt: new Date(t.transferCreatedAt),
+      status: t.transferStatus,
+      transferId: t.transferId,
+    }));
+    setTransferProperties(mappedTransfers);
+  } catch (err) {
+    console.error("Failed to load transfers:", err);
+  }
+  setLoading(false);
+};
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -51,15 +79,11 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       setMyProperties(properties || []);
       setLoading(false);
     };
-    const loadTransfers = async () => {
-      setLoading(true);
-      const transfers = await apiClient.getTransfersByProperty(); 
-      setMyProperties(properties || []);
-      setLoading(false);
-    };
+
 
     if (userID) {
       loadProperties();
+      loadTransfers();
     }
   }, [userID]);
   
@@ -259,7 +283,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
               </TableHeader>
               <TableBody>
                 {transferProperties.map((property) => (
-                  <TableRow key={property.propertyId}>
+                  <TableRow key={property.transferId}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{property.name}</div>
@@ -318,7 +342,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                           onClick={() =>
                             setTransferProperties((prev) =>
                               prev.map((p) =>
-                                p.propertyId === property.propertyId
+                                p.transferId === property.transferId
                                   ? { ...p, status: "APPROVED" }
                                   : p
                               )
@@ -334,7 +358,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                           onClick={() =>
                             setTransferProperties((prev) =>
                               prev.map((p) =>
-                                p.propertyId === property.propertyId
+                                p.transferId === property.transferId
                                   ? { ...p, status: "REJECTED" }
                                   : p
                               )
@@ -348,6 +372,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                   </TableRow>
                 ))}
               </TableBody>
+
             </Table>
           ) : (
             <div className="text-center py-12">
@@ -367,25 +392,27 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         open={open}
         onOpenChange={setOpen}
         userID={userID}
-        onInitiateTransfer={(propertyId, invitedOwners, currentOwners) => {
-          const property = myProperties.find((p) => p.propertyId === propertyId);
-          setTransferProperties((prev) => [
-            ...prev,
-            {
-              propertyId,
-              name: property?.name ?? "Unknown Property",
-              address: property?.address ?? "",
-              invitedOwners,
-              currentOwners: currentOwners.map((o) =>
-                o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
-              ),
-              createdAt: new Date(),
-              status: "PENDING",
-            },
-          ]);
+        onInitiateTransfer={async (propertyId, invitedOwners, currentOwners) => {
+          try {
+            const oldOwnerUserIds = currentOwners
+              .map(o => o.userId)
+              .filter((id): id is string => !!id);
+
+            const newOwnerUserIds = invitedOwners
+              .map(o => o.userId)
+              .filter((id): id is string => !!id);
+
+            await apiClient.initiateTransfer(propertyId, oldOwnerUserIds, newOwnerUserIds);
+
+            // Refresh transfers from API
+            await loadTransfers();
+
+            setOpen(false);
+          } catch (err) {
+            console.error("Failed to initiate transfer:", err);
+          }
         }}
       />
-
     </div>
   );
 }

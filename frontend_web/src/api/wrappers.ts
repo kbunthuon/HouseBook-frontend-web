@@ -524,7 +524,7 @@ class ApiClient {
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {
     const response = await this.authenticatedRequest(
-      API_ROUTES.TRANSFER.GET_BY_PROPERTY(propertyId)
+      API_ROUTES.TRANSFER.GET({ action: "byProperty", id: propertyId })
     );
 
     if (!response.ok) {
@@ -532,9 +532,48 @@ class ApiClient {
       throw new Error(error.error || "Failed to fetch transfers for property");
     }
 
-    const data = response.json();
+    const data = await response.json();
+    return data
+  }
+
+  async getTransfersByUser(userId: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.TRANSFER.GET({ action: "byOwner", id: userId })
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch transfers for user");
+    }
+
+    const data = await response.json();
+    console.log("getTransfersByUser response data:", data);
     return data;
   }
+
+  async initiateTransfer(propertyId: string, oldOwnerUserIds: string[], newOwnerUserIds: string[]) {
+    const response = await this.authenticatedRequest(API_ROUTES.TRANSFER.INITIATE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        propertyId,
+        oldOwnerUserIds,
+        newOwnerUserIds,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to initiate transfer");
+    }
+
+    const data = await response.json();
+    console.log("initiateTransfer response data:", data);
+    return data;
+  }
+
+
+
 }
 
 // Export singleton instance
