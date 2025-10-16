@@ -126,10 +126,10 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage userId={userId} userType={userType} />} />
-          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
+          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
-          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
           <Route path={ADMIN_ROUTES.requests} element={<AdminRequests userId={userId} userType={userType} />} />
           <Route path={ADMIN_ROUTES.users} element={<UserManagementPage />} />
@@ -209,10 +209,12 @@ function DashboardPage({ userId, userType}: { userId: string, userType: string }
   );
 }
 
-function AdminPropertiesPage() {
+function AdminPropertiesPage({ userId, userType}: { userId: string, userType:string}) {
   const navigate = useNavigate();
   return (
     <PropertyManagement
+      userId={userId}
+      userType={userType}
       onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
     />
   );

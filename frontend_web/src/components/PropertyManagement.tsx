@@ -1,75 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Label } from "./ui/label";
-import { Building, Search, Eye, Edit, Key, Trash2, ExternalLink } from "lucide-react";
+import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-react";
+// import { getProperty } from "../../../backend/FetchData";
+import { Property } from "../types/serverTypes";
+import { apiClient } from "../api/wrappers";
+import { getAdminProperty } from "../../../backend/FetchData";
 
 interface PropertyManagementProps {
+  userId: string;
+  userType: string;
   onViewProperty?: (propertyId: string) => void;
+  onAddProperty?: () => void;
 }
 
-export function PropertyManagement({ onViewProperty }: PropertyManagementProps) {
+export function PropertyManagement({ userId, userType, onViewProperty, onAddProperty }: PropertyManagementProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [myProperties, setMyProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const properties = [
-    {
-      id: "1",
-      name: "Rose Wood Retreat",
-      address: "123 Maple Street, Downtown",
-      type: "Single Family Home",
-      owner: "John Smith",
-      units: 1,
-      status: "Active",
-      pin: "123456",
-      token: "abc123def456",
-      lastUpdated: "2 days ago"
-    },
-    {
-      id: "2",
-      name: "Riverside Apartments",
-      address: "456 River Road, Riverside",
-      type: "Residential",
-      owner: "Sarah Johnson",
-      units: 32,
-      status: "Active",
-      pin: "789012",
-      token: "ghi789jkl012",
-      lastUpdated: "1 week ago"
-    },
-    {
-      id: "3",
-      name: "Oak Grove Complex",
-      address: "789 Oak Avenue, Westside",
-      type: "Mixed Use",
-      owner: "Mike Wilson",
-      units: 68,
-      status: "Pending",
-      pin: "345678",
-      token: "mno345pqr678",
-      lastUpdated: "3 days ago"
-    },
-    {
-      id: "4",
-      name: "Pine Valley Homes",
-      address: "321 Pine Valley Drive, Suburbs",
-      type: "Residential",
-      owner: "Lisa Brown",
-      units: 28,
-      status: "Transfer",
-      pin: "901234",
-      token: "stu901vwx234",
-      lastUpdated: "5 days ago"
+  useEffect(() => {
+    const loadProperties = async () => {
+      
+      setLoading(true);
+
+
+      const properties = await getAdminProperty(userId, userType);
+      // Remove duplicate properties by propertyId
+      const uniquePropertiesMap = new Map();
+      properties?.forEach((p: any) => {
+        if (!uniquePropertiesMap.has(p.propertyId)) {
+          uniquePropertiesMap.set(p.propertyId, p);
+        }
+      });
+  
+      const uniqueProperties = Array.from(uniquePropertiesMap.values());
+      setMyProperties(uniqueProperties ?? []);
+      
+      console.log(uniqueProperties);
+      setLoading(false);
+
+    };
+
+    if (userId) {
+      loadProperties();
     }
-  ];
-
-  const filteredProperties = properties.filter(property =>
+  }, [userId]);
+  
+  const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
     property.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -86,180 +68,143 @@ export function PropertyManagement({ onViewProperty }: PropertyManagementProps) 
     }
   };
 
-  const regenerateAccessCodes = (propertyId: string) => {
-    const newPin = Math.floor(100000 + Math.random() * 900000).toString();
-    const newToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    console.log(`Regenerated codes for property ${propertyId}: PIN: ${newPin}, Token: ${newToken}`);
+  const getCompletionColor = (percentage: number) => {
+    if (percentage >= 90) return "text-green-600";
+    if (percentage >= 70) return "text-yellow-600";
+    return "text-red-600";
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1>Property Management</h1>
+          <h1>My Properties</h1>
           <p className="text-muted-foreground">
             Manage your property portfolio
           </p>
         </div>
-        <Button>
-          <Building className="mr-2 h-4 w-4" />
-          Add Property
+        <Button onClick={onAddProperty}>
+          <Settings className="mr-2 h-4 w-4" />
+          Add New Property
         </Button>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{myProperties.length}</div>
+            <div className="text-sm text-muted-foreground">Total Properties</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">
+              {myProperties.filter(p => p.status === "Active").length}
+            </div>
+            <div className="text-sm text-muted-foreground">Active Properties</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">
+              {Math.round(myProperties.reduce((acc, p) => acc + p.completionStatus, 0) / myProperties.length) || 0}%
+            </div>
+            <div className="text-sm text-muted-foreground">Avg. Completion</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Properties</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search properties..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="flex justify-between items-center">
+            <CardTitle>Property List</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search my properties..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Property</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Units</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProperties.map((property) => (
-                <TableRow key={property.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{property.name}</div>
-                      <div className="text-sm text-muted-foreground">{property.address}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{property.owner}</TableCell>
-                  <TableCell>{property.type}</TableCell>
-                  <TableCell>{property.units}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(property.status)}>
-                      {property.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{property.lastUpdated}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {onViewProperty && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewProperty(property.id)}
-                          title="View Property Details"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Dialog>
-                        <DialogTrigger asChild>
+          {filteredProperties.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Property</TableHead>
+                  <TableHead>Type</TableHead>
+                  {/* <TableHead>Status</TableHead>
+                  <TableHead>Completion</TableHead> */}
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProperties.map((property) => (
+                  <TableRow key={property.propertyId}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{property.name}</div>
+                        <div className="text-sm text-muted-foreground">{property.address}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{property.type}</TableCell>
+                    {/* <TableCell>
+                      <Badge variant={getStatusColor(property.status)}>
+                        {property.status}
+                      </Badge>
+                    </TableCell> */}
+                    {/* <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${getCompletionColor(property.completionStatus)}`}>
+                          {property.completionStatus}%
+                        </span>
+                      </div>
+                    </TableCell> */}
+                    <TableCell>{new Date(property.lastUpdated).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        {onViewProperty && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedProperty(property)}
-                            title="Quick View"
+                            onClick={() => onViewProperty(property.propertyId)}
+                            title="View Property Details"
                           >
-                            <Eye className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Property Overview</DialogTitle>
-                          </DialogHeader>
-                          {selectedProperty && (
-                            <div className="space-y-4">
-                              <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                  <Label>Property Name</Label>
-                                  <Input value={selectedProperty.name} readOnly />
-                                </div>
-                                <div>
-                                  <Label>Owner</Label>
-                                  <Input value={selectedProperty.owner} readOnly />
-                                </div>
-                              </div>
-                              <div>
-                                <Label>Address</Label>
-                                <Input value={selectedProperty.address} readOnly />
-                              </div>
-                              <div className="grid gap-4 md:grid-cols-3">
-                                <div>
-                                  <Label>Type</Label>
-                                  <Input value={selectedProperty.type} readOnly />
-                                </div>
-                                <div>
-                                  <Label>Units</Label>
-                                  <Input value={selectedProperty.units} readOnly />
-                                </div>
-                                <div>
-                                  <Label>Status</Label>
-                                  <Input value={selectedProperty.status} readOnly />
-                                </div>
-                              </div>
-                              <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                  <Label>Access PIN</Label>
-                                  <div className="flex space-x-2">
-                                    <Input value={selectedProperty.pin} readOnly />
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => regenerateAccessCodes(selectedProperty.id)}
-                                    >
-                                      <Key className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label>Access Token</Label>
-                                  <div className="flex space-x-2">
-                                    <Input value={selectedProperty.token} readOnly />
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => regenerateAccessCodes(selectedProperty.id)}
-                                    >
-                                      <Key className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                              {onViewProperty && (
-                                <div className="flex justify-end mt-6">
-                                  <Button onClick={() => onViewProperty(selectedProperty.id)}>
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    View Full Details
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      <Button variant="ghost" size="sm" title="Edit Property">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" title="Delete Property">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        )}
+                        <Button variant="ghost" size="sm" title="Edit Property">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" title="Access Codes">
+                          <Key className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" title="Generate Report">
+                          <BarChart3 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground">
+                {searchTerm ? "No properties match your search." : "You haven't added any properties yet."}
+              </div>
+              {!searchTerm && onAddProperty && (
+                <Button className="mt-4" onClick={onAddProperty}>
+                  Add Your First Property
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
