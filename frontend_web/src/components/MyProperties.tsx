@@ -52,33 +52,47 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   };
 
   const loadTransfers = async () => {
-  setLoading(true);
-  try {
-    const res = await apiClient.getTransfersByUser(userID);
-    // Map API response to the format used by the table
-    const mappedTransfers = (res.transfers || []).map((t: any) => ({
-      propertyId: t.propertyId,
-      name: t.propertyName,
-      address: t.propertyAddress,
-      currentOwners: t.oldOwners.map((o: any) =>
-        o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
-      ),
-      invitedOwners: t.newOwners.map((o: any) => ({
-        email: o.email,
-        firstName: o.firstName,
-        lastName: o.lastName,
-      })),
-      createdAt: new Date(t.transferCreatedAt),
-      transferStatus: t.transferStatus, // Overall transfer status
-      userStatus: t.userStatus, // This user's individual status
-      transferId: t.transferId,
-    }));
-    setTransferProperties(mappedTransfers);
-  } catch (err) {
-    console.error("Failed to load transfers:", err);
-  }
-  setLoading(false);
-};
+    setLoading(true);
+    try {
+      const res = await apiClient.getTransfersByUser(userID);
+      console.log("Raw API response:", res);
+      
+      // Map API response to the format used by the table
+      const mappedTransfers = (res.transfers || []).map((t: any) => {
+        console.log("Processing transfer:", t);
+        
+        return {
+          propertyId: t.propertyId,
+          name: t.propertyName,
+          address: t.propertyAddress,
+          // OLD OWNERS - map correctly from the actual structure
+          currentOwners: (t.oldOwners || []).map((o: any) =>
+            o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email || "Unknown"
+          ),
+          // NEW OWNERS - map correctly from the actual structure
+          invitedOwners: (t.newOwners || []).map((o: any) => ({
+            email: o.email,
+            firstName: o.firstName,
+            lastName: o.lastName,
+          })),
+          createdAt: new Date(t.transferCreatedAt),
+          transferStatus: t.transferStatus, // Overall transfer status (ACCEPTED, PENDING, etc.)
+          // User status - find this user's acceptStatus from either oldOwners or newOwners
+          userStatus: 
+            t.oldOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
+            t.newOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
+            "PENDING",
+          transferId: t.transferId,
+        };
+      });
+      
+      console.log("Mapped transfers:", mappedTransfers);
+      setTransferProperties(mappedTransfers);
+    } catch (err) {
+      console.error("Failed to load transfers:", err);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     const loadProperties = async () => {
