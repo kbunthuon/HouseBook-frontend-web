@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
 import { Copy, Send, ExternalLink, X, Check, Loader2 } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
 import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 import { Owner } from "../types/serverTypes";
@@ -17,7 +18,14 @@ interface OldOwnerTransferDialogProps {
   onOpenChange: (open: boolean) => void;
   userID: string;
   onViewTransfer?: (propertyId: string) => void;
+  onInitiateTransfer?: (
+    propertyId: string,
+    allOldOwnerIds: string[],
+    newOwnerStateIds: string[]
+  ) => void;
+
 }
+
 
 interface InvitedOwner {
   email: string;
@@ -31,7 +39,8 @@ export default function OldOwnerTransferDialog({
   open,
   onOpenChange,
   userID,
-  onViewTransfer
+  onViewTransfer,
+  onInitiateTransfer,
 }: OldOwnerTransferDialogProps) {
   const [propertyId, setPropertyId] = React.useState<string>("");
   const [inviteEmail, setInviteEmail] = React.useState("");
@@ -40,6 +49,7 @@ export default function OldOwnerTransferDialog({
   const [checkedUserId, setCheckedUserId] = React.useState<string | null>(null);
   const [invitedOwners, setInvitedOwners] = React.useState<InvitedOwner[]>([]);
   const [currentOwners, setCurrentOwners] = React.useState<InvitedOwner[]>([]);
+  const [selectedOwnersMovingOut, setSelectedOwnersMovingOut] = React.useState<string[]>([]);
   const [loadingOwners, setLoadingOwners] = React.useState(false);
 
   const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
@@ -229,6 +239,14 @@ export default function OldOwnerTransferDialog({
     }
   };
 
+  const toggleOwnerMovingOut = (ownerId: string) => {
+    setSelectedOwnersMovingOut(prev =>
+      prev.includes(ownerId)
+        ? prev.filter(id => id !== ownerId)
+        : [...prev, ownerId]
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:w-[500px] max-h-[90vh] overflow-y-auto">
@@ -258,10 +276,10 @@ export default function OldOwnerTransferDialog({
             )}
           </div>
 
-          {/* Current Owners */}
+          {/* Current Owners with checkbox selection for moving out */}
           {propertyId && (
             <div>
-              <Label>Current Owners</Label>
+              <Label>Current Owners (Select who is moving out)</Label>
               {loadingOwners ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -270,25 +288,38 @@ export default function OldOwnerTransferDialog({
               ) : currentOwners.length > 0 ? (
                 <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20">
                   {currentOwners.map((owner, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center justify-between bg-background p-2 rounded"
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 bg-background p-2 rounded"
                     >
-                      <div className="flex flex-col">
+                      <Checkbox
+                        id={`owner-${owner.userId}`}
+                        checked={selectedOwnersMovingOut.includes(owner.userId || '')}
+                        onCheckedChange={() => toggleOwnerMovingOut(owner.userId || '')}
+                      />
+                      <label
+                        htmlFor={`owner-${owner.userId}`}
+                        className="flex flex-col flex-1 cursor-pointer"
+                      >
                         <span className="text-sm font-medium">
-                          {owner.firstName && owner.lastName 
+                          {owner.firstName && owner.lastName
                             ? `${owner.firstName} ${owner.lastName}`
                             : owner.email}
                         </span>
                         {owner.firstName && owner.lastName && (
                           <span className="text-xs text-muted-foreground">{owner.email}</span>
                         )}
-                      </div>
+                      </label>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground mt-2">No current owners found.</p>
+              )}
+              {selectedOwnersMovingOut.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedOwnersMovingOut.length} owner(s) selected to move out
+                </p>
               )}
             </div>
           )}
@@ -379,7 +410,47 @@ export default function OldOwnerTransferDialog({
         </div>
 
         <Separator className="my-2" />
+        <div className="flex justify-end gap-2 p-4">
+          <Button
+            onClick={() => {
+              if (!propertyId) {
+                toast.error("Please select a property first");
+                return;
+              }
+              if (invitedOwners.length === 0) {
+                toast.error("Please add at least one new owner to transfer to");
+                return;
+              }
 
+              // Calculate allOldOwnerIds: ALL current owners (A, B, C)
+              const allOldOwnerIds = currentOwners
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              // Calculate newOwnerStateIds: remaining owners + new owners
+              // Remaining = current owners NOT selected to move out
+              const remainingOwnerIds = currentOwners
+                .filter(o => !selectedOwnersMovingOut.includes(o.userId || ''))
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              const newInvitedOwnerIds = invitedOwners
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              const newOwnerStateIds = [...remainingOwnerIds, ...newInvitedOwnerIds];
+
+              onInitiateTransfer?.(propertyId, allOldOwnerIds, newOwnerStateIds);
+              toast.success("Transfer initiated");
+              onOpenChange(false);
+            }}
+            disabled={!propertyId || invitedOwners.length === 0}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Initiate Transfer
+          </Button>
+
+        </div>
         {/* How to transfer */}
         <div className="rounded-lg bg-muted/40 p-4">
           <p className="font-semibold mb-2">How to transfer:</p>

@@ -1283,7 +1283,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-      {/* Custom Image Viewer Overlay */}
+      {/* Image Viewer Overlay */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
