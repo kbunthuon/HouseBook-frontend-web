@@ -153,9 +153,13 @@ export async function getTransfersByOwner(ownerId: string) {
         owner_id,
         Owner (
           owner_id,
-          first_name,
-          last_name,
-          email
+          user_id,
+          User (
+            user_id,
+            first_name,
+            last_name,
+            email
+          )
         )
       `)
       .eq("transfer_id", transfer.transferId);
@@ -165,16 +169,20 @@ export async function getTransfersByOwner(ownerId: string) {
       // Continue with empty array if there's an error
     }
 
-    // Get all new owners
+    // For NEW owners
     const { data: newOwners, error: newOwnersQueryError } = await supabase
       .from("TransferNewOwners")
       .select(`
         owner_id,
         Owner (
           owner_id,
-          first_name,
-          last_name,
-          email
+          user_id,
+          User (
+            user_id,
+            first_name,
+            last_name,
+            email
+          )
         )
       `)
       .eq("transfer_id", transfer.transferId);

@@ -442,6 +442,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         userID={userID}
         onInitiateTransfer={async (propertyId, allOldOwnerIds, newOwnerStateIds) => {
           try {
+            console.log("Initiating transfer for property:", propertyId, allOldOwnerIds, newOwnerStateIds);
             await apiClient.initiateTransfer(propertyId, allOldOwnerIds, newOwnerStateIds);
 
             // Refresh transfers from API
