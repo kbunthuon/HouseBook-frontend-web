@@ -93,7 +93,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       loadProperties();
       loadTransfers();
     }
-  }, [userID, myProperties]);
+  }, [userID]);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
