@@ -117,7 +117,7 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
   // Validate required fields
   if (!job.propertyId) throw new Error(`Missing "propertyId".`);
   if (!job.title) throw new Error(`Missing "title".`);
-  if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);
+  // if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);
 
   // Insert job
   const { data, error } = await supabase.from("Jobs").insert([
@@ -125,7 +125,7 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
       property_id: job.propertyId,
       title: job.title,
       end_time: job.endTime ? new Date(job.endTime).toISOString() : oneHourFromNowISO(),
-      expired: false, // Just created, cannot be expired
+      // expired: false, // Just created, cannot be expired
     } 
   ]).select(); // returns the inserted row
 
@@ -214,8 +214,7 @@ export async function updateJobTable(job: Job): Promise<Job> {
     .from("Jobs")
     .update({
       title: job.title,
-      endTime: job.endTime ? new Date(job.endTime).toISOString() : null,
-      expired: job.expired,
+      end_time: job.endTime ? new Date(job.endTime).toISOString() : null,
       pin: job.pin,
     })
     .eq("id", job.id)
@@ -224,7 +223,18 @@ export async function updateJobTable(job: Job): Promise<Job> {
   if (error) throw new Error(`Failed to update job: ${error.message}`);
   if (!data || data.length === 0) throw new Error("No job updated");
 
-  return data[0] as Job;
+  // Map database response (snake_case) to Job interface (camelCase)
+  const updatedJob: Job = {
+    id: data[0].id,
+    propertyId: data[0].property_id,
+    title: data[0].title,
+    createdAt: data[0].created_at,
+    endTime: data[0].end_time,
+    expired: data[0].expired,
+    pin: data[0].pin,
+  };
+
+  return updatedJob;
 }
 
 /**

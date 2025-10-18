@@ -33,7 +33,8 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       propertyId: string;
       name: string;
       address?: string;
-      currentOwners: string[];
+      // currentOwners: string[]; // Something not right here?
+      currentOwners: { email: string; firstName?: string; lastName?: string }[];
       invitedOwners: { email: string; firstName?: string; lastName?: string }[];
       createdAt: Date;
       transferStatus: "PENDING" | "ACCEPTED" | "DECLINED";
@@ -44,41 +45,70 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transferId: string; propertyName: string } | null>(null);
 
-  const navigate = useNavigate();
-
-  const handleViewTransfer = (pid: string) => {
-    if (!pid) return;
-    navigate(ROUTES.propertyTransferPath(pid)); 
-  };
-
   const loadTransfers = async () => {
-  setLoading(true);
-  try {
-    const res = await apiClient.getTransfersByUser(userID);
-    // Map API response to the format used by the table
-    const mappedTransfers = (res.transfers || []).map((t: any) => ({
-      propertyId: t.propertyId,
-      name: t.propertyName,
-      address: t.propertyAddress,
-      currentOwners: t.oldOwners.map((o: any) =>
-        o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
-      ),
-      invitedOwners: t.newOwners.map((o: any) => ({
-        email: o.email,
-        firstName: o.firstName,
-        lastName: o.lastName,
-      })),
-      createdAt: new Date(t.transferCreatedAt),
-      transferStatus: t.transferStatus, // Overall transfer status
-      userStatus: t.userStatus, // This user's individual status
-      transferId: t.transferId,
-    }));
-    setTransferProperties(mappedTransfers);
-  } catch (err) {
-    console.error("Failed to load transfers:", err);
-  }
-  setLoading(false);
-};
+    setLoading(true);
+    try {
+      const res = await apiClient.getTransfersByUser(userID);
+      console.log("Raw API response:", res);
+      
+      // Map API response to the format used by the table
+      const mappedTransfers = (res.transfers || []).map((t: any) => {
+        console.log("Processing transfer:", t);
+
+        return {
+          propertyId: t.propertyId,
+          name: t.propertyName,
+          address: t.propertyAddress,
+          // OLD OWNERS - use the properly mapped data from backend
+          currentOwners: (t.oldOwners || []).map((o: any) => ({
+            email: o.email,
+            firstName: o.firstName,
+            lastName: o.lastName,
+            acceptStatus: o.acceptStatus,
+          })),
+          // NEW OWNERS - use the properly mapped data from backend
+          invitedOwners: (t.newOwners || []).map((o: any) => ({
+            email: o.email,
+            firstName: o.firstName,
+            lastName: o.lastName,
+            acceptStatus: o.acceptStatus,
+          })),
+          createdAt: new Date(t.transferCreatedAt),
+          transferStatus: t.transferStatus, // Overall transfer status (ACCEPTED, PENDING, etc.)
+          // User status - find this user's acceptStatus from either oldOwners or newOwners
+          userStatus:
+            t.oldOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
+            t.newOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
+            "PENDING",
+          transferId: t.transferId,
+        };
+      });
+
+      // // Group by property and keep only the latest transfer for each property
+      // const transfersByProperty = new Map<string, typeof mappedTransfers[0]>();
+
+      // for (const transfer of mappedTransfers) {
+      //   const existing = transfersByProperty.get(transfer.propertyId);
+
+      //   // Keep the transfer if:
+      //   // 1. No existing transfer for this property, OR
+      //   // 2. This transfer is newer than the existing one
+      //   if (!existing || transfer.createdAt > existing.createdAt) {
+      //     transfersByProperty.set(transfer.propertyId, transfer);
+      //   }
+      // }
+
+      // const uniqueTransfers = Array.from(transfersByProperty.values())
+      //   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // console.log("Mapped transfers (before dedup):", mappedTransfers);
+      // console.log("Unique transfers (after dedup):", uniqueTransfers);
+      setTransferProperties(mappedTransfers);
+    } catch (err) {
+      console.error("Failed to load transfers:", err);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -93,7 +123,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       loadProperties();
       loadTransfers();
     }
-  }, [userID]);
+  }, []);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -302,19 +332,10 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           <div className="flex justify-between items-center">
             <CardTitle>Transfer Property List</CardTitle>
             <div className="flex items-center space-x-2">
-              {/*
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search my properties..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              */ }
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[50vh] overflow-y-auto">
           {transferProperties.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
@@ -342,9 +363,13 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                     </TableCell>
 
                     <TableCell>
-                      {property.currentOwners?.length
-                        ? property.currentOwners.join(", ")
-                        : "Unknown"}
+                      {property.currentOwners.map((owner, i) => (
+                        <div key={i} className="text-sm">
+                          {owner.firstName && owner.lastName
+                            ? `${owner.firstName} ${owner.lastName}`
+                            : owner.email}
+                        </div>
+                      ))}
                     </TableCell>
 
                     <TableCell>
@@ -442,6 +467,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         userID={userID}
         onInitiateTransfer={async (propertyId, allOldOwnerIds, newOwnerStateIds) => {
           try {
+            console.log("Initiating transfer for property:", propertyId, allOldOwnerIds, newOwnerStateIds);
             await apiClient.initiateTransfer(propertyId, allOldOwnerIds, newOwnerStateIds);
 
             // Refresh transfers from API
