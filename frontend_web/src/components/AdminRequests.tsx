@@ -8,7 +8,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
+//import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property, Owner, ChangeLog } from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -35,16 +35,18 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
       const getOwnerProps = async () => {
         try {
           
-          const properties = await getAdminProperty(userId, userType);
+          const properties = await apiClient.getAdminProperties(userId, userType);
           setOwnerProperties(properties ?? []);
           
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
           console.log("property", propertyIds);
-          const changes = await getChangeLogs(propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
+          console.log("changes", changes);
+          const ownersResults = await apiClient.getAllOwners();
+          console.log("ownersResults", ownersResults);
 
-          const ownersResults = await getAllOwners();
           setOwners(ownersResults);
   
             if (!changes) {
@@ -53,19 +55,21 @@ export function AdminRequests({ userId, userType}: AdminRequestProps) {
             return;
           }
   
-            // Normalizing user from array so that it is a single object
-            // const normalizedChanges = (changes ?? []).map((c: any) => ({
-            //   ...c,
-            //   user: c.user && c.user.length > 0 ? c.user[0] : null,
-            //   userFirstName: c.user?.[0]?.first_name || 'Unknown',
-            //   userLastName: c.user?.[0]?.last_name || 'Unknown',
-            //   userEmail: c.user?.[0]?.email || '',
-            // }));
+            // TODO: change to snake case when types update
 
-            const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
-              ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
+            const normalizedChanges: OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
+              id: c.changelog_id,
+              changeDescription: c.changelog_description,
+              created_at: c.changelog_created_at,
+              status: c.changelog_status,
+              specifications: c.changelog_specifications ?? {}, // ensure not undefined
+              propertyId: c.property_id,
+              user: c.user?.[0] ?? null,
+              userFirstName: c.user_first_name || 'Unknown',
+              userLastName: c.user_last_name || 'Unknown',
+              userEmail: c.user?.[0]?.email || '',
             }));
+
   
             setRequests(normalizedChanges);
             console.log("requests in AdminRequests:", changes);
@@ -241,7 +245,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                   <Label>Field Specification</Label>
                                   <td className="px-4 py-2">
                                     <ul className="text-xs space-y-1">
-                                      {Object.entries(request.specifications).map(([key, value]) => (
+                                      {Object.entries(request.specifications??{}).map(([key, value]) => (
                                         <li key={key}>
                                           <strong>{key}:</strong> {String(value)}
                                         </li>
