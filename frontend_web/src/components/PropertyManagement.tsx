@@ -8,7 +8,7 @@ import { Search, ExternalLink, Edit, Key, BarChart3, Settings } from "lucide-rea
 // import { getProperty } from "../../../backend/FetchData";
 import { Property } from "../types/serverTypes";
 import { apiClient } from "../api/wrappers";
-import { getAdminProperty } from "../../../backend/FetchData";
+//import { getAdminProperty } from "../../../backend/FetchData";
 
 interface PropertyManagementProps {
   userId: string;
@@ -28,7 +28,7 @@ export function PropertyManagement({ userId, userType, onViewProperty, onAddProp
       setLoading(true);
 
 
-      const properties = await getAdminProperty(userId, userType);
+      const properties = await apiClient.getAdminProperties(userId, userType);
       // Remove duplicate properties by propertyId
       const uniquePropertiesMap = new Map();
       properties?.forEach((p: any) => {

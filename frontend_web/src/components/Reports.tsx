@@ -15,12 +15,13 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
 import {
-  getPropertyDetails,
+  //getPropertyDetails,
   getProperty,
   getUserIdByEmail,
-  getAdminProperty
+  //getAdminProperty
 } from "../../../backend/FetchData";
 import { getPropertyImages } from "../../../backend/ImageUpload";
+import { apiClient } from "../api/wrappers";
 
 // Reference to hold the html2pdf library once loaded dynamically
 const html2pdfRef = { current: null as any };
@@ -118,7 +119,7 @@ export function Reports({ userId, userType }: ReportsProps) {
   const fetchProperties = async () => {
     setLoadingProperties(true);
     try {
-      const props = await getAdminProperty(userId, userType);
+      const props = await apiClient.getAdminProperties(userId, userType);
       if (props && Array.isArray(props)) {
         // Get unique properties by propertyId
         const uniquePropsMap = new Map();
@@ -235,7 +236,7 @@ export function Reports({ userId, userType }: ReportsProps) {
   useEffect(() => {
     if (!reportConfig.propertyId) return;
     (async () => {
-      const data = await getPropertyDetails(reportConfig.propertyId);
+      const data = await apiClient.getPropertyDetails(reportConfig.propertyId);
       setProperty(data);
     })();
   }, [reportConfig.propertyId]);

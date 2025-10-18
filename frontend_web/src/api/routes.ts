@@ -32,6 +32,9 @@ export const API_ROUTES = {
   // Admin Routes
   ADMIN: {
     ONBOARD_PROPERTY: `${BASE_URL}/admin/onboard`,
+    GET_ADMIN_PROPERTIES: (userId: string, userType: string) => 
+      `${BASE_URL}/admin?action=getAdminProperty&userId=${encodeURIComponent(userId)}&userType=${encodeURIComponent(userType)}`,
+    GET_ALL_OWNERS: `${BASE_URL}/admin?action=getAllOwners`,
   },
 
   // Property Routes
