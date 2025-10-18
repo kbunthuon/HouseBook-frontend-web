@@ -33,7 +33,8 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       propertyId: string;
       name: string;
       address?: string;
-      currentOwners: string[];
+      // currentOwners: string[]; // Something not right here?
+      currentOwners: { email: string; firstName?: string; lastName?: string }[];
       invitedOwners: { email: string; firstName?: string; lastName?: string }[];
       createdAt: Date;
       transferStatus: "PENDING" | "ACCEPTED" | "DECLINED";
@@ -43,13 +44,6 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transferId: string; propertyName: string } | null>(null);
-
-  const navigate = useNavigate();
-
-  const handleViewTransfer = (pid: string) => {
-    if (!pid) return;
-    navigate(ROUTES.propertyTransferPath(pid)); 
-  };
 
   const loadTransfers = async () => {
     setLoading(true);
@@ -66,9 +60,12 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           name: t.propertyName,
           address: t.propertyAddress,
           // OLD OWNERS - use the properly mapped data from backend
-          currentOwners: (t.oldOwners || []).map((o: any) =>
-            o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email || "Unknown"
-          ),
+          currentOwners: (t.oldOwners || []).map((o: any) => ({
+            email: o.email,
+            firstName: o.firstName,
+            lastName: o.lastName,
+            acceptStatus: o.acceptStatus,
+          })),
           // NEW OWNERS - use the properly mapped data from backend
           invitedOwners: (t.newOwners || []).map((o: any) => ({
             email: o.email,
@@ -87,26 +84,26 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         };
       });
 
-      // Group by property and keep only the latest transfer for each property
-      const transfersByProperty = new Map<string, typeof mappedTransfers[0]>();
+      // // Group by property and keep only the latest transfer for each property
+      // const transfersByProperty = new Map<string, typeof mappedTransfers[0]>();
 
-      for (const transfer of mappedTransfers) {
-        const existing = transfersByProperty.get(transfer.propertyId);
+      // for (const transfer of mappedTransfers) {
+      //   const existing = transfersByProperty.get(transfer.propertyId);
 
-        // Keep the transfer if:
-        // 1. No existing transfer for this property, OR
-        // 2. This transfer is newer than the existing one
-        if (!existing || transfer.createdAt > existing.createdAt) {
-          transfersByProperty.set(transfer.propertyId, transfer);
-        }
-      }
+      //   // Keep the transfer if:
+      //   // 1. No existing transfer for this property, OR
+      //   // 2. This transfer is newer than the existing one
+      //   if (!existing || transfer.createdAt > existing.createdAt) {
+      //     transfersByProperty.set(transfer.propertyId, transfer);
+      //   }
+      // }
 
-      const uniqueTransfers = Array.from(transfersByProperty.values())
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      // const uniqueTransfers = Array.from(transfersByProperty.values())
+      //   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      console.log("Mapped transfers (before dedup):", mappedTransfers);
-      console.log("Unique transfers (after dedup):", uniqueTransfers);
-      setTransferProperties(uniqueTransfers);
+      // console.log("Mapped transfers (before dedup):", mappedTransfers);
+      // console.log("Unique transfers (after dedup):", uniqueTransfers);
+      setTransferProperties(mappedTransfers);
     } catch (err) {
       console.error("Failed to load transfers:", err);
     }
@@ -126,7 +123,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       loadProperties();
       loadTransfers();
     }
-  }, [userID]);
+  }, []);
   
   const filteredProperties = myProperties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -335,19 +332,10 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           <div className="flex justify-between items-center">
             <CardTitle>Transfer Property List</CardTitle>
             <div className="flex items-center space-x-2">
-              {/*
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search my properties..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              */ }
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[50vh] overflow-y-auto">
           {transferProperties.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
@@ -375,9 +363,13 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                     </TableCell>
 
                     <TableCell>
-                      {property.currentOwners?.length
-                        ? property.currentOwners.join(", ")
-                        : "Unknown"}
+                      {property.currentOwners.map((owner, i) => (
+                        <div key={i} className="text-sm">
+                          {owner.firstName && owner.lastName
+                            ? `${owner.firstName} ${owner.lastName}`
+                            : owner.email}
+                        </div>
+                      ))}
                     </TableCell>
 
                     <TableCell>
