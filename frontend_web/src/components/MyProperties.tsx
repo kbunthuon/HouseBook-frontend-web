@@ -60,34 +60,53 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
       // Map API response to the format used by the table
       const mappedTransfers = (res.transfers || []).map((t: any) => {
         console.log("Processing transfer:", t);
-        
+
         return {
           propertyId: t.propertyId,
           name: t.propertyName,
           address: t.propertyAddress,
-          // OLD OWNERS - map correctly from the actual structure
+          // OLD OWNERS - use the properly mapped data from backend
           currentOwners: (t.oldOwners || []).map((o: any) =>
             o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email || "Unknown"
           ),
-          // NEW OWNERS - map correctly from the actual structure
+          // NEW OWNERS - use the properly mapped data from backend
           invitedOwners: (t.newOwners || []).map((o: any) => ({
             email: o.email,
             firstName: o.firstName,
             lastName: o.lastName,
+            acceptStatus: o.acceptStatus,
           })),
           createdAt: new Date(t.transferCreatedAt),
           transferStatus: t.transferStatus, // Overall transfer status (ACCEPTED, PENDING, etc.)
           // User status - find this user's acceptStatus from either oldOwners or newOwners
-          userStatus: 
+          userStatus:
             t.oldOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
             t.newOwners?.find((o: any) => o.userId === userID)?.acceptStatus ||
             "PENDING",
           transferId: t.transferId,
         };
       });
-      
-      console.log("Mapped transfers:", mappedTransfers);
-      setTransferProperties(mappedTransfers);
+
+      // Group by property and keep only the latest transfer for each property
+      const transfersByProperty = new Map<string, typeof mappedTransfers[0]>();
+
+      for (const transfer of mappedTransfers) {
+        const existing = transfersByProperty.get(transfer.propertyId);
+
+        // Keep the transfer if:
+        // 1. No existing transfer for this property, OR
+        // 2. This transfer is newer than the existing one
+        if (!existing || transfer.createdAt > existing.createdAt) {
+          transfersByProperty.set(transfer.propertyId, transfer);
+        }
+      }
+
+      const uniqueTransfers = Array.from(transfersByProperty.values())
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      console.log("Mapped transfers (before dedup):", mappedTransfers);
+      console.log("Unique transfers (after dedup):", uniqueTransfers);
+      setTransferProperties(uniqueTransfers);
     } catch (err) {
       console.error("Failed to load transfers:", err);
     }

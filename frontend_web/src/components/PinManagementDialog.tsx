@@ -44,16 +44,24 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
     const loadJobData = async () => {
       if (job && open) {
         setJobData(job);
-        
-        if (job.id) {
+
+        if (job.id && property) {
           try {
             const existingAssets = await fetchJobAssets(job.id);
             const assetIds = existingAssets.map(asset => asset.asset_id);
             setSelectedAssets(assetIds);
-            
-            // Convert asset IDs back to UI keys
+
+            // Convert asset IDs back to UI keys - wait for property data to be available
             const uiKeys: string[] = [];
-            propertySections.forEach(section => {
+            const sections = (property?.spaces ?? []).map(s => ({
+              name: s.name,
+              assets: (s.assets ?? []).map(a => ({
+                id: a.id,
+                type: a.type ?? a.assetTypes?.name ?? "",
+              })),
+            }));
+
+            sections.forEach(section => {
               section.assets.forEach(asset => {
                 if (assetIds.includes(asset.id)) {
                   const uiKey = `${section.name}: ${asset.type}`;
@@ -61,7 +69,7 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
                 }
               });
             });
-            
+
             setSelectedSections(syncParentsFromChildren(new Set(uiKeys)));
             updateDisciplineSelections(uiKeys);
           } catch (error) {
@@ -82,7 +90,7 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
     };
 
     loadJobData();
-  }, [job, open, propertyId]);
+  }, [job, open, propertyId, property]);
 
   // Reset selections for new job
   useEffect(() => {
@@ -319,7 +327,8 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
+    if (!open && !isEdit) {
+      // Only clear state when closing if it's not an edit dialog
       setSelectedSections([]);
       setSelectedDisciplines([]);
       setSelectedAssets([]);
@@ -353,8 +362,8 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
               type="datetime-local"
               className="mt-1 w-full rounded-md border px-3 py-2"
               min={localInputValue()}
-              value={jobData.endTime ? jobData.endTime.slice(0, 16) : ""}
-              onChange={(e) => updateJobData("endTime", e.target.value)}
+              value={jobData.endTime ? (jobData.endTime.includes('T') ? jobData.endTime.slice(0, 16) : jobData.endTime) : ""}
+              onChange={(e) => updateJobData("endTime", e.target.value || null)}
             />
           </div>
 
