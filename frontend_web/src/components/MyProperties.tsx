@@ -13,7 +13,7 @@ import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 import { toast } from "sonner";
 import { approveTransfer, rejectTransfer } from "../../../backend/TransferService";
-import { getOwnerId } from "../../../backend/FetchData";
+//import { getOwnerId } from "../../../backend/FetchData";
 
 interface MyPropertiesProps {
   ownerId: string;
@@ -167,7 +167,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
 
     try {
       // Get owner ID from user ID
-      const ownerId = await getOwnerId(userID);
+      const ownerId = await apiClient.getOwnerId(userID);
 
       if (confirmAction.type === 'approve') {
         await approveTransfer(confirmAction.transferId, ownerId);

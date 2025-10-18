@@ -10,7 +10,7 @@ import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+//import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
 import { Property, ChangeLog} from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { apiClient } from "../api/wrappers.ts";
@@ -44,7 +44,7 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
   
           if (properties && properties.length > 0) {
           const propertyIds = properties.map((p: any) => p.propertyId);
-          const changes = await getChangeLogs(propertyIds);
+          const changes = await apiClient.getChangeLogs(propertyIds);
   
             if (!changes) {
             console.error("Error fetching change logs.");
@@ -53,9 +53,19 @@ export function OwnerRequests({ userId }: OwnerRequestsProps) {
           }
   
             // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
-              ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
+            // TODO: change to snake case when types update
+
+            const normalizedChanges: OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
+              id: c.changelog_id,
+              changeDescription: c.changelog_description,
+              created_at: c.changelog_created_at,
+              status: c.changelog_status,
+              specifications: c.changelog_specifications ?? {}, // ensure not undefined
+              propertyId: c.property_id,
+              user: c.user?.[0] ?? null,
+              userFirstName: c.user_first_name || 'Unknown',
+              userLastName: c.user_last_name || 'Unknown',
+              userEmail: c.user?.[0]?.email || '',
             }));
   
             setRequests(normalizedChanges);

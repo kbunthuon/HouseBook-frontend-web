@@ -381,6 +381,30 @@ class ApiClient {
     return response.json();
   }
 
+  async getAdminProperties(userId: string, userType: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.ADMIN.GET_ADMIN_PROPERTIES(userId, userType)
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch admin properties");
+    }
+    const data = await response.json();
+    return data.properties;
+  }
+
+  async getAllOwners() {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.ADMIN.GET_ALL_OWNERS
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch all owners");
+    }
+    const data = await response.json();
+    return data.owners;
+  }
+
   // Property methods
   async getPropertyList(userId: string) {
     const response = await this.authenticatedRequest(
