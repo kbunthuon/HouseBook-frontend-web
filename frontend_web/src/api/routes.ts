@@ -19,7 +19,10 @@ export const API_ROUTES = {
   // User Routes ------ will need to update soon?
   USER: {
     INFO_BY_EMAIL: (email: string) =>
-      `${BASE_URL}/user/infoByEmail?email=${encodeURIComponent(email)}`,
+      `${BASE_URL}/user?action=getUserInfoByEmail&email=${encodeURIComponent(email)}`,
+
+    INFO_BY_OWNER_ID: (ownerId: string) =>
+      `${BASE_URL}/user?action=getUserInfoByOwnerId&ownerId=${encodeURIComponent(ownerId)}`,
   },
 
   // Owner Routes

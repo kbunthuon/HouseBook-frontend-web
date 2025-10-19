@@ -319,6 +319,33 @@ class ApiClient {
     };
   }
 
+  async getUserInfoByOwnerId(ownerId: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.USER.INFO_BY_OWNER_ID(ownerId)
+    );
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch user info");
+    }
+
+    const data = await response.json();
+
+    // Transform snake_case to camelCase
+    return {
+      ownerId: data.ownerId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+    };
+  }
+
+
   // Owner methods
   async getOwnerId(userId: string) {
     const response = await this.authenticatedRequest(
