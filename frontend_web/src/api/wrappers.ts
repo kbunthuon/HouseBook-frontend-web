@@ -17,24 +17,24 @@ class TokenManager {
     refreshToken: string,
     expiresAt?: number
   ) {
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
+    sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
     if (expiresAt) {
-      localStorage.setItem(this.EXPIRES_AT_KEY, expiresAt.toString());
+      sessionStorage.setItem(this.EXPIRES_AT_KEY, expiresAt.toString());
     }
   }
 
   static getAccessToken(): string | null {
-    return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+    return sessionStorage.getItem(this.ACCESS_TOKEN_KEY);
   }
 
   static getExpiresAt(): number | null {
-    const expiresAt = localStorage.getItem(this.EXPIRES_AT_KEY);
+    const expiresAt = sessionStorage.getItem(this.EXPIRES_AT_KEY);
     return expiresAt ? parseInt(expiresAt) : null;
   }
 
   static clearTokens() {
-    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-    localStorage.removeItem(this.EXPIRES_AT_KEY);
+    sessionStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(this.EXPIRES_AT_KEY);
   }
 
   static isTokenExpired(): boolean {
@@ -79,7 +79,7 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        console.log('✅ Tokens cleared from localStorage');
+        console.log('✅ Tokens cleared from sessionStorage');
         throw new Error("Session expired. Please login again.");
       }
     }
@@ -125,10 +125,10 @@ class ApiClient {
     try {
       await supabase.auth.signOut();
       TokenManager.clearTokens();
-      // Clear all app-related localStorage
-      Object.keys(localStorage).forEach(key => {
+      // Clear all app-related sessionStorage
+      Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('housebook_') || key.startsWith('sb-')) {
-          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
         }
       });
     } catch (error) {
@@ -185,10 +185,10 @@ class ApiClient {
     try {
       await supabase.auth.signOut();
       TokenManager.clearTokens();
-      // Clear all app-related localStorage
-      Object.keys(localStorage).forEach(key => {
+      // Clear all app-related sessionStorage
+      Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('housebook_') || key.startsWith('sb-')) {
-          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
         }
       });
     } catch (error) {
@@ -270,16 +270,16 @@ class ApiClient {
         throw new Error(error.error || "Logout failed");
       }
 
-      // 3. Clear all tokens and session data from localStorage
+      // 3. Clear all tokens and session data from sessionStorage
       TokenManager.clearTokens();
 
       // 4. Clear any other app-specific data that might be cached
-      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
 
-      // Clear all localStorage items related to the app (be careful not to clear third-party data)
-      Object.keys(localStorage).forEach(key => {
+      // Clear all sessionStorage items related to the app (be careful not to clear third-party data)
+      Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('housebook_') || key.startsWith('sb-')) {
-          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
         }
       });
 
@@ -288,7 +288,7 @@ class ApiClient {
       console.error("Logout error:", error);
       // Even if logout fails, still clear local data
       TokenManager.clearTokens();
-      localStorage.clear(); // Nuclear option: clear everything
+      sessionStorage.clear(); // Nuclear option: clear everything
       throw error;
     }
   }
