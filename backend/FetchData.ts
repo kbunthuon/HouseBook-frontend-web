@@ -202,13 +202,21 @@ export const getPropertyDetails = async (propertyId: string): Promise<Property |
   return property;
 };
 
-export const getPropertyImages = async (propertyId: string, imageName?: string): Promise<string[]> => {
+export async function getPropertyImages(
+  propertyId: string,
+  imageLink?: string
+): Promise<string[]> {
+  if (!propertyId) throw new Error("Missing propertyId");
+
+  // Fetch image links from Supabase table
   let query = supabase
     .from("PropertyImages")
     .select("image_link")
     .eq("property_id", propertyId);
 
-  if (imageName) query = query.eq("image_name", imageName);
+  if (imageLink) {
+    query = query.eq("image_link", imageLink);
+  }
 
   const { data: imagesData, error } = await query;
 
@@ -217,18 +225,33 @@ export const getPropertyImages = async (propertyId: string, imageName?: string):
     return [];
   }
 
-  const imageSet = new Set<string>();
+  if (!imagesData || imagesData.length === 0) return [];
 
-  imagesData?.forEach((row) => {
-    const { data: publicUrl } = supabase.storage
-      .from("PropertyImage")
-      .getPublicUrl(row.image_link);
+  // Deduplicate image links
+  const uniqueLinks = Array.from(
+    new Set(imagesData.map((row: any) => row.image_link))
+  );
 
-    if (publicUrl?.publicUrl) imageSet.add(publicUrl.publicUrl);
-  });
+  // Generate signed URLs
+  const imageUrls = await Promise.all(
+    uniqueLinks.map(async (link) => {
+      const { data: signedUrlData, error: signedUrlError } =
+        await supabase.storage
+          .from("Property_Images")
+          .createSignedUrl(link, 60 * 10); // 10 minutes
 
-  return Array.from(imageSet);
-};
+      if (signedUrlError) {
+        console.error("Error creating signed URL for", link, signedUrlError);
+        return null;
+      }
+
+      return signedUrlData?.signedUrl || null;
+    })
+  );
+
+  // Filter out any failed URLs
+  return imageUrls.filter(Boolean) as string[];
+}
 
 export const getPropertyOwners = async (propertyId: string): Promise<Owner[] | null> => {
   const { data, error } = await supabase
@@ -293,32 +316,32 @@ const { data, error } = await supabase
     return [];
   }
 
-  const properties: Property[] = data.map((row) => {
-    // Get the actual public URL for the splash image
-    const splashImageUrl = row.splash_image
-      ? supabase.storage
-          .from("PropertyImage")
-          .getPublicUrl(row.splash_image)
-          .data?.publicUrl ?? ''
-      : '';
+  const properties: Property[] = await Promise.all(
+    data.map(async (row) => {
+      // If getPropertyImages returns string[], take first; if string, just use it
+      const splashImageResult = await getPropertyImages(row.property_id, row.splash_image);
+      const splashImageUrl = Array.isArray(splashImageResult)
+        ? splashImageResult[0] || undefined
+        : splashImageResult || undefined;
 
-    return {
-      propertyId: row.property_id,
-      name: row.property_name,
-      address: row.address,
-      description: row.description,
-      pin: row.pin,
-      createdAt: row.property_created_at,
-      type: row.type,
-      status: row.status,
-      lastUpdated: row.last_updated,
-      completionStatus: row.completion_status,
-      totalFloorArea: row.total_floor_area,
-      spaces: [],  // populate later if needed
-      images: [],  // populate later if needed
-      splashImage: splashImageUrl,
-    };
-  });
+      return {
+        propertyId: row.property_id,
+        name: row.property_name,
+        address: row.address,
+        description: row.description,
+        pin: row.pin,
+        createdAt: row.property_created_at,
+        type: row.type,
+        status: row.status,
+        lastUpdated: row.last_updated,
+        completionStatus: row.completion_status,
+        totalFloorArea: row.total_floor_area,
+        spaces: [], // populate later if needed
+        images: [], // populate later if needed
+        splashImage: splashImageUrl,
+      };
+    })
+  );
 
   console.log("Returning properties:", properties);
   return properties;

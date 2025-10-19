@@ -379,16 +379,60 @@ export default function OldOwnerTransferDialog({
         </div>
 
         <Separator className="my-2" />
+        <div className="flex justify-end gap-2 p-4">
+          <Button
+            onClick={() => {
+              if (!propertyId) {
+                toast.error("Please select a property first");
+                return;
+              }
 
+              // Check that at least one change is being made
+              if (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0) {
+                toast.error("Please either add new owners or select owners to move out");
+                return;
+              }
+
+              // Calculate allOldOwnerIds: ALL current owners (A, B, C)
+              const allOldOwnerIds = currentOwners
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              // Calculate newOwnerStateIds: remaining owners + new owners
+              // Remaining = current owners NOT selected to move out
+              const remainingOwnerIds = currentOwners
+                .filter(o => !selectedOwnersMovingOut.includes(o.userId || ''))
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              const newInvitedOwnerIds = invitedOwners
+                .map(o => o.userId)
+                .filter((id): id is string => !!id);
+
+              const newOwnerStateIds = [...remainingOwnerIds, ...newInvitedOwnerIds];
+
+              onInitiateTransfer?.(propertyId, allOldOwnerIds, newOwnerStateIds);
+              toast.success("Transfer initiated");
+              onOpenChange(false);
+            }}
+            disabled={!propertyId || (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0)}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Initiate Transfer
+          </Button>
+
+        </div>
         {/* How to transfer */}
         <div className="rounded-lg bg-muted/40 p-4">
           <p className="font-semibold mb-2">How to transfer:</p>
           <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
             <li>Select a property to view its current owners.</li>
-            <li>Enter email addresses and add new owners to the list.</li>
-            <li>Click "Send Invitations" to notify new owners.</li>
-            <li>New owners will receive an inbox message to accept the property transfer request.</li>
-            <li>You'll receive a notification to approve or reject the property transfer request.</li>
+            <li><strong>To add new owners:</strong> Enter email addresses and add them to the list.</li>
+            <li><strong>To remove owners:</strong> Check the box next to owners who are moving out.</li>
+            <li>You can add new owners, remove existing ones, or do both in a single transfer.</li>
+            <li>Click "Initiate Transfer" to start the process.</li>
+            <li>All involved owners (current and new) will receive notifications to approve the transfer.</li>
+            <li>The transfer completes once all parties approve. Any rejection cancels the entire transfer.</li>
           </ol>
         </div>
 

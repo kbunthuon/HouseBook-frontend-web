@@ -2,42 +2,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogOverlay } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { ArrowLeft, Edit, Key, Image, History, Save, X, Trash2, Plus, AlertCircle, Download, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { Owner, ChangeLog, Property, Asset } from "../types/serverTypes";
+import { Property, Asset, Space, Owner } from "@housebookgroup/shared-types";
+import { ChangeLog } from "../types/serverTypes";
+import { useProperty, usePropertyImages, usePropertyOwners, useAssetTypes, useSpaceTypes, usePropertyJobs, useDeleteJob, queryKeys } from "../hooks/useQueries";
 
 import { fetchJobsInfo, Job, JobAsset, deleteJob } from "../../../backend/JobService";
 
-import { 
-  updateProperty, 
-  updateSpace, 
-  updateAsset, 
+import {
+  updateProperty,
+  updateSpace,
+  updateAsset,
   deleteSpace,
   deleteAsset,
   createSpace,
   createAsset,
-  updateFeatures,
   deleteFeature,
-  getAssetTypes,
-  getPropertyForEdit,
-  PropertyUpdate, 
-  SpaceUpdate, 
-  AssetUpdate 
+  PropertyUpdate,
+  SpaceUpdate,
+  AssetUpdate
 } from "../../../backend/PropertyEditService";
-import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
-import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+import { getPropertyHistory, getSpaceHistory } from "../../../backend/ChangeLogService";
 import { apiClient } from "../api/wrappers";
-import SplashImageDialog from "./Dialogues/SplashImageSelect";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -56,31 +54,50 @@ interface DialogContext {
 }
 
 export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
+  const queryClient = useQueryClient();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false);
   const [isAllHistoryDialogOpen, setIsAllHistoryDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  
+
   const [dialogContext, setDialogContext] = useState<DialogContext>({ mode: null });
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'space' | 'asset' | 'feature', id?: string, name?: string }>({ type: 'asset' });
 
-  const [property, setProperty] = useState<Property | null>(null);
-  const [owners, setOwners] = useState<Owner[] | null>(null);
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
-  const [allJobAssets, setAllJobAssets] = useState<JobAsset[]>([]);
+  // React Query hooks - fetch data in parallel automatically
+  const { data: property, isLoading: propertyLoading, error: propertyError } = useProperty(propertyId);
+  const { data: imagesResult, isLoading: imagesLoading } = usePropertyImages(propertyId);
+  const { data: owners, isLoading: ownersLoading } = usePropertyOwners(propertyId);
+  const { data: assetTypesData, isLoading: assetTypesLoading } = useAssetTypes();
+  const { data: spaceTypesData, isLoading: spaceTypesLoading } = useSpaceTypes();
+
+  // Merge images into property object
+  const propertyWithImages = property ? { ...property, images: imagesResult?.images || [] } : null;
+
+  // React Query hook for jobs
+  const { data: jobsData, isLoading: jobsLoading } = usePropertyJobs(propertyId);
+  const deleteJobMutation = useDeleteJob();
+
+  const allJobs = jobsData?.jobs || [];
+  const allJobAssets = jobsData?.jobAssets || [];
+
   const [changelogHistory, setChangelogHistory] = useState<ChangeLog[]>([]);
   const [spaceChangelogHistory, setSpaceChangelogHistory] = useState<ChangeLog[]>([]);
-  const [assetTypes, setAssetTypes] = useState<any[]>([]);
-  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
+
+  // Combine loading states
+  const loading = propertyLoading || imagesLoading || ownersLoading || assetTypesLoading || spaceTypesLoading;
+  const error = propertyError ? (propertyError as Error).message : null;
+
+  // Extract data from React Query results
+  const assetTypes = assetTypesData || [];
+  const spaceTypes = spaceTypesData || [];
 
   // Image management states
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
@@ -150,16 +167,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     );
   }
 
-  useEffect(() => {
-    fetchData();
-    loadAssetTypes();
-    loadSpaceTypes();
-  }, [propertyId]);
+  // Jobs are now loaded via React Query (usePropertyJobs hook above)
 
   // Keyboard navigation for image viewer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedImage || !property?.images) return;
+      if (!selectedImage || !propertyWithImages?.images) return;
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -174,107 +187,67 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImage, selectedImageIndex, property?.images]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("Fetching data for propertyId:", propertyId);
-      const result = await apiClient.getPropertyDetails(propertyId);
-      if (result) setProperty(result);
-      else setError("Property not found");
-
-      // Fetch images
-      const imagesResult = await apiClient.getPropertyImages(propertyId);
-      console.log(imagesResult);
-      // Update property with images without losing current state
-      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
-
-      const ownerResult = await apiClient.getPropertyOwners(propertyId);
-      if (ownerResult) setOwners(ownerResult);
-
-      const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
-      if (jobs) setAllJobs(jobs);
-      if (jobAssets) setAllJobAssets(jobAssets);
-
-      console.log("property:", property);
-    } catch (err: any) {
-      setError(err.message ?? "Unexpected error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedImage, selectedImageIndex, propertyWithImages?.images]);
 
   // Map backend-shaped property to the shared Property shape expected by some child components
-  const mapToSharedProperty = (bp: Property | null) => {
+  const mapToSharedProperty = (bp: Property | null): Property | null => {
     if (!bp) return null;
     console.log("Mapping backend property to shared shape, images are", bp.images);
     return {
       propertyId: bp.propertyId,
-      address: bp.address || bp.address || "",
+      address: bp.address || "",
       description: bp.description || "",
-      pin: "",
+      pin: bp.pin || "",
       name: bp.name,
-      type: bp.totalFloorArea ? "" : "",
-      status: "",
-      lastUpdated: "",
-      completionStatus: 0,
+      type: bp.type || "",
+      status: bp.status || "",
+      lastUpdated: bp.lastUpdated || "",
+      completionStatus: bp.completionStatus || 0,
       totalFloorArea: bp.totalFloorArea,
-      spaces: bp.spaces?.map(s => ({
-        space_id: s.id,
+      spaces: bp.spaces?.map((s: Space) => ({
+        id: s.id,
         name: s.name,
         type: s.type || "",
-        assets: s.assets?.map(a => ({
-          assetId: a.id,
-          type: a.assetTypes?.name || a.type || "",
+        deleted: s.deleted || false,
+        assets: s.assets?.map((a: Asset) => ({
+          id: a.id,
           description: a.description || "",
+          type: a.type,
+          currentSpecifications: a.currentSpecifications || {},
+          deleted: a.deleted || false,
+          assetTypes: a.assetTypes,
         })) || [],
       })) || [],
       images: bp.images || [],
-      created_at: "",
-    } as any;
+      createdAt: bp.createdAt || "",
+      splashImage: bp.splashImage,
+    };
   };
 
-
-  const loadAssetTypes = async () => {
-    try {
-      const types = await getAssetTypes();
-      setAssetTypes(types);
-    } catch (error) {
-      console.error("Failed to load asset types:", error);
-    }
-  };
-
-  const loadSpaceTypes = async () => {
-    try {
-      const types = await fetchSpaceEnum();
-      setSpaceTypes(types || []);
-      // if creating a space and no type set, default to first enum
-      if (!formData.type && types && types.length > 0) {
-        setFormData((f: any) => ({ ...f, type: types[0] }));
-      }
-    } catch (err) {
-      console.error("Failed to load space types:", err);
-    }
+  // Refetch all property data after mutations
+  const refetchPropertyData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.property(propertyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(propertyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.propertyOwners(propertyId) });
+    queryClient.invalidateQueries({ queryKey: ['jobs', propertyId] }); // Reload jobs via React Query
   };
 
   // PROPERTY EDIT
   const handleEditProperty = () => {
     setDialogContext({ mode: 'property' });
     setFormData({
-      name: property?.name || '',
-      description: property?.description || '',
-      address: property?.address || '',
+      name: propertyWithImages?.name || '',
+      description: propertyWithImages?.description || '',
+      address: propertyWithImages?.address || '',
       type: 'Townhouse',
-      totalFloorArea: property?.totalFloorArea || 0
+      totalFloorArea: propertyWithImages?.totalFloorArea || 0
     });
     setIsDialogOpen(true);
   };
 
   // SPACE EDIT
   const handleEditSpace = (spaceId: string, spaceName: string) => {
-    const space = property?.spaces?.find(s => s.id === spaceId);
+    const space = propertyWithImages?.spaces?.find((s: Space) => s.id === spaceId);
     console.log("handleEditSpace: ", spaceId, spaceName);
     setDialogContext({ mode: 'space', spaceId, spaceName });
     setFormData({
@@ -303,8 +276,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // ASSET EDIT
   const handleEditAsset = (spaceId: string, spaceName: string, assetId: string, assetType: string) => {
-    const space = property?.spaces?.find(s => s.id === spaceId);
-    const asset = space?.assets?.find(a => a.id === assetId);
+    const space = propertyWithImages?.spaces?.find((s: Space) => s.id === spaceId);
+    const asset = space?.assets?.find((a: Asset) => a.id === assetId);
     console.log("handleEditAssets: spaceId: ", spaceId, ", spaceName: ", spaceName, ", assetId: ", assetId, ", assetType: ", assetType);
     setDialogContext({ mode: 'asset', spaceId, spaceName, assetId, assetType });
     setFormData({
@@ -399,13 +372,14 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         toast.success("Asset created successfully");
       }
       console.log("Dialog context: ", dialogContext);
-      await fetchData();
+      refetchPropertyData();
       setIsDialogOpen(false);
       setDialogContext({ mode: null });
-    } catch (error: any) {
-      console.error("Error saving:", error);
-      
-      toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error saving:", err);
+
+      toast.error(`Failed to save: ${err.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -414,7 +388,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   // DELETE HANDLER
   const handleConfirmDelete = async () => {
     setIsDeleteConfirmOpen(false);
-    
+
     try {
       if (deleteTarget.type === 'space') {
         await deleteSpace(deleteTarget.id!);
@@ -426,12 +400,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         await deleteFeature(deleteTarget.id!, deleteTarget.name!);
         toast.success("Feature deleted successfully");
       }
-      
-      await fetchData();
-    } catch (error: any) {
-      console.error("Error deleting:", error);
+
+      refetchPropertyData();
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error deleting:", err);
       console.log("Delete target: ", deleteTarget);
-      toast.error(`Failed to delete: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to delete: ${err.message || 'Unknown error'}`);
     }
   };
 
@@ -441,7 +416,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     console.log("handleShowTimeline spaceName: ", spaceName);
     if (spaceId) {
       try {
-        const history = await getSpaceHistory(spaceId);
+        const history = await apiClient.getSpaceHistory(spaceId);
         setSpaceChangelogHistory(history);
       } catch (error) {
         console.error("Failed to load space history:", error);
@@ -455,7 +430,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   const handleShowAllPropertyHistory = async () => {
     try {
-      const history = await getPropertyHistory(propertyId);
+      const history = await apiClient.getPropertyHistory(propertyId);
       setChangelogHistory(history);
     } catch (error) {
       console.error("Failed to load property history:", error);
@@ -464,28 +439,22 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     setIsAllHistoryDialogOpen(true);
   };
 
-  // PIN handlers
+  // PIN handlers - Using React Query mutations
   const handleSavePin = async (job: Job, assetIds?: string[]) => {
-    const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
-    if (jobs) setAllJobs(jobs);
-    if (jobAssets) setAllJobAssets(jobAssets);
+    queryClient.invalidateQueries({ queryKey: ['jobs', propertyId] });
     toast.success("Job saved successfully");
   };
 
   const handleSaveJobEdits = async (updatedJob: Job) => {
-    setAllJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
-    const [, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
-    if (jobAssets) setAllJobAssets(jobAssets);
+    queryClient.invalidateQueries({ queryKey: ['jobs', propertyId] });
     toast.success("Job updated successfully");
   };
 
   const handleDeleteJob = async (jobId: string) => {
-    const success = await deleteJob(jobId);
-    if (success) {
-      setAllJobs(prev => prev.filter(j => j.id !== jobId));
-      setAllJobAssets(prev => prev.filter(a => a.job_id !== jobId));
+    try {
+      await deleteJobMutation.mutateAsync(jobId);
       toast.success("Job deleted successfully");
-    } else {
+    } catch (error) {
       toast.error("Failed to delete job");
     }
   };
@@ -509,18 +478,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       
       // Add property information
       doc.setFontSize(20);
-      doc.text(property?.name || 'Property', 20, 20);
-      
+      doc.text(propertyWithImages?.name || 'Property', 20, 20);
+
       doc.setFontSize(12);
-      doc.text(`Address: ${property?.address || 'N/A'}`, 20, 35);
-      
+      doc.text(`Address: ${propertyWithImages?.address || 'N/A'}`, 20, 35);
+
       if (owners && owners.length > 0) {
         const ownerText = owners.length > 1 ? 'Owners:' : 'Owner:';
-        const ownerNames = owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ");
+        const ownerNames = owners.map((o: Owner) => `${o.firstName} ${o.lastName}`).join(", ");
         doc.text(`${ownerText} ${ownerNames}`, 20, 45);
       }
-      
-      doc.text(`Total Floor Area: ${property?.totalFloorArea || 0}m²`, 20, 55);
+
+      doc.text(`Total Floor Area: ${propertyWithImages?.totalFloorArea || 0}m²`, 20, 55);
       
       // Add QR code
       if (qrCodeRef.current) {
@@ -533,7 +502,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 167);
       
       // Save the PDF
-      doc.save(`${property?.name || 'property'}-QR.pdf`);
+      doc.save(`${propertyWithImages?.name || 'property'}-QR.pdf`);
       toast.success("PDF downloaded successfully");
     } catch (error) {
       console.error("Failed to generate PDF:", error);
@@ -553,17 +522,17 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   };
 
   const navigateToNextImage = () => {
-    if (!property?.images || selectedImageIndex === -1) return;
-    const nextIndex = (selectedImageIndex + 1) % property.images.length;
+    if (!propertyWithImages?.images || selectedImageIndex === -1) return;
+    const nextIndex = (selectedImageIndex + 1) % propertyWithImages.images.length;
     setSelectedImageIndex(nextIndex);
-    setSelectedImage(property.images[nextIndex]);
+    setSelectedImage(propertyWithImages.images[nextIndex]);
   };
 
   const navigateToPreviousImage = () => {
-    if (!property?.images || selectedImageIndex === -1) return;
-    const prevIndex = selectedImageIndex === 0 ? property.images.length - 1 : selectedImageIndex - 1;
+    if (!propertyWithImages?.images || selectedImageIndex === -1) return;
+    const prevIndex = selectedImageIndex === 0 ? propertyWithImages.images.length - 1 : selectedImageIndex - 1;
     setSelectedImageIndex(prevIndex);
-    setSelectedImage(property.images[prevIndex]);
+    setSelectedImage(propertyWithImages.images[prevIndex]);
   };
 
   // Image management handlers
@@ -624,18 +593,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         await apiClient.updatePropertySplashImage(selectedSplashImage);
         toast.success(`Splash image updated successfully`);
       }
-      
-      await fetchData();
+
+      refetchPropertyData();
       setImageAction(null);
-    } catch (error: any) {
-      console.error("Image operation failed:", error);
-      toast.error(`Failed: ${error.message || 'Unknown error'}`);
+    } catch (error) {
+      const err = error as Error;
+      console.error("Image operation failed:", err);
+      toast.error(`Failed: ${err.message || 'Unknown error'}`);
     }
   };
 
   const handleOpenSplashDialog = () => {
     // Pre-select the current splash image when the dialog opens
-    setSelectedSplashImage(property?.splashImage || null);
+    setSelectedSplashImage(propertyWithImages?.splashImage || null);
     setIsSplashDialogOpen(true);
   };
 
@@ -967,10 +937,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
                     <CardContent className="pt-4 space-y-3">
                       <div>
                         <Label>Asset Type *</Label>
-                        <Select 
-                          value={String(asset.assetTypeId)} 
+                        <Select
+                          value={String(asset.assetTypeId)}
                           onValueChange={(value: string) => {
-                            const assetType = assetTypes.find(t => t.id === parseInt(value));
+                            const assetType = assetTypes.find((t: any) => t.id === parseInt(value));
                             const updated = [...newSpaceAssets];
                             updated[idx] = {...asset, assetTypeId: parseInt(value), assetTypeName: assetType?.name || ''};
                             setNewSpaceAssets(updated);
@@ -1180,7 +1150,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="default">{(property && (property as any).status) ?? "Active"}</Badge>
+          <Badge variant="default">{(propertyWithImages && (propertyWithImages as any).status) ?? "Active"}</Badge>
           <Button variant="outline" size="sm" onClick={handleEditProperty}>
             <Edit className="h-4 w-4 mr-2" />Edit Property
           </Button>
@@ -1189,23 +1159,23 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 min-w-0">
-          <h1 className="break-words">{property?.name ?? "Property"}</h1>
-          <p className="text-muted-foreground text-lg break-words">{property?.description}</p>
+          <h1 className="break-words">{propertyWithImages?.name ?? "Property"}</h1>
+          <p className="text-muted-foreground text-lg break-words">{propertyWithImages?.description}</p>
           <div className="flex items-center flex-wrap gap-2 text-sm text-muted-foreground">
             <span className="break-words">
               {owners && owners.length > 0 ? (
                 <>
                   Owner{owners.length > 1 ? "s" : ""}:{" "}
-                  {owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ")}
+                  {owners.map((o: Owner) => `${o.firstName} ${o.lastName}`).join(", ")}
                 </>
               ) : (
                 "Owner: N/A"
               )}
             </span>
             <span>•</span>
-            <span className="break-words">{property?.address}</span>
+            <span className="break-words">{propertyWithImages?.address}</span>
             <span>•</span>
-            <span>{property?.totalFloorArea ?? 0}m²</span>
+            <span>{propertyWithImages?.totalFloorArea ?? 0}m²</span>
           </div>
           <div className="pt-2 flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleShowAllPropertyHistory}>
@@ -1241,21 +1211,21 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               <Plus className="h-4 w-4 mr-2" />
               Add Images
             </Button>
-            <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!property?.images || property.images.length === 0}>
+            <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Images
             </Button>
-            <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!property?.images || property.images.length === 0}>
+            <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
               <Plus className="h-4 w-4 mr-2" />
               Select splash image
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {property?.images && property.images.length > 0 ? (
+          {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
             <div className="overflow-x-auto py-4">
               <div className="flex gap-6 w-max">
-                {property.images.map((url, idx) => (
+                {propertyWithImages.images.map((url: string, idx: number) => (
                   <div
                     key={idx}
                     className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
@@ -1305,7 +1275,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           `}</style>
 
           {/* Navigation Button - Previous */}
-          {property?.images && property.images.length > 1 && (
+          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1341,7 +1311,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </div>
 
           {/* Navigation Button - Next */}
-          {property?.images && property.images.length > 1 && (
+          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1364,12 +1334,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </button>
 
           {/* Image Counter */}
-          {property?.images && property.images.length > 1 && (
+          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
             <div
               className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-2 rounded-full text-sm z-10"
               style={{ backdropFilter: 'blur(10px)' }}
             >
-              {selectedImageIndex + 1} / {property.images.length}
+              {selectedImageIndex + 1} / {propertyWithImages.images.length}
             </div>
           )}
         </div>
@@ -1383,13 +1353,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {property?.spaces?.filter(space => !space.deleted).map(space => (
+        {propertyWithImages?.spaces?.filter((space: Space) => !space.deleted).map((space: Space) => (
           <SpecificationSection
             key={space.id}
             title={space.name}
             spaceId={space.id}
             spaceName={space.name}
-            assets={(space.assets ?? []).filter(asset => !asset.deleted).map(asset => ({
+            assets={(space.assets ?? []).filter((asset: Asset) => !asset.deleted).map((asset: Asset) => ({
               id: asset.id,
               description: asset.description,
               discipline: asset.assetTypes?.discipline ?? "",
@@ -1414,7 +1384,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         <CardContent>
           <PinTable
             propertyId={propertyId}
-            property={property}
+            property={propertyWithImages}
             jobs={allJobs}
             jobAssets={allJobAssets}
             onDeleteJob={handleDeleteJob}
@@ -1423,7 +1393,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </CardContent>
       </Card>
 
-      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(property)} onSave={handleSavePin} />
+      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(propertyWithImages)} onSave={handleSavePin} />
 
       {renderDialog()}
 
@@ -1618,11 +1588,12 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             <DialogTitle>Delete Images</DialogTitle>
             <DialogDescription>Select images to delete from this property</DialogDescription>
           </DialogHeader>
-          
+
+
           <div className="space-y-4">
-            {property?.images && property.images.length > 0 ? (
+            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
               <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {property.images.map((url, idx) => (
+                {propertyWithImages.images.map((url: string, idx: number) => (
                   <div 
                     key={idx} 
                     className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
@@ -1679,9 +1650,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            {property?.images && property.images.length > 0 ? (
+            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
               <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {property.images.map((imgUrl, idx) => (
+                {propertyWithImages.images.map((imgUrl: string, idx: number) => (
                   <div
                     key={imgUrl} // use url as key for uniqueness
                     className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${

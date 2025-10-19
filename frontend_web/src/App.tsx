@@ -9,6 +9,8 @@ import {
   useParams,
 } from "react-router-dom";
 import { Toaster } from "sonner";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { Auth } from "./components/Auth";
 import { Layout } from "./components/Layout";
@@ -36,6 +38,18 @@ import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
 import { FormProvider, AdminFormProvider } from "./components/FormContext";
 import { apiClient } from "./api/wrappers";
+
+// Create a React Query client with optimized defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
+      cacheTime: 10 * 60 * 1000, // Cache persists for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      retry: 1, // Retry failed requests once
+    },
+  },
+});
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -129,9 +143,10 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-    <Toaster position="top-right" />
-      <Routes>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Toaster position="top-right" />
+        <Routes>
         {/* Default: send to role home if logged in, else to login */}
         <Route
           path="/"
@@ -218,7 +233,10 @@ export default function App() {
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      {/* React Query DevTools - only visible in development */}
+      <ReactQueryDevtools initialIsOpen={false} />
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

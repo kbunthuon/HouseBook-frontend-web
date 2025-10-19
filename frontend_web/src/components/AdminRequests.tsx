@@ -7,122 +7,51 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
-import { useState, useEffect} from "react";
-import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
-import supabase from "../../../config/supabaseClient.ts"
-import { Property, Owner, ChangeLog } from "../types/serverTypes.ts";
+import { useMemo } from "react";
+import { Property } from "@housebookgroup/shared-types";
+import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { apiClient } from "../api/wrappers.ts";
+import { useAdminProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
 
 interface AdminRequestProps {
   userId: string;
   userType: string;
 }
 
-interface OwnerChangeLog extends ChangeLog {
-  userEmail: string;
-  userFirstName: string;
-  userLastName: string;
-}
-
 export function AdminRequests({ userId, userType}: AdminRequestProps) {
-  const [myProperties, setOwnerProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
-  const [owners, setOwners] = useState<Owner[]>([]);
+  // React Query hooks for data fetching
+  const { data: myProperties = [], isLoading: propertiesLoading } = useAdminProperties(userId, userType);
 
-  useEffect (() => {
-      const getOwnerProps = async () => {
-        try {
-          
-          const properties = await getAdminProperty(userId, userType);
-          setOwnerProperties(properties ?? []);
-          
-  
-          if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-          console.log("property", propertyIds);
-          const changes = await getChangeLogs(propertyIds);
+  // Get property IDs for changelog query
+  const propertyIds = useMemo(() => {
+    return myProperties.map((p: Property) => p.propertyId);
+  }, [myProperties]);
 
-          const ownersResults = await getAllOwners();
-          setOwners(ownersResults);
-  
-            if (!changes) {
-            console.error("Error fetching change logs.");
-            setLoading(false);
-            return;
-          }
-  
-            // Normalizing user from array so that it is a single object
-            // const normalizedChanges = (changes ?? []).map((c: any) => ({
-            //   ...c,
-            //   user: c.user && c.user.length > 0 ? c.user[0] : null,
-            //   userFirstName: c.user?.[0]?.first_name || 'Unknown',
-            //   userLastName: c.user?.[0]?.last_name || 'Unknown',
-            //   userEmail: c.user?.[0]?.email || '',
-            // }));
+  const { data: requests = [], isLoading: requestsLoading } = useChangeLogs(propertyIds);
 
-            const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
-              ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
-            }));
-  
-            setRequests(normalizedChanges);
-            console.log("requests in AdminRequests:", changes);
-          } else {
-            setRequests([]);
-          }
-  
-        } catch (error) {
-          console.error(error);
-          setOwnerProperties([]);
-  
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      getOwnerProps();
-    },[userId])
+  // Mutations for approve/reject
+  const approveEditMutation = useApproveEdit();
+  const rejectEditMutation = useRejectEdit();
 
+  const loading = propertiesLoading || requestsLoading;
 
-
-const approveEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "ACCEPTED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
+  const approveEdit = async (id: string) => {
+    try {
+      await approveEditMutation.mutateAsync(id);
       console.log(`Approved edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
-      )
-      );
-
+    } catch (error) {
+      console.error("Error approving edit:", error);
     }
   };
 
-const rejectEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "DECLINED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
-      console.log(`Declined edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
-      )
-      );
+  const rejectEdit = async (id: string) => {
+    try {
+      await rejectEditMutation.mutateAsync(id);
+      console.log(`Rejected edit ${id}`);
+    } catch (error) {
+      console.error("Error rejecting edit:", error);
     }
-  }
+  };
 
   const getEditStatusColor = (status: string) => {
     switch (status) {
@@ -241,7 +170,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                   <Label>Field Specification</Label>
                                   <td className="px-4 py-2">
                                     <ul className="text-xs space-y-1">
-                                      {Object.entries(request.specifications).map(([key, value]) => (
+                                      {Object.entries(request.specifications??{}).map(([key, value]) => (
                                         <li key={key}>
                                           <strong>{key}:</strong> {String(value)}
                                         </li>
@@ -253,11 +182,15 @@ function formatDateTime(timestamp: string | number | Date) {
                                   <Button
                                     variant="outline"
                                     onClick={() => rejectEdit(request.id)}
+                                    disabled={request.status !== "PENDING"}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button
+                                    onClick={() => approveEdit(request.id)}
+                                    disabled={request.status !== "PENDING"}
+                                  >
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>
