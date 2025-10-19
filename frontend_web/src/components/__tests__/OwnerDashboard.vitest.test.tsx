@@ -1,0 +1,81 @@
+import React from 'react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
+import { OwnerDashboard } from '../OwnerDashboard';
+import { apiClient } from '../../api/wrappers';
+import { getChangeLogs } from '../../../../backend/FetchData';
+
+// Mock backend modules and supabase
+vi.mock('../../../../backend/FetchData');
+vi.mock('../../../../config/supabaseClient.ts', () => ({
+  default: {
+    from: (_table: string) => ({
+      update: (_payload: any) => ({
+        eq: (_field: string, _val: any) => Promise.resolve({ data: {}, error: null })
+      })
+    })
+  }
+}));
+
+// Casts
+const mockGetChangeLogs = getChangeLogs as any;
+
+const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
+describe('OwnerDashboard (vitest)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Ensure apiClient methods are mocked functions we can control
+    (apiClient.getOwnerId as any) = vi.fn().mockResolvedValue('owner-1');
+    (apiClient.getPropertyList as any) = vi.fn().mockResolvedValue([]);
+    mockGetChangeLogs.mockResolvedValue([]);
+  });
+
+  it('shows no pending requests when none', async () => {
+    renderWithRouter(<OwnerDashboard userId="user-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No pending requests/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders pending requests and opens details dialog', async () => {
+    const mockProps = [{ propertyId: 'property-1', address: '123 Fake St' }];
+    const mockChanges = [
+      {
+        id: 'change-1',
+        propertyId: 'property-1',
+        changeDescription: 'Change the roof color',
+        status: 'PENDING',
+        specifications: {},
+        created_at: new Date().toISOString(),
+        user: { first_name: 'Alice', last_name: 'Smith', email: 'alice@example.com' }
+      }
+    ];
+
+  (apiClient.getPropertyList as any).mockResolvedValue(mockProps);
+  mockGetChangeLogs.mockResolvedValue(mockChanges);
+
+    renderWithRouter(<OwnerDashboard userId="user-1" />);
+
+    // Wait for the change description to appear in the table
+    await waitFor(() => expect(screen.getByText('Change the roof color')).toBeInTheDocument());
+
+    // Open the view dialog (the Eye button)
+    const eyeButton = screen.getAllByRole('button').find((b) => b.getAttribute('title') === null);
+    // There are many buttons; find the one that has an accessible name via svg only. Fallback: click the first button in the row.
+    if (eyeButton) fireEvent.click(eyeButton);
+
+  // After opening, find the dialog and the Approve button inside it
+  const dialog = await screen.findByRole('dialog');
+  await waitFor(() => expect(within(dialog).getByRole('button', { name: /Approve/i })).toBeInTheDocument());
+
+  // Click Approve inside the dialog and ensure the UI remains stable
+  const approve = within(dialog).getByRole('button', { name: /Approve/i });
+  fireEvent.click(approve);
+
+  // The dialog may close and UI will update; at minimum ensure the change description row still exists
+  await waitFor(() => expect(screen.queryByText('Change the roof color')).toBeInTheDocument());
+  });
+});
