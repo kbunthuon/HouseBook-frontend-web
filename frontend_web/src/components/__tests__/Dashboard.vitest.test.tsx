@@ -1,17 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { vi } from 'vitest';
-import { fireEvent } from '@testing-library/react';
 import { Dashboard } from '../Dashboard';
+import { apiClient } from '../../api/wrappers';
 
-// Mock the backend FetchData module that the component imports
-vi.mock('../../../../backend/FetchData', () => ({
-  getAdminProperty: vi.fn(),
-  getChangeLogs: vi.fn(),
-  getAllOwners: vi.fn(),
-}));
-
-import * as FetchData from '../../../../backend/FetchData';
+// Ensure we can control apiClient calls used by the hooks
+// (useAdminProperties uses apiClient.getAdminProperties)
 
 describe('Dashboard (vitest)', () => {
   beforeEach(() => {
@@ -19,9 +13,10 @@ describe('Dashboard (vitest)', () => {
   });
 
   it('shows empty state when there are no properties', async () => {
-    (FetchData.getAdminProperty as any).mockResolvedValue([]);
-    (FetchData.getChangeLogs as any).mockResolvedValue([]);
-    (FetchData.getAllOwners as any).mockResolvedValue([]);
+  // apiClient methods used by hooks
+  (apiClient.getAdminProperties as any) = vi.fn().mockResolvedValue([]);
+  (apiClient.getChangeLogs as any) = vi.fn().mockResolvedValue([]);
+  (apiClient.getAllOwners as any) = vi.fn().mockResolvedValue([]);
 
     render(<Dashboard userId="user-1" userType="ADMIN" />);
 
@@ -46,9 +41,22 @@ describe('Dashboard (vitest)', () => {
       user: [{ first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' }],
     } as any;
 
-    (FetchData.getAdminProperty as any).mockResolvedValue([property]);
-    (FetchData.getChangeLogs as any).mockResolvedValue([change]);
-    (FetchData.getAllOwners as any).mockResolvedValue([]);
+    (apiClient.getAdminProperties as any) = vi.fn().mockResolvedValue([property]);
+    // Return API-shaped changelog objects (snake_case) since useChangeLogs expects that
+    (apiClient.getChangeLogs as any) = vi.fn().mockResolvedValue([
+      {
+        changelog_id: 'chg-1',
+        changelog_description: 'Update address',
+        changelog_created_at: new Date().toISOString(),
+        changelog_status: 'PENDING',
+        changelog_specifications: { address: '456 New St' },
+        property_id: 'prop-1',
+        user_first_name: 'Jane',
+        user_last_name: 'Doe',
+        user_email: 'jane@example.com'
+      }
+    ]);
+    (apiClient.getAllOwners as any) = vi.fn().mockResolvedValue([]);
 
     render(<Dashboard userId="user-1" userType="ADMIN" />);
 

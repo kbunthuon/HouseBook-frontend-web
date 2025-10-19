@@ -7,7 +7,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Send } from "lucide-react";
 import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 import { Owner } from "../types/serverTypes";

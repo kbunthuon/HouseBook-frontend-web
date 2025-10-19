@@ -48,7 +48,9 @@ export default defineConfig(async () => {
       setupFiles: ['./frontend_web/src/setupTests.vitest.ts'],
       include: ['frontend_web/src/**/*.vitest.test.[jt]s?(x)'],
       deps: {
-        inline: [/(@radix-ui)/, /@testing-library\/user-event/]
+        // Inline some dependencies that need pre-bundling to avoid ESM/CJS
+        // resolution issues when Vitest/Vite transform modules during tests.
+        inline: [/(@radix-ui)/, /@tanstack\/react-query/, /@testing-library\/user-event/]
       }
     }
   };

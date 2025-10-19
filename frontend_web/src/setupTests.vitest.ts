@@ -51,3 +51,7 @@ if (typeof globalThis.fetch === 'undefined') {
 	// @ts-ignore - test shim
 	globalThis.fetch = async () => ({ ok: true, json: async () => [] } as any);
 }
+
+// QueryClientProvider is intentionally not provided globally here; tests
+// that need react-query behavior should use the `render` helper from
+// `frontend_web/src/test-utils.tsx` which wraps UI in a QueryClientProvider.
