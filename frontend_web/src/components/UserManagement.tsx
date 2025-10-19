@@ -1,33 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getAllOwners } from '../../../backend/FetchData.ts';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table.tsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from './ui/table.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card.tsx';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { 
-  User, 
-  Search, 
-  Mail, 
-  MoreVertical,
-  UserCheck,
-  UserX
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+import { User, Search, Mail, MoreVertical,UserCheck,UserX} from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,} from './ui/dropdown-menu';
 import { Owner } from '@housebookgroup/shared-types';
 
 export const UserManagementPage = () => {
@@ -66,7 +45,7 @@ export const UserManagementPage = () => {
     fetchOwners();
   }, []);
 
-  // Search filter
+  /* Search filter */
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredOwners(owners);

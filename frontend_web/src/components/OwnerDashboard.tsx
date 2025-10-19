@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
-import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
+import { getChangeLogs } from "../../../backend/FetchData.ts";
 import { Property, ChangeLog } from "../types/serverTypes.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
@@ -57,8 +57,6 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
             return;
           }
 
-          // setRequests(changes);
-  
           // Normalize changes with user info
           const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => {
             return {

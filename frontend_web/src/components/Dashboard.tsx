@@ -6,13 +6,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
-import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
+import { UserCog, Eye, CheckCircle, XCircle } from "lucide-react";
 import { useState, useEffect} from "react";
 import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
 import supabase from "../../../config/supabaseClient.ts"
 import { Property, Owner, ChangeLog} from "../types/serverTypes.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { apiClient } from "../api/wrappers.ts";
 
 interface OwnerChangeLog extends ChangeLog {
   userFirstName: string;
@@ -29,17 +28,16 @@ interface DashboardProps {
 
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
   const [myProperties, setOwnerProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
 
   useEffect (() => {
       const getOwnerProps = async () => {
-        try {
+  try {
           
           const properties = await getAdminProperty(userId, userType);
           // Remove duplicate properties by propertyId
-          const uniquePropertiesMap = new Map();
+          const uniquePropertiesMap: Map<string, any> = new Map();
           properties?.forEach((p: any) => {
             if (!uniquePropertiesMap.has(p.propertyId)) {
               uniquePropertiesMap.set(p.propertyId, p);
@@ -49,27 +47,31 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
           const uniqueProperties = Array.from(uniquePropertiesMap.values());
           setOwnerProperties(uniqueProperties ?? []);
           
-          console.log(uniqueProperties);
           if (uniqueProperties && uniqueProperties.length > 0) {
           const propertyIds = [...new Set(uniqueProperties.map((p: any) => p.propertyId))];
           const changes = await getChangeLogs(propertyIds);
 
           const ownersResults = await getAllOwners();
           setOwners(ownersResults);
-  
-            if (!changes) {
+
+          if (!changes) {
             console.error("Error fetching change logs.");
-            setLoading(false);
             return;
           }
-  
-            // Normalizing user from array so that it is a single object
-            const normalizedChanges = (changes ?? []).map((c: any) => ({
+
+          // Normalize change logs: extract user info (user may be an array)
+          const normalizedChanges: OwnerChangeLog[] = (changes ?? []).map((c: any) => {
+            const userObj = c.user && c.user.length > 0 ? c.user[0] : null;
+            return {
               ...c,
-              user: c.user && c.user.length > 0 ? c.user[0] : null,
-            }));
-  
-            setRequests(normalizedChanges);
+              user: userObj,
+              userFirstName: userObj?.first_name ?? null,
+              userLastName: userObj?.last_name ?? null,
+              userEmail: userObj?.email ?? null,
+            } as OwnerChangeLog;
+          });
+
+          setRequests(normalizedChanges);
           } else {
             setRequests([]);
           }
@@ -77,14 +79,11 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
         } catch (error) {
           console.error(error);
           setOwnerProperties([]);
-  
-        } finally {
-          setLoading(false);
         }
       };
   
       getOwnerProps();
-    },[userId])
+  },[userId, userType])
 
 
   const metrics = [
