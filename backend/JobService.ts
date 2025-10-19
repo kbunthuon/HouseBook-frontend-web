@@ -126,14 +126,24 @@ export async function insertJobsTable(job: Job): Promise<Job | null> {
       title: job.title,
       end_time: job.endTime ? new Date(job.endTime).toISOString() : oneHourFromNowISO(),
       // expired: false, // Just created, cannot be expired
-    } 
+    }
   ]).select(); // returns the inserted row
 
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) return null;
 
-  // Return the inserted job
-  return data[0] as Job;
+  // Map database response (snake_case) to Job interface (camelCase)
+  const insertedJob: Job = {
+    id: data[0].id,
+    propertyId: data[0].property_id,
+    title: data[0].title,
+    createdAt: data[0].created_at,
+    endTime: data[0].end_time,
+    expired: data[0].expired,
+    pin: data[0].pin,
+  };
+
+  return insertedJob;
 }
 
 /**

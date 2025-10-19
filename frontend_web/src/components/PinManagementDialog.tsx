@@ -56,8 +56,9 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
             const sections = (property?.spaces ?? []).map(s => ({
               name: s.name,
               assets: (s.assets ?? []).map(a => ({
-                id: a.id,
-                type: a.type ?? a.assetTypes?.name ?? "",
+                // The property data uses 'assetId' not 'id' due to mapToSharedProperty transform
+                id: (a as any).assetId || (a as any).id,
+                type: a.type ?? (a as any).assetTypes?.name ?? "",
               })),
             }));
 
@@ -116,11 +117,11 @@ export function PinManagementDialog({ open, onOpenChange, onSave, propertyId, pr
     (property?.spaces ?? []).map(s => ({
       name: s.name,
       assets: (s.assets ?? []).map(a => ({
-        id: a.id,
-        type: a.type ?? a.assetTypes?.name ?? "", // ✅ fallback
+        // The property data uses 'assetId' not 'id' due to mapToSharedProperty transform
+        id: (a as any).assetId || (a as any).id,
+        type: a.type ?? (a as any).assetTypes?.name ?? "", // ✅ fallback
       })),
     }));
-
 
   const assetKeyToId: Record<string, string> = {};
   for (const section of propertySections) {

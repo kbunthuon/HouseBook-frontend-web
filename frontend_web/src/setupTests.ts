@@ -28,11 +28,6 @@ jest.mock('../../backend/FetchData', () => ({
 jest.mock('../../backend/JobService', () => ({
   fetchJobsInfo: jest.fn(),
   deleteJob: jest.fn(),
-  JobStatus: {
-    ACCEPTED: 'ACCEPTED',
-    REVOKED: 'REVOKED',
-    PENDING: 'PENDING',
-  },
 }));
 
 // Mock sonner toast

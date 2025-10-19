@@ -542,7 +542,10 @@ class ApiClient {
       throw new Error(error.error || "Failed to fetch change logs");
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log("🔍 API RESPONSE - getChangeLogs:", data);
+    console.log("🔍 First change log entry (if exists):", data?.[0]);
+    return data;
   }
 
   // Transfer methods

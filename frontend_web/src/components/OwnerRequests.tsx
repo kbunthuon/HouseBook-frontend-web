@@ -9,121 +9,48 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
-import { useState, useEffect} from "react";
-//import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
-import { Property, ChangeLog} from "../types/serverTypes.ts";
-import supabase from "../../../config/supabaseClient.ts"
-import { apiClient } from "../api/wrappers.ts";
-
-
-interface OwnerChangeLog extends ChangeLog {
-  userFirstName: string;
-  userLastName: string;
-  userEmail: string;
-}
+import { useMemo } from "react";
+import { Property } from "@housebookgroup/shared-types";
+import { useProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
 
 interface OwnerRequestsProps {
   userId: string;
 }
 
 export function OwnerRequests({ userId }: OwnerRequestsProps) {
-  const [myProperties, setOwnerProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
+  // React Query hooks for data fetching
+  const { data: myProperties = [], isLoading: propertiesLoading } = useProperties(userId);
 
-  useEffect (() => {
-      const getOwnerProps = async () => {
-        try {
-          // Get owner id
-          const ownerId = await apiClient.getOwnerId(userId);
-          if (!ownerId) throw Error("Owner ID not found");
-          
-          const properties = await apiClient.getPropertyList(userId);
-          setOwnerProperties(properties ?? []);
-  
-  
-          if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-          const changes = await apiClient.getChangeLogs(propertyIds);
-  
-            if (!changes) {
-            console.error("Error fetching change logs.");
-            setLoading(false);
-            return;
-          }
-  
-            // Normalizing user from array so that it is a single object
-            // TODO: change to snake case when types update
+  // Get property IDs for changelog query
+  const propertyIds = useMemo(() => {
+    return myProperties.map((p: Property) => p.propertyId);
+  }, [myProperties]);
 
-            const normalizedChanges: OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
-              id: c.changelog_id,
-              changeDescription: c.changelog_description,
-              created_at: c.changelog_created_at,
-              status: c.changelog_status,
-              specifications: c.changelog_specifications ?? {}, // ensure not undefined
-              propertyId: c.property_id,
-              user: c.user?.[0] ?? null,
-              userFirstName: c.user_first_name || 'Unknown',
-              userLastName: c.user_last_name || 'Unknown',
-              userEmail: c.user?.[0]?.email || '',
-            }));
-  
-            setRequests(normalizedChanges);
-          } else {
-            setRequests([]);
-          }
-  
-        } catch (error) {
-          console.error(error);
-          setOwnerProperties([]);
-  
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      getOwnerProps();
-  
-    },[userId])
+  const { data: requests = [], isLoading: requestsLoading } = useChangeLogs(propertyIds);
 
+  // Mutations for approve/reject
+  const approveEditMutation = useApproveEdit();
+  const rejectEditMutation = useRejectEdit();
 
-const approveEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "ACCEPTED" })
-      .eq("id", id);
+  const loading = propertiesLoading || requestsLoading;
 
-    console.log("data", data);
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
+  const approveEdit = async (id: string) => {
+    try {
+      await approveEditMutation.mutateAsync(id);
       console.log(`Approved edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
-      )
-      );
-
+    } catch (error) {
+      console.error("Error approving edit:", error);
     }
   };
 
-const rejectEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "DECLINED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
-      console.log(`Declined edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
-      )
-      );
+  const rejectEdit = async (id: string) => {
+    try {
+      await rejectEditMutation.mutateAsync(id);
+      console.log(`Rejected edit ${id}`);
+    } catch (error) {
+      console.error("Error rejecting edit:", error);
     }
-  }
+  };
 
   const getEditStatusColor = (status: string) => {
     switch (status) {

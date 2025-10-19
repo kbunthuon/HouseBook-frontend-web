@@ -11,17 +11,12 @@ import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } fro
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
 import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "../../../backend/FetchData.ts";
-import { Property, ChangeLog } from "../types/serverTypes.ts";
+import { Property } from "@housebookgroup/shared-types";
+import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 import { apiClient } from "../api/wrappers.ts";
-
-
-interface OwnerChangeLog extends ChangeLog {
-  userEmail: string;
-  userFirstName: string;
-  userLastName: string;
-}
+import { useProperties, useChangeLogs } from "../hooks/useQueries.ts";
 
 interface OwnerDashboardProps {
   userId: string;
@@ -31,62 +26,13 @@ interface OwnerDashboardProps {
 }
 
 export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerDashboardProps) {
-  const [myProperties, setOwnerProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
+  // Use React Query for properties and change logs
+  const { data: myProperties = [], isLoading: propertiesLoading } = useProperties(userId);
 
-  useEffect (() => {
-    const getOwnerProps = async () => {
-      try {
-        // Get owner id
-        const ownerId = await apiClient.getOwnerId(userId);
-        if (!ownerId) throw Error("Owner ID not found");
-        
-        const properties = await apiClient.getPropertyList(userId);
-        setOwnerProperties(properties ?? []);
+  const propertyIds = myProperties.map((p: Property) => p.propertyId);
+  const { data: changeLogs = [], isLoading: changeLogsLoading } = useChangeLogs(propertyIds);
 
-
-        if (properties && properties.length > 0) {
-          const propertyIds = properties.map((p: any) => p.propertyId);
-          console.log("Fetching change logs for properties:", propertyIds);
-          const changes = await getChangeLogs(propertyIds);
-          
-          if (!changes) {
-            console.error("Error fetching change logs.");
-            setLoading(false);
-            return;
-          }
-
-          // setRequests(changes);
-  
-          // Normalize changes with user info
-          const normalizedChanges : OwnerChangeLog[] = (changes ?? []).map((c: any) => {
-            return {
-              ...c,
-              changedByUserFirstName: c.user?.first_name,
-              changedByUserLastName: c.user?.last_name,
-              changedByUserEmail: c.user?.email,
-            };
-          });
-          
-          setRequests(normalizedChanges);
-          console.log("Changes in OwnerDashboard", normalizedChanges)
-        } else {
-          setRequests([]);
-        }
-
-      } catch (error) {
-        console.error(error);
-        setOwnerProperties([]);
-
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getOwnerProps();
-
-  },[userId])
+  const loading = propertiesLoading || changeLogsLoading;
 
   const activeProperties = myProperties.filter(p => p.status === "Active").length;
   const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
@@ -124,7 +70,7 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
 const approveEdit = async (id: string) => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("ChangeLog")
       .update({ status: "ACCEPTED" })
       .eq("id", id);
@@ -133,17 +79,13 @@ const approveEdit = async (id: string) => {
       console.error("Error updating change log status:", error);
     } else {
       console.log(`Approved edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
-      )
-      );
-
+      // Trigger refetch via manual invalidation since we're using Supabase directly
+      window.location.reload(); // Simple solution - or use queryClient.invalidateQueries
     }
   };
 
 const rejectEdit = async (id: string) => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("ChangeLog")
       .update({ status: "DECLINED" })
       .eq("id", id);
@@ -152,11 +94,8 @@ const rejectEdit = async (id: string) => {
       console.error("Error updating change log status:", error);
     } else {
       console.log(`Declined edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
-      )
-      );
+      // Trigger refetch via manual invalidation since we're using Supabase directly
+      window.location.reload(); // Simple solution - or use queryClient.invalidateQueries
     }
   }
 
@@ -223,11 +162,11 @@ return (
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
-              requests
-              .filter((r) => r.status !== "ACCEPTED")
+              {changeLogs.filter((request: ChangeLogWithUser) => request.status !== "ACCEPTED").length > 0 ? (
+              changeLogs
+              .filter((r: ChangeLogWithUser) => r.status !== "ACCEPTED")
               .slice(0, 15)
-              .map((request) => (
+              .map((request: ChangeLogWithUser) => (
                 <TableRow key={request.id}>
                   <TableCell className="font-medium">
                     {myProperties.find(
@@ -284,19 +223,20 @@ return (
                               <Label>Change Description</Label>
                               <Input value={request.changeDescription} readOnly />
                             </div>
-                            <div>
-                              <Label>Field Specification</Label>
-                              <div className="p-4 border rounded-lg bg-gray-50">
-                                <ul className="text-sm space-y-1">
-                                  {Object.entries(request.specifications).map(([key, value]) => (
-                                    <li key={key}>
-                                      <strong>{key}:</strong> {String(value)}
-                                    </li>
-                                  ))}
-                                </ul>
+                            {request.specifications && Object.keys(request.specifications).length > 0 && (
+                              <div>
+                                <Label>Field Specification</Label>
+                                <div className="p-4 border rounded-lg bg-gray-50">
+                                  <ul className="text-sm space-y-1">
+                                    {Object.entries(request.specifications).map(([key, value]) => (
+                                      <li key={key}>
+                                        <strong>{key}:</strong> {String(value)}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex justify-end space-x-2">
+                            )}                            <div className="flex justify-end space-x-2">
                               <Button
                                 variant="outline"
                                 onClick={() => rejectEdit(request.id)}

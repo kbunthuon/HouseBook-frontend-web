@@ -7,18 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
-import { useState, useEffect} from "react";
-//import { getAdminProperty, getAllOwners, getChangeLogs } from "../../../backend/FetchData.ts";
-import supabase from "../../../config/supabaseClient.ts"
-import { Property, Owner, ChangeLog} from "../types/serverTypes.ts";
+import { useState, useMemo } from "react";
+import { Property } from "@housebookgroup/shared-types";
+import { Owner } from "../types/serverTypes.ts";
+import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { apiClient } from "../api/wrappers.ts";
-
-interface OwnerChangeLog extends ChangeLog {
-  userFirstName: string;
-  userLastName: string;
-  userEmail: string;
-}
+import { useAdminProperties, useAllOwners, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
 
 interface DashboardProps {
   userId: string;
@@ -28,72 +22,22 @@ interface DashboardProps {
 }
 
 export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: DashboardProps) {
-  const [myProperties, setOwnerProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [requests, setRequests] = useState<OwnerChangeLog[]>([]);
-  const [owners, setOwners] = useState<Owner[]>([]);
+  // React Query hooks for data fetching
+  const { data: myProperties = [], isLoading: propertiesLoading } = useAdminProperties(userId, userType);
+  const { data: owners = [], isLoading: ownersLoading } = useAllOwners();
 
-  useEffect (() => {
-      const getOwnerProps = async () => {
-        try {
-          
-          const properties = await apiClient.getAdminProperties(userId, userType);
-          // Remove duplicate properties by propertyId
-          const uniquePropertiesMap = new Map();
-          properties?.forEach((p: any) => {
-            if (!uniquePropertiesMap.has(p.propertyId)) {
-              uniquePropertiesMap.set(p.propertyId, p);
-            }
-          });
-      
-          const uniqueProperties = Array.from(uniquePropertiesMap.values());
-          setOwnerProperties(uniqueProperties ?? []);
-          
-          console.log(uniqueProperties);
-          if (uniqueProperties && uniqueProperties.length > 0) {
-          const propertyIds = [...new Set(uniqueProperties.map((p: any) => p.propertyId))];
-          const changes = await apiClient.getChangeLogs(propertyIds);
+  // Get property IDs for changelog query
+  const propertyIds = useMemo(() => {
+    return myProperties.map((p: Property) => p.propertyId);
+  }, [myProperties]);
 
-          const ownersResults = await apiClient.getAllOwners();
-          setOwners(ownersResults);
-  
-            if (!changes) {
-            console.error("Error fetching change logs.");
-            setLoading(false);
-            return;
-          }
-  
-            // TODO: change to snake case when types update
+  const { data: requests = [], isLoading: requestsLoading } = useChangeLogs(propertyIds);
 
-            const normalizedChanges: OwnerChangeLog[] = (changes ?? []).map((c: any) => ({
-              id: c.changelog_id,
-              changeDescription: c.changelog_description,
-              created_at: c.changelog_created_at,
-              status: c.changelog_status,
-              specifications: c.changelog_specifications ?? {}, // ensure not undefined
-              propertyId: c.property_id,
-              user: c.user?.[0] ?? null,
-              userFirstName: c.user_first_name || 'Unknown',
-              userLastName: c.user_last_name || 'Unknown',
-              userEmail: c.user?.[0]?.email || '',
-            }));
-  
-            setRequests(normalizedChanges);
-          } else {
-            setRequests([]);
-          }
-  
-        } catch (error) {
-          console.error(error);
-          setOwnerProperties([]);
-  
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      getOwnerProps();
-    },[userId])
+  // Mutations for approve/reject
+  const approveEditMutation = useApproveEdit();
+  const rejectEditMutation = useRejectEdit();
+
+  const loading = propertiesLoading || ownersLoading || requestsLoading;
 
 
   const metrics = [
@@ -128,41 +72,22 @@ export function Dashboard({ userId, userType, onAddProperty, onViewProperty }: D
   ];
 
   const approveEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "ACCEPTED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
+    try {
+      await approveEditMutation.mutateAsync(id);
       console.log(`Approved edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "ACCEPTED" } : r
-      )
-      );
-
+    } catch (error) {
+      console.error("Error approving edit:", error);
     }
   };
 
-const rejectEdit = async (id: string) => {
-    const { data, error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "DECLINED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
-      console.log(`Declined edit ${id}`);
-      setRequests(prev =>
-      prev.map(r =>
-        r.id === id ? { ...r, changelog_status: "DECLINED" } : r
-      )
-      );
+  const rejectEdit = async (id: string) => {
+    try {
+      await rejectEditMutation.mutateAsync(id);
+      console.log(`Rejected edit ${id}`);
+    } catch (error) {
+      console.error("Error rejecting edit:", error);
     }
-  }
+  };
 
   const getEditStatusColor = (status: string) => {
     switch (status) {
@@ -434,7 +359,7 @@ function formatDateTime(timestamp: string | number | Date) {
             </TableHeader>
             <TableBody>
               {owners.length > 0 ? (
-                owners.map((owner) => (
+                owners.map((owner : Owner) => (
                   <TableRow key={owner.ownerId}>
                     <TableCell className="font-medium">
                       {owner.firstName || 'N/A'}
