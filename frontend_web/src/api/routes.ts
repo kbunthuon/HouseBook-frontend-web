@@ -19,7 +19,10 @@ export const API_ROUTES = {
   // User Routes ------ will need to update soon?
   USER: {
     INFO_BY_EMAIL: (email: string) =>
-      `${BASE_URL}/user/infoByEmail?email=${encodeURIComponent(email)}`,
+      `${BASE_URL}/user?action=getUserInfoByEmail&email=${encodeURIComponent(email)}`,
+
+    INFO_BY_OWNER_ID: (ownerId: string) =>
+      `${BASE_URL}/user?action=getUserInfoByOwnerId&ownerId=${encodeURIComponent(ownerId)}`,
   },
 
   // Owner Routes
@@ -32,6 +35,9 @@ export const API_ROUTES = {
   // Admin Routes
   ADMIN: {
     ONBOARD_PROPERTY: `${BASE_URL}/admin/onboard`,
+    GET_ADMIN_PROPERTIES: (userId: string, userType: string) => 
+      `${BASE_URL}/admin?action=getAdminProperty&userId=${encodeURIComponent(userId)}&userType=${encodeURIComponent(userType)}`,
+    GET_ALL_OWNERS: `${BASE_URL}/admin?action=getAllOwners`,
   },
 
   // Property Routes
@@ -60,11 +66,23 @@ export const API_ROUTES = {
 
   // Changelog Routes
   CHANGELOG: {
+    // Original: fetch multiple property change logs
     GET: (propertyIds: string[]) =>
-      `${BASE_URL}/changelog?propertyIds=${encodeURIComponent(
-        propertyIds.join(",")
-      )}`,
+      `${BASE_URL}/changelog?propertyIds=${encodeURIComponent(propertyIds.join(","))}`,
+
+    // Fetch asset history
+    ASSET_HISTORY: (assetId: string) =>
+      `${BASE_URL}/changelog?action=getAssetHistory&assetId=${encodeURIComponent(assetId)}`,
+
+    // Fetch space history
+    SPACE_HISTORY: (spaceId: string) =>
+      `${BASE_URL}/changelog?action=getSpaceHistory&spaceId=${encodeURIComponent(spaceId)}`,
+
+    // Fetch property history
+    PROPERTY_HISTORY: (propertyId: string) =>
+      `${BASE_URL}/changelog?action=getPropertyHistory&propertyId=${encodeURIComponent(propertyId)}`,
   },
+
 
   // Transfer Routes
   TRANSFER: {

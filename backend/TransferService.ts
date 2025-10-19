@@ -151,11 +151,16 @@ export async function getTransfersByOwner(ownerId: string) {
       .from("TransferOldOwners")
       .select(`
         owner_id,
+        status,
         Owner (
           owner_id,
-          first_name,
-          last_name,
-          email
+          user_id,
+          User (
+            user_id,
+            first_name,
+            last_name,
+            email
+          )
         )
       `)
       .eq("transfer_id", transfer.transferId);
@@ -165,16 +170,21 @@ export async function getTransfersByOwner(ownerId: string) {
       // Continue with empty array if there's an error
     }
 
-    // Get all new owners
+    // For NEW owners
     const { data: newOwners, error: newOwnersQueryError } = await supabase
       .from("TransferNewOwners")
       .select(`
         owner_id,
+        status,
         Owner (
           owner_id,
-          first_name,
-          last_name,
-          email
+          user_id,
+          User (
+            user_id,
+            first_name,
+            last_name,
+            email
+          )
         )
       `)
       .eq("transfer_id", transfer.transferId);
@@ -186,16 +196,20 @@ export async function getTransfersByOwner(ownerId: string) {
 
     transfer.oldOwners = (oldOwners || []).map((o: any) => ({
       ownerId: o.Owner?.owner_id,
-      firstName: o.Owner?.first_name,
-      lastName: o.Owner?.last_name,
-      email: o.Owner?.email,
+      userId: o.Owner?.User?.user_id,
+      firstName: o.Owner?.User?.first_name,
+      lastName: o.Owner?.User?.last_name,
+      email: o.Owner?.User?.email,
+      acceptStatus: o.status,
     }));
 
     transfer.newOwners = (newOwners || []).map((o: any) => ({
       ownerId: o.Owner?.owner_id,
-      firstName: o.Owner?.first_name,
-      lastName: o.Owner?.last_name,
-      email: o.Owner?.email,
+      userId: o.Owner?.User?.user_id,
+      firstName: o.Owner?.User?.first_name,
+      lastName: o.Owner?.User?.last_name,
+      email: o.Owner?.User?.email,
+      acceptStatus: o.status,
     }));
   }
 
@@ -222,6 +236,43 @@ export async function initiateTransfer(
     allOldOwnerIds,
     newOwnerStateIds
   });
+
+  // 1. Check if there's already a pending transfer for this property
+  const { data: existingTransfer } = await supabase
+    .from("Transfers")
+    .select("transfer_id, status")
+    .eq("property_id", propertyId)
+    .eq("status", TransferStatus.PENDING)
+    .maybeSingle();
+
+  if (existingTransfer) {
+    throw new Error("A pending transfer already exists for this property. Please complete or cancel the existing transfer first.");
+  }
+
+  // 2. Verify all old owners actually own this property
+  const { data: currentOwnership, error: ownershipError } = await supabase
+    .from("OwnerProperty")
+    .select("owner_id")
+    .eq("property_id", propertyId);
+
+  if (ownershipError) {
+    console.error("Error checking property ownership:", ownershipError);
+    throw new Error("Failed to verify property ownership");
+  }
+
+  const currentOwnerIds = (currentOwnership || []).map(o => o.owner_id);
+
+  // Check that all provided old owners actually own the property
+  const invalidOldOwners = allOldOwnerIds.filter(id => !currentOwnerIds.includes(id));
+  if (invalidOldOwners.length > 0) {
+    throw new Error(`The following owners do not own this property: ${invalidOldOwners.join(", ")}`);
+  }
+
+  // Check that all current owners are included in allOldOwnerIds
+  const missingOldOwners = currentOwnerIds.filter(id => !allOldOwnerIds.includes(id));
+  if (missingOldOwners.length > 0) {
+    throw new Error("All current owners must be included in the transfer");
+  }
 
   const { data: transfer, error: transferError } = await supabase
     .from("Transfers")

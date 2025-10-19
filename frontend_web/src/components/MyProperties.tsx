@@ -1,19 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft, Eye, CheckCircle, XCircle } from "lucide-react";
-import { Property } from "../types/serverTypes";
 import OldOwnerTransferDialog from "./OldOwnerTransferDialog";
-import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 import { toast } from "sonner";
 import { approveTransfer, rejectTransfer } from "../../../backend/TransferService";
-import { getOwnerId } from "../../../backend/FetchData";
+import { useProperties, useOwnerTransfers, useApproveTransfer, useRejectTransfer, queryKeys } from "../hooks/useQueries";
+import { Property } from "@housebookgroup/shared-types";
 
 interface MyPropertiesProps {
   ownerId: string;
@@ -21,84 +19,105 @@ interface MyPropertiesProps {
   onAddProperty?: () => void;
 }
 
+// Transfer-related interfaces
+interface TransferOwnerInfo {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  acceptStatus: string;
+  userId?: string;
+  ownerId?: string;
+}
+
+interface TransferProperty {
+  propertyId: string;
+  name: string;
+  address?: string;
+  currentOwners: TransferOwnerInfo[];
+  invitedOwners: TransferOwnerInfo[];
+  createdAt: Date;
+  transferStatus: string;
+  userStatus: string;
+  transferId: string;
+}
+
+interface TransferApiOwner {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  acceptStatus: string;
+  userId?: string;
+  ownerId?: string;
+}
+
+interface TransferApiResponse {
+  propertyId: string;
+  propertyName: string;
+  propertyAddress?: string;
+  oldOwners: TransferApiOwner[];
+  newOwners: TransferApiOwner[];
+  transferCreatedAt: string;
+  transferStatus: string;
+  transferId: string;
+}
+
 export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }: MyPropertiesProps) {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [myProperties, setMyProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-
-  const [transferProperties, setTransferProperties] = useState<
-    {
-      transferId: string;
-      propertyId: string;
-      name: string;
-      address?: string;
-      currentOwners: string[];
-      invitedOwners: { email: string; firstName?: string; lastName?: string }[];
-      createdAt: Date;
-      transferStatus: "PENDING" | "ACCEPTED" | "DECLINED";
-      userStatus: "PENDING" | "ACCEPTED" | "REJECTED";
-    }[]
-  >([]);
-
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; transferId: string; propertyName: string } | null>(null);
 
-  const navigate = useNavigate();
+  // React Query hooks - fetch data automatically and in parallel
+  const { data: myProperties = [], isLoading: propertiesLoading } = useProperties(userID);
+  const { data: transferData, isLoading: transfersLoading } = useOwnerTransfers(userID);
+  const approveTransferMutation = useApproveTransfer();
+  const rejectTransferMutation = useRejectTransfer();
 
-  const handleViewTransfer = (pid: string) => {
-    if (!pid) return;
-    navigate(ROUTES.propertyTransferPath(pid)); 
-  };
+  // Map transfer data to the format expected by the component
+  const transferProperties = useMemo((): TransferProperty[] => {
+    if (!transferData || !transferData.transfers) return [];
 
-  const loadTransfers = async () => {
-  setLoading(true);
-  try {
-    const res = await apiClient.getTransfersByUser(userID);
-    // Map API response to the format used by the table
-    const mappedTransfers = (res.transfers || []).map((t: any) => ({
+    return transferData.transfers.map((t: TransferApiResponse): TransferProperty => ({
       propertyId: t.propertyId,
       name: t.propertyName,
       address: t.propertyAddress,
-      currentOwners: t.oldOwners.map((o: any) =>
-        o.firstName && o.lastName ? `${o.firstName} ${o.lastName}` : o.email
-      ),
-      invitedOwners: t.newOwners.map((o: any) => ({
+      currentOwners: (t.oldOwners || []).map((o: TransferApiOwner): TransferOwnerInfo => ({
         email: o.email,
         firstName: o.firstName,
         lastName: o.lastName,
+        acceptStatus: o.acceptStatus,
+        userId: o.userId,
+        ownerId: o.ownerId,
+      })),
+      invitedOwners: (t.newOwners || []).map((o: TransferApiOwner): TransferOwnerInfo => ({
+        email: o.email,
+        firstName: o.firstName,
+        lastName: o.lastName,
+        acceptStatus: o.acceptStatus,
+        userId: o.userId,
+        ownerId: o.ownerId,
       })),
       createdAt: new Date(t.transferCreatedAt),
-      transferStatus: t.transferStatus, // Overall transfer status
-      userStatus: t.userStatus, // This user's individual status
+      transferStatus: t.transferStatus,
+      userStatus:
+        t.oldOwners?.find((o: TransferApiOwner) => o.userId === userID)?.acceptStatus ||
+        t.newOwners?.find((o: TransferApiOwner) => o.userId === userID)?.acceptStatus ||
+        "PENDING",
       transferId: t.transferId,
     }));
-    setTransferProperties(mappedTransfers);
-  } catch (err) {
-    console.error("Failed to load transfers:", err);
-  }
-  setLoading(false);
-};
+  }, [transferData, userID]);
 
-  useEffect(() => {
-    const loadProperties = async () => {
-      setLoading(true);
-      const properties = await apiClient.getPropertyList(userID); 
-      setMyProperties(properties || []);
-      setLoading(false);
-    };
+  const loading = propertiesLoading || transfersLoading;
 
-
-    if (userID) {
-      loadProperties();
-      loadTransfers();
-    }
-  }, [userID]);
-  
-  const filteredProperties = myProperties.filter(property =>
-    property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.address.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProperties = useMemo((): Property[] =>
+    myProperties.filter((property: Property) =>
+      property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.address.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [myProperties, searchTerm]
   );
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -134,21 +153,21 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
 
     try {
       // Get owner ID from user ID
-      const ownerId = await getOwnerId(userID);
+      const ownerId = await apiClient.getOwnerId(userID);
 
       if (confirmAction.type === 'approve') {
-        await approveTransfer(confirmAction.transferId, ownerId);
+        await approveTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId });
         toast.success("Transfer approved successfully");
       } else {
-        await rejectTransfer(confirmAction.transferId, ownerId);
+        await rejectTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId });
         toast.success("Transfer rejected");
       }
 
-      // Refresh transfers
-      await loadTransfers();
-    } catch (err: any) {
-      console.error("Failed to process transfer:", err);
-      toast.error(err.message || "Failed to process transfer");
+      // React Query will automatically refetch transfers via mutation invalidation
+    } catch (err) {
+      const error = err as Error;
+      console.error("Failed to process transfer:", error);
+      toast.error(error.message || "Failed to process transfer");
     } finally {
       setConfirmDialogOpen(false);
       setConfirmAction(null);
@@ -187,7 +206,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {myProperties.filter(p => p.status === "Active").length}
+              {myProperties.filter((p: Property) => p.status === "Active").length}
             </div>
             <div className="text-sm text-muted-foreground">Active Properties</div>
           </CardContent>
@@ -195,7 +214,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {Math.round(myProperties.reduce((acc, p) => acc + p.completionStatus, 0) / myProperties.length) || 0}%
+              {Math.round(myProperties.reduce((acc: number, p: Property) => acc + p.completionStatus, 0) / myProperties.length) || 0}%
             </div>
             <div className="text-sm text-muted-foreground">Avg. Completion</div>
           </CardContent>
@@ -232,7 +251,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {filteredProperties.map((property) => (
+                {filteredProperties.map((property: Property) => (
                   <TableRow key={property.propertyId}>
                     <TableCell>
                       <div>
@@ -241,18 +260,6 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                       </div>
                     </TableCell>
                     <TableCell>{property.type}</TableCell>
-                    {/* <TableCell>
-                      <Badge variant={getStatusColor(property.status)}>
-                        {property.status}
-                      </Badge>
-                    </TableCell> */}
-                    {/* <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-sm font-medium ${getCompletionColor(property.completionStatus)}`}>
-                          {property.completionStatus}%
-                        </span>
-                      </div>
-                    </TableCell> */}
                     <TableCell>{new Date(property.lastUpdated).toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -302,19 +309,10 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
           <div className="flex justify-between items-center">
             <CardTitle>Transfer Property List</CardTitle>
             <div className="flex items-center space-x-2">
-              {/*
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search my properties..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              */ }
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[50vh] overflow-y-auto">
           {transferProperties.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
@@ -330,7 +328,7 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {transferProperties.map((property) => (
+                {transferProperties.map((property: TransferProperty) => (
                   <TableRow key={property.transferId}>
                     <TableCell>
                       <div>
@@ -342,9 +340,13 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
                     </TableCell>
 
                     <TableCell>
-                      {property.currentOwners?.length
-                        ? property.currentOwners.join(", ")
-                        : "Unknown"}
+                      {property.currentOwners.map((owner, i) => (
+                        <div key={i} className="text-sm">
+                          {owner.firstName && owner.lastName
+                            ? `${owner.firstName} ${owner.lastName}`
+                            : owner.email}
+                        </div>
+                      ))}
                     </TableCell>
 
                     <TableCell>
@@ -442,10 +444,12 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
         userID={userID}
         onInitiateTransfer={async (propertyId, allOldOwnerIds, newOwnerStateIds) => {
           try {
+            console.log("Initiating transfer for property:", propertyId, allOldOwnerIds, newOwnerStateIds);
             await apiClient.initiateTransfer(propertyId, allOldOwnerIds, newOwnerStateIds);
 
-            // Refresh transfers from API
-            await loadTransfers();
+            // React Query will automatically refetch transfers and properties
+            queryClient.invalidateQueries({ queryKey: ['transfers'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.properties });
 
             setOpen(false);
           } catch (err) {

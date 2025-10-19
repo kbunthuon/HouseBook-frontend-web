@@ -408,33 +408,30 @@ export async function deleteFeature(
 
     if (!asset) throw new Error("Asset not found");
 
+    // Store the deleted feature for the changelog
+    const deletedFeature = { [featureName]: asset.current_specifications[featureName] };
+
     // Remove feature
     const updatedSpecifications = { ...asset.current_specifications };
     delete updatedSpecifications[featureName];
 
     // Update asset
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("Assets")
       .update({ current_specifications: updatedSpecifications })
-      .eq("id", assetId)
-      .select(`
-        *,
-        AssetTypes!inner(id, name, discipline),
-        Spaces!inner(id, name, property_id)
-      `)
-      .single();
+      .eq("id", assetId);
 
     if (error) throw error;
 
-    // Create changelog entry
+    // Create changelog entry with the deleted feature (not the updated state)
     await createChangeLogEntry(
       assetId,
       `Feature deleted: ${featureName}`,
-      ChangeLogAction.UPDATED,
-      updatedSpecifications
+      ChangeLogAction.DELETED,
+      deletedFeature
     );
 
-    return data;
+    return { success: true, updatedSpecifications };
   } catch (error) {
     console.error("Error in deleteFeature:", error);
     throw error;

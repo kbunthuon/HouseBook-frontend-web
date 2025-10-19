@@ -417,8 +417,10 @@ export default function OldOwnerTransferDialog({
                 toast.error("Please select a property first");
                 return;
               }
-              if (invitedOwners.length === 0) {
-                toast.error("Please add at least one new owner to transfer to");
+
+              // Check that at least one change is being made
+              if (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0) {
+                toast.error("Please either add new owners or select owners to move out");
                 return;
               }
 
@@ -444,7 +446,7 @@ export default function OldOwnerTransferDialog({
               toast.success("Transfer initiated");
               onOpenChange(false);
             }}
-            disabled={!propertyId || invitedOwners.length === 0}
+            disabled={!propertyId || (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0)}
           >
             <Send className="mr-2 h-4 w-4" />
             Initiate Transfer
@@ -456,10 +458,12 @@ export default function OldOwnerTransferDialog({
           <p className="font-semibold mb-2">How to transfer:</p>
           <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
             <li>Select a property to view its current owners.</li>
-            <li>Enter email addresses and add new owners to the list.</li>
-            <li>Click "Send Invitations" to notify new owners.</li>
-            <li>New owners will receive an inbox message to accept the property transfer request.</li>
-            <li>You'll receive a notification to approve or reject the property transfer request.</li>
+            <li><strong>To add new owners:</strong> Enter email addresses and add them to the list.</li>
+            <li><strong>To remove owners:</strong> Check the box next to owners who are moving out.</li>
+            <li>You can add new owners, remove existing ones, or do both in a single transfer.</li>
+            <li>Click "Initiate Transfer" to start the process.</li>
+            <li>All involved owners (current and new) will receive notifications to approve the transfer.</li>
+            <li>The transfer completes once all parties approve. Any rejection cancels the entire transfer.</li>
           </ol>
         </div>
 
