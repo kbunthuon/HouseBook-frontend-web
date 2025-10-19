@@ -1,13 +1,22 @@
 import '@testing-library/jest-dom';
 
-// Provide a lightweight mock for canvas.getContext used by qrcode.react and other
-// libraries during tests. JSDOM doesn't implement canvas drawing methods so
-// some components will call getContext() and fail unless we stub it.
-// The mock implements only the methods our code/tests need (toDataURL, measureText,
-// basic drawing ops) and returns a minimal object.
-if (typeof HTMLCanvasElement !== 'undefined' && !HTMLCanvasElement.prototype.getContext) {
-	// @ts-ignore - adding a test-only shim
+// Always stub HTMLCanvasElement.prototype.getContext in tests. JSDOM's
+// implementation throws "Not implemented" when components (like QR code
+// renderers) call getContext. Replacing it with a safe stub prevents noisy
+// errors and keeps tests deterministic.
+if (typeof HTMLCanvasElement !== 'undefined') {
+	// Preserve original if present (in case other tests rely on it).
+	const _origGetContext = (HTMLCanvasElement.prototype as any).getContext;
+
+	// @ts-ignore - test shim
 	HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
+		try {
+			// If the original exists and works, try it first.
+			if (_origGetContext) return _origGetContext.call(this);
+		} catch (e) {
+			// ignore and fall through to stub
+		}
+
 		return {
 			fillRect: () => {},
 			clearRect: () => {},
@@ -32,4 +41,13 @@ if (typeof HTMLCanvasElement !== 'undefined' && !HTMLCanvasElement.prototype.get
 			toDataURL: () => '',
 		} as any;
 	};
+}
+
+// Lightweight global fetch stub used in tests to avoid noisy "fetch failed"
+// logs. It returns an empty array for JSON responses. If a test needs to
+// assert fetch behavior it should override this stub with a more specific
+// mock.
+if (typeof globalThis.fetch === 'undefined') {
+	// @ts-ignore - test shim
+	globalThis.fetch = async () => ({ ok: true, json: async () => [] } as any);
 }

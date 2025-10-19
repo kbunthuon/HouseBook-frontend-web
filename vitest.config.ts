@@ -36,6 +36,12 @@ export default defineConfig(async () => {
     resolve: {
       alias: [versionStripAlias() as any]
     },
+    // Provide default env values for Vite import.meta.env during tests so modules
+    // that create external clients (e.g. Supabase) don't throw at import time.
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'http://localhost'),
+      'import.meta.env.VITE_ANON_KEY': JSON.stringify(process.env.VITE_ANON_KEY || 'anon')
+    },
     test: {
       environment: 'jsdom',
       globals: true,
