@@ -7,8 +7,9 @@
       "esModuleInterop": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
-      "types": ["jest", "node"]
+      "types": ["vitest/globals", "jest", "node"],
+      "jsx": "react-jsx"
     },
-    "include": ["src", "tests"]
+    "include": ["src", "tests", "frontend_web/src"]
   }
   
