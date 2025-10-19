@@ -79,7 +79,7 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        console.log('✅ Tokens cleared from sessionStorage');
+        console.log('Tokens cleared from sessionStorage');
         throw new Error("Session expired. Please login again.");
       }
     }
@@ -123,7 +123,7 @@ class ApiClient {
   async login(params: LoginParams) {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       TokenManager.clearTokens();
       // Clear all app-related sessionStorage
       Object.keys(sessionStorage).forEach(key => {
@@ -170,8 +170,8 @@ class ApiClient {
         throw new Error("Failed to restore Supabase session");
       }
 
-      console.log('✅ New session created for:', data.user.email, data);
-      console.log('✅ Supabase session restored');
+      console.log('New session created for:', data.user.email, data);
+      console.log('Supabase session restored');
     } catch (error) {
       console.error("Failed to set Supabase session:", error);
       throw error;
@@ -183,7 +183,7 @@ class ApiClient {
   async signup(params: SignupData) {
     // Clear any existing sessions/tokens first to ensure fresh signup
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       TokenManager.clearTokens();
       // Clear all app-related sessionStorage
       Object.keys(sessionStorage).forEach(key => {
@@ -230,8 +230,8 @@ class ApiClient {
         throw new Error("Failed to restore Supabase session");
       }
 
-      console.log('✅ New session created for:', data.user.email);
-      console.log('✅ Supabase session restored');
+      console.log('New session created for:', data.user.email);
+      console.log('Supabase session restored');
     } catch (error) {
       console.error("Failed to set Supabase session:", error);
       throw error;
@@ -252,44 +252,34 @@ class ApiClient {
 
   async logout() {
     try {
-      // 1. Sign out from Supabase first to clear auth session
-      const { error: supabaseError } = await supabase.auth.signOut();
-      if (supabaseError) {
-        console.error("Supabase signOut error:", supabaseError);
-      }
-
-      // 2. Call backend logout endpoint
-      const response = await fetch(API_ROUTES.AUTH.LOGOUT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // include HttpOnly refresh token cookie
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Logout failed");
-      }
-
-      // 3. Clear all tokens and session data from sessionStorage
+      // 1. Clear all tokens and session data from sessionStorage FIRST
       TokenManager.clearTokens();
 
-      // 4. Clear any other app-specific data that might be cached
-      sessionStorage.removeItem('supabase.auth.token');
-
-      // Clear all sessionStorage items related to the app (be careful not to clear third-party data)
+      // 2. Clear all app-specific sessionStorage items
       Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('housebook_') || key.startsWith('sb-')) {
           sessionStorage.removeItem(key);
         }
       });
 
+      // 3. Sign out from Supabase (this might fail if session is already cleared, which is OK)
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+        console.log('Supabase session cleared');
+      } catch (supabaseError) {
+        console.warn("Supabase signOut warning (non-critical):", supabaseError);
+        // This is OK - the session might already be cleared or invalid
+      }
+
+      console.log('Logout successful - all local data cleared');
       return true;
     } catch (error) {
       console.error("Logout error:", error);
       // Even if logout fails, still clear local data
       TokenManager.clearTokens();
       sessionStorage.clear(); // Nuclear option: clear everything
-      throw error;
+      console.log('Forced logout - all data cleared');
+      return true; // Return true anyway since we cleared the data
     }
   }
 
@@ -570,8 +560,8 @@ class ApiClient {
     }
 
     const data = await response.json();
-    console.log("🔍 API RESPONSE - getChangeLogs:", data);
-    console.log("🔍 First change log entry (if exists):", data?.[0]);
+    console.log("API RESPONSE - getChangeLogs:", data);
+    console.log("First change log entry (if exists):", data?.[0]);
     return data;
   }
   

@@ -288,6 +288,7 @@ export const useAllOwners = () => {
 
 /**
  * Mutation hook for approving a changelog/edit request
+ * Also updates the Asset's current_specifications with the changelog specifications
  */
 export const useApproveEdit = () => {
   const queryClient = useQueryClient();
@@ -295,6 +296,26 @@ export const useApproveEdit = () => {
   return useMutation({
     mutationFn: async (changelogId: string) => {
       const { default: supabase } = await import('../../../config/supabaseClient');
+
+      // First, get the changelog to retrieve asset_id and specifications
+      const { data: changelog, error: fetchError } = await supabase
+        .from("ChangeLog")
+        .select("asset_id, specifications")
+        .eq("id", changelogId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!changelog) throw new Error("Changelog not found");
+
+      // Update the Asset's current_specifications with the changelog specifications
+      const { error: assetError } = await supabase
+        .from("Assets")
+        .update({ current_specifications: changelog.specifications })
+        .eq("id", changelog.asset_id);
+
+      if (assetError) throw assetError;
+
+      // Update the ChangeLog status to ACCEPTED
       const { data, error } = await supabase
         .from("ChangeLog")
         .update({ status: "ACCEPTED" })
@@ -306,6 +327,8 @@ export const useApproveEdit = () => {
     onSuccess: () => {
       // Invalidate changelogs to refetch updated data
       queryClient.invalidateQueries({ queryKey: queryKeys.changeLogs });
+      // Also invalidate properties to refresh the asset data
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties });
     },
   });
 };

@@ -16,7 +16,7 @@ import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import supabase from "../../../config/supabaseClient.ts"
 
 import { apiClient } from "../api/wrappers.ts";
-import { useProperties, useChangeLogs } from "../hooks/useQueries.ts";
+import { useProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
 
 interface OwnerDashboardProps {
   userId: string;
@@ -32,10 +32,14 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
   const propertyIds = myProperties.map((p: Property) => p.propertyId);
   const { data: changeLogs = [], isLoading: changeLogsLoading } = useChangeLogs(propertyIds);
 
+  // Mutations for approve/reject
+  const approveEditMutation = useApproveEdit();
+  const rejectEditMutation = useRejectEdit();
+
   const loading = propertiesLoading || changeLogsLoading;
 
-  const activeProperties = myProperties.filter(p => p.status === "Active").length;
-  const pendingProperties = myProperties.filter(p => p.status === "Pending").length;
+  const activeProperties = myProperties.filter((p: Property) => p.status === "Active").length;
+  const pendingProperties = myProperties.filter((p: Property) => p.status === "Pending").length;
 
   const metrics = [
     {
@@ -70,32 +74,20 @@ export function OwnerDashboard({ userId, onAddProperty, onViewProperty }: OwnerD
 
 
 const approveEdit = async (id: string) => {
-    const { error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "ACCEPTED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
+    try {
+      await approveEditMutation.mutateAsync(id);
       console.log(`Approved edit ${id}`);
-      // Trigger refetch via manual invalidation since we're using Supabase directly
-      window.location.reload(); // Simple solution - or use queryClient.invalidateQueries
+    } catch (error) {
+      console.error("Error approving edit:", error);
     }
   };
 
 const rejectEdit = async (id: string) => {
-    const { error } = await supabase
-      .from("ChangeLog")
-      .update({ status: "DECLINED" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error updating change log status:", error);
-    } else {
+    try {
+      await rejectEditMutation.mutateAsync(id);
       console.log(`Declined edit ${id}`);
-      // Trigger refetch via manual invalidation since we're using Supabase directly
-      window.location.reload(); // Simple solution - or use queryClient.invalidateQueries
+    } catch (error) {
+      console.error("Error rejecting edit:", error);
     }
   }
 
@@ -240,11 +232,15 @@ return (
                               <Button
                                 variant="outline"
                                 onClick={() => rejectEdit(request.id)}
+                                disabled={request.status !== "PENDING"}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.id)}>
+                              <Button
+                                onClick={() => approveEdit(request.id)}
+                                disabled={request.status !== "PENDING"}
+                              >
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>

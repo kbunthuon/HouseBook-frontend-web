@@ -182,11 +182,15 @@ function formatDateTime(timestamp: string | number | Date) {
                                   <Button
                                     variant="outline"
                                     onClick={() => rejectEdit(request.id)}
+                                    disabled={request.status !== "PENDING"}
                                   >
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Reject
                                   </Button>
-                                  <Button onClick={() => approveEdit(request.id)}>
+                                  <Button
+                                    onClick={() => approveEdit(request.id)}
+                                    disabled={request.status !== "PENDING"}
+                                  >
                                     <CheckCircle className="mr-2 h-4 w-4" />
                                     Approve
                                   </Button>

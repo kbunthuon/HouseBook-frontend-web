@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Property } from "@housebookgroup/shared-types";
 import { Owner } from "../types/serverTypes.ts";
 import { ChangeLogWithUser } from "../hooks/useQueries.ts";
@@ -305,11 +305,15 @@ function formatDateTime(timestamp: string | number | Date) {
                               <Button
                                 variant="outline"
                                 onClick={() => rejectEdit(request.id)}
+                                disabled={request.status !== "PENDING"}
                               >
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                               </Button>
-                              <Button onClick={() => approveEdit(request.id)}>
+                              <Button
+                                onClick={() => approveEdit(request.id)}
+                                disabled={request.status !== "PENDING"}
+                              >
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
