@@ -61,6 +61,7 @@
             "@types/node": "^20.10.0",
             "@types/react": "^19.1.13",
             "@vitejs/plugin-react-swc": "^3.10.2",
+            "@vitest/coverage-v8": "^1.6.1",
             "identity-obj-proxy": "^3.0.0",
             "jest": "^30.2.0",
             "jest-environment-jsdom": "^30.2.0",
@@ -72,10 +73,10 @@
             "dev": "vite",
             "build": "vite build",
             "preview": "vite preview",
-                  "test": "jest",
-                  "test:watch": "jest --watch",
-                  "test:coverage": "jest --coverage",
-                      "test:vitest": "vitest",
-                      "test:vitest:run": "vitest run --reporter=dot"
+            "test": "jest",
+            "test:watch": "jest --watch",
+            "test:coverage": "jest --coverage",
+            "test:vitest": "vitest",
+            "test:vitest:run": "vitest run --reporter=dot"
       }
 }
