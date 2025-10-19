@@ -571,6 +571,52 @@ class ApiClient {
 
     return response.json();
   }
+  
+  async getAssetHistory(assetId: string) {
+    console.log("Fetching asset history for assetId:", assetId);
+    const url = API_ROUTES.CHANGELOG.ASSET_HISTORY(assetId);
+    console.log("Fetching from:", url);
+
+    const response = await this.authenticatedRequest(url);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch asset history");
+    }
+
+    return response.json();
+  }
+
+  async getSpaceHistory(spaceId: string) {
+    console.log("Fetching space history for spaceId:", spaceId);
+    const url = API_ROUTES.CHANGELOG.SPACE_HISTORY(spaceId);
+    console.log("Fetching from:", url);
+
+    const response = await this.authenticatedRequest(url);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch space history");
+    }
+
+    return response.json();
+  }
+
+  async getPropertyHistory(propertyId: string) {
+    console.log("Fetching property history for propertyId:", propertyId);
+    const url = API_ROUTES.CHANGELOG.PROPERTY_HISTORY(propertyId);
+    console.log("Fetching from:", url);
+
+    const response = await this.authenticatedRequest(url);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch property history");
+    }
+
+    return response.json();
+  }
+
 
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {

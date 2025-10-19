@@ -1,6 +1,7 @@
 // backend/ChangeLogService.ts
 import supabase from "../config/supabaseClient";
 import { ChangeLog } from "@housebookgroup/shared-types";
+import { apiClient } from "../frontend_web/src/api/wrappers";
 
 export enum ChangeLogStatus {
   PENDING = 'PENDING',
@@ -56,6 +57,13 @@ export async function createChangeLogEntry(
  */
 export async function getAssetHistory(assetId: string): Promise<ChangeLog[]> {
   try {
+    const outData = await apiClient.getAssetHistory(assetId);
+    console.log("getAssetHistory outData:", outData);
+    if(outData){
+      return outData;
+    }
+
+    // --------------- Already handled in apiClient above ---------------
     const { data, error } = await supabase
       .from("ChangeLog")
       .select(`
@@ -93,6 +101,13 @@ export async function getAssetHistory(assetId: string): Promise<ChangeLog[]> {
  */
 export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
   try {
+    const outData = await apiClient.getSpaceHistory(spaceId);
+    console.log("getSpaceHistory outData:", outData);
+    if(outData){
+      return outData;
+    }
+
+    //--------------- Already handled in apiClient above ---------------
     // 1) fetch asset IDs for the space (including soft-deleted assets)
     const { data: assets, error: assetsErr } = await supabase
       .from("Assets")
@@ -146,6 +161,14 @@ export async function getSpaceHistory(spaceId: string): Promise<ChangeLog[]> {
  */
 export async function getPropertyHistory(propertyId: string): Promise<ChangeLog[]> {
   try {
+    const outData = await apiClient.getPropertyHistory(propertyId);
+    console.log("getPropertyHistory outData:", outData);
+    if(outData){
+      return outData;
+    }
+
+
+    // --------------- Already handled in apiClient above ---------------
     // Step 1: Get all spaces for this property (including soft-deleted)
     const { data: spaces, error: spacesError } = await supabase
       .from("Spaces")

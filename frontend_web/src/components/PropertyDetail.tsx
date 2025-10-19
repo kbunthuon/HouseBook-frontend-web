@@ -441,7 +441,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     console.log("handleShowTimeline spaceName: ", spaceName);
     if (spaceId) {
       try {
-        const history = await getSpaceHistory(spaceId);
+        const history = await apiClient.getSpaceHistory(spaceId);
         setSpaceChangelogHistory(history);
       } catch (error) {
         console.error("Failed to load space history:", error);
@@ -455,7 +455,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   const handleShowAllPropertyHistory = async () => {
     try {
-      const history = await getPropertyHistory(propertyId);
+      const history = await apiClient.getPropertyHistory(propertyId);
       setChangelogHistory(history);
     } catch (error) {
       console.error("Failed to load property history:", error);
