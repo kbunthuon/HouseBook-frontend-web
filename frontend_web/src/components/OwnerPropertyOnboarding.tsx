@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { Upload, CheckCircle, Building } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { UNSAFE_getTurboStreamSingleFetchDataStrategy, useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
@@ -17,51 +17,43 @@ import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { ownerOnboardProperty} from "../../../backend/OnboardPropertyService";
 import { FormData, SpaceInt} from "../types/serverTypes";
 import { ROUTES } from "../Routes";
+import { useFormContext } from "./FormContext";
 
-export function OwnerPropertyOnboarding() {
+export function OwnerPropertyOnboarding({userId}: {userId: string}) {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<SpaceInt[]>([
-    {
-      type: "",
-      name: "",
-      assets: [
-        {
-          typeId: "",
-          name: "",
-          description: "",
-          features: [{ name: "" , value: ""}]
-        }
-      ]
-    }
-  ]);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    // General Information
-    propertyName: "",
-    propertyDescription: "",
-    address: "",
-    // Plans & Documents
-    floorPlans: [] as File[],
-    buildingPlans: [] as File[]
-  });
-
   const navigate = useNavigate();
+
+  const {
+    formData,
+    setFormData,
+    spaces,
+    setSpaces,
+    currentStep,
+    setCurrentStep,
+    resetForm
+  } = useFormContext();
+
+  formData.floorPlans = formData.floorPlans || [];
+  formData.buildingPlans = formData.buildingPlans || [];
+  formData.propertyName = formData.propertyName || "";
+  formData.propertyDescription = formData.propertyDescription || "";
+  formData.address = formData.address || "";
 
   useEffect(() => {
     const getEnums = async () => {
       const types = await fetchSpaceEnum();
       setSpaceTypes(types);
     };
-    getEnums();
-  }, []);
 
-  useEffect(() => {
     const getAssetTypes = async () => {
       const types = await fetchAssetTypes();
       setAssetTypes(types);
+      console.log("Fetched asset types:", types);
     };
+
     getAssetTypes();
+    getEnums();
   }, []);
 
   const steps = [
@@ -76,12 +68,25 @@ export function OwnerPropertyOnboarding() {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
-      // No longer Next button, this will be complete onboarding
-      // Let backend handle saving information in database
-      const propertyId = await ownerOnboardProperty(formData, spaces);
-      console.log(propertyId);
-      
-      navigate(ROUTES.properties.detail(propertyId));
+      try {
+        console.log("Starting property onboarding...");
+        console.log("Form data:", formData);
+        console.log("Spaces data:", spaces);
+
+        const propertyId = await ownerOnboardProperty(userId, formData, spaces);
+        console.log("Property onboarded successfully with ID:", propertyId);
+
+        // Reset the form data after successful submission
+        resetForm();
+
+        // Navigate to the property details page
+        console.log("Navigating to property details page:", ROUTES.properties.detail(propertyId));
+        navigate(ROUTES.properties.detail(propertyId));
+      } catch (error) {
+        console.error("Failed to onboard property:", error);
+        // Show error message to user
+        alert(`Failed to onboard property: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the console for more details.`);
+      }
     }
   };
 
@@ -205,7 +210,8 @@ export function OwnerPropertyOnboarding() {
     return (
       formData.propertyName.trim() !== "" &&        // Property name not null
       formData.propertyDescription.trim() !== "" && // Property description not null
-      formData.address.trim() !== ""                // Property address not null 
+      formData.address.trim() !== "" &&             // Property address not null
+      formData.totalFloorArea > 0                   // Total floor area must be greater than 0
     );
   };
 
@@ -237,14 +243,13 @@ export function OwnerPropertyOnboarding() {
       case 1:
         return (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <Label htmlFor="propertyName">Property Name</Label>
                 <Input
                   id="propertyName"
                   value={formData.propertyName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyName: e.target.value})}
-                  
                 />
               </div>
               <div>
@@ -253,7 +258,17 @@ export function OwnerPropertyOnboarding() {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
-                  
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalFloorArea">Total Floor Area (m²)</Label>
+                <Input
+                  id="totalFloorArea"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.totalFloorArea || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, totalFloorArea: parseFloat(e.target.value) || 0})}
                 />
               </div>
             </div>
@@ -361,7 +376,6 @@ export function OwnerPropertyOnboarding() {
                       onChange={(e) => updateSpaceName(spaceIndex, e.target.value)}
                       placeholder="Downstairs Bedroom"
                       autoComplete="off"
-                      
                     />
                   </div>
                 </div>
@@ -401,8 +415,9 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           id={`asset-desc-${spaceIndex}-${assetIndex}`}
                           value={asset.description}
-                          onChange={(e) => updateAsset(spaceIndex, assetIndex, "description", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateAsset(spaceIndex, assetIndex, "description", e.target.value)
+                          }
                         />
                       </div>
 
@@ -426,14 +441,16 @@ export function OwnerPropertyOnboarding() {
                         <Input
                           placeholder="Feature Name"
                           value={feature.name}
-                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "name", e.target.value)
+                          }
                         />
                         <Input
                           placeholder="Feature Value"
                           value={feature.value}
-                          onChange={(e) => updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)}
-                          
+                          onChange={(e) =>
+                            updateFeature(spaceIndex, assetIndex, featureIndex, "value", e.target.value)
+                          }
                         />
                         <div className="flex justify-end">
                           <button
@@ -538,63 +555,53 @@ export function OwnerPropertyOnboarding() {
               </div>
             </div>
 
+
             {/* Spaces */}
-            <div className="border rounded-lg p-4 space-y-1">
-              {spaces.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No spaces added yet.
-                </p> // Fallback in case no spaces exist past the validation
-              ) : (
-                <ul className="space-y-4">
-                  {spaces.map((space, spaceIndex) => (
-                    <li key={spaceIndex} className="list-disc pl-6">
-                      {/* Space */}
-                      <span className="font-medium">
-                        {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
-                      </span>
+            {spaces.length === 0 ? (
+              <p className="text-muted-foreground">No spaces added yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {spaces.map((space, spaceIndex) => (
+                  <li key={spaceIndex} className="list-disc pl-4">
+                    {/* Space */}
+                    <span className="font-medium">
+                      {space.type || "No Type Selected"} - {space.name || "Unnamed Room"}
+                    </span>
 
-                      {/* Assets */}
-                      <div className="p-4">
-                        {space.assets.length > 0 ? (
-                          <ul className="list-disc pl-6 space-y-2 mt-3">
-                            {space.assets.map((asset, assetIndex) => (
-                              <li key={assetIndex}>
-                                <span className="font-medium">
-                                  {asset.name || "Unnamed Asset"}
-                                </span>
-                                {asset.description && (
-                                  <span className="text-muted-foreground">
-                                    {" "}— {asset.description}
-                                  </span>
-                                )}
+                    {/* Assets */}
+                    {space.assets.length > 0 ? (
+                      <ul className="list-disc pl-6 space-y-2 mt-2">
+                        {space.assets.map((asset, assetIndex) => (
+                          <li key={assetIndex}>
+                            <span className="font-medium">{asset.name || "Unnamed Asset"}</span>
+                            {asset.description && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                — {asset.description}
+                              </span>
+                            )}
 
-                                {/* Asset Features */}
-                                <div className="p-4">
-                                  {asset.features && asset.features.length > 0 && (
-                                    <ul className="pl-2 mt-3 space-y-2 text-sm text-muted-foreground">
-                                      {asset.features.map((feature, featureIndex) => (
-                                        <li key={featureIndex}>
-                                          {feature.name || "Unnamed Feature"}:{" "}
-                                          {feature.value || "No Value"}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="ml-6 text-sm text-muted-foreground">
-                            No assets added.
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                            {/* Asset Features */}
+                            {asset.features && asset.features.length > 0 && (
+                              <ul className="list-circle pl-6 mt-1 space-y-1 text-sm text-muted-foreground">
+                                {asset.features.map((feature, featureIndex) => (
+                                  <li key={featureIndex}>
+                                    {feature.name || "Unnamed Feature"}:{" "}
+                                    {feature.value || "No Value"}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ml-6 text-sm text-muted-foreground">No assets added.</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         );
 

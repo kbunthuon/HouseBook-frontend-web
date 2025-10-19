@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import { Auth } from "./components/Auth";
 import { Layout } from "./components/Layout";
@@ -18,6 +19,11 @@ import { PropertyManagement } from "./components/PropertyManagement";
 import { PropertyDetail } from "./components/PropertyDetail";
 import { AdminFunctions } from "./components/AdminFunctions";
 import { Reports } from "./components/Reports";
+import TransferRequestPage from "./components/TransferRequestPage";
+import TransferSubmittedPage from "./components/TransferSubmittedPage";
+
+import { AdminRequests } from "./components/AdminRequests";
+import { UserManagementPage } from "./components/UserManagement";
 
 // Owner-specific components
 import { OwnerLayout } from "./components/OwnerLayout";
@@ -28,12 +34,15 @@ import { OwnerRequests } from "./components/OwnerRequests";
 
 import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
 
+import { FormProvider, AdminFormProvider } from "./components/FormContext";
+import { apiClient } from "./api/wrappers";
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
-
+  
   const handleLogin = (email: string, type: "admin" | "owner", user_id: string) => {
     setIsAuthenticated(true);
     setUserType(type);
@@ -41,11 +50,24 @@ export default function App() {
     setUserId(user_id);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserType("owner");
-    setUserEmail("");
-    setUserId("");
+  const handleLogout = async () => {
+    try {
+      // First, logout from backend and clear all sessions/tokens
+      await apiClient.logout();
+
+      // Then clear local state
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Still clear local state even if logout fails
+      setIsAuthenticated(false);
+      setUserType("owner");
+      setUserEmail("");
+      setUserId("");
+    }
   };
 
   {/*
@@ -74,8 +96,41 @@ export default function App() {
       .join(" ");
   };
 
+  // Add cleanup on page unload/close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Optional: Only logout if user wants session to end on browser close
+      // For now, we'll just ensure any pending operations are completed
+      // You can uncomment the lines below to force logout on page close
+
+      // Note: This will NOT work reliably due to browser restrictions
+      // Modern browsers don't allow async operations in beforeunload
+      // But we can at least clear localStorage synchronously
+
+      // Uncomment to force session clear on browser close:
+      // localStorage.clear();
+    };
+
+    const handleVisibilityChange = () => {
+      // When the page becomes hidden (tab switch, minimize, etc.)
+      // we don't want to logout, but we can log for debugging
+      if (document.hidden) {
+        console.log('Page hidden - session maintained');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   return (
     <BrowserRouter>
+    <Toaster position="top-right" />
       <Routes>
         {/* Default: send to role home if logged in, else to login */}
         <Route
@@ -88,7 +143,6 @@ export default function App() {
             )
           }
         />
-
         {/* Login route */}
         <Route
           path={LOGIN}
@@ -100,58 +154,67 @@ export default function App() {
             )
           }
         />
-
         {/* ADMIN AREA */}
         <Route
           path={ADMIN_ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="admin">
-                <Layout
-                  onLogout={handleLogout}
-                  currentPage={DASHBOARD}
-                  onPageChange={() => {}}
-                >
-                  <Outlet />
-                </Layout>
+                <AdminFormProvider>
+                  <Layout
+                    onLogout={handleLogout}
+                    currentPage={DASHBOARD}
+                    onPageChange={() => {}}
+                  >
+                    <Outlet />
+                  </Layout>
+                </AdminFormProvider>
               </RequireRole>
             </RequireAuth>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage />} />
+          <Route index element={<DashboardPage userId={userId} userType={userType} />} />
+          <Route path={ADMIN_ROUTES.properties.list} element={<AdminPropertiesPage userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.properties.add} element={<AdminPropertyOnboarding />} />
           <Route path={ADMIN_ROUTES.properties.pattern} element={<AdminPropertyDetailPage />} />
-          <Route path={ADMIN_ROUTES.reports} element={<Reports />} />
+          <Route path={ADMIN_ROUTES.reports} element={<Reports userId={userId} userType={userType}/>} />
           <Route path={ADMIN_ROUTES.adminTools} element={<AdminFunctions />} />
-        </Route>
+          <Route path={ADMIN_ROUTES.requests} element={<AdminRequests userId={userId} userType={userType} />} />
+          <Route path={ADMIN_ROUTES.users} element={<UserManagementPage />} />
 
+
+        </Route>
         {/* OWNER AREA */}
         <Route
           path={ROUTES.dashboard}
           element={
             <RequireAuth isAuthenticated={isAuthenticated}>
               <RequireRole userType={userType} role="owner">
-                <OwnerLayout
-                  onLogout={handleLogout}
-                  ownerName={getUserName()}
-                  currentPage={DASHBOARD}
-                  onPageChange={() => {}}
-                >
-                  <Outlet />
-                </OwnerLayout>
+                <FormProvider>
+                  <OwnerLayout
+                    onLogout={handleLogout}
+                    ownerName={getUserName()}
+                    currentPage={DASHBOARD}
+                    onPageChange={() => {}}
+                  >
+                    <Outlet />
+                  </OwnerLayout>
+                </FormProvider>
               </RequireRole>
             </RequireAuth>
           }
         >
           <Route index element={<OwnerDashboardPage userId={userId} />} />
-          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} userEmail={userEmail} />} />
-          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding />} />
+          <Route path={ROUTES.properties.list} element={<OwnerPropertiesPage userId={userId} />} />
+          <Route path={ROUTES.properties.add} element={<OwnerPropertyOnboarding userId={userId} />} />
           <Route path={ROUTES.properties.pattern} element={<OwnerPropertyDetailPage />} />
           <Route path={ROUTES.reports} element={<MyReports ownerEmail={userEmail} />} />
           <Route path={ROUTES.requests} element={<OwnerRequests userId={userId}/>} />
+          <Route path={ROUTES.propertyTransfer} element={<TransferRequestRoute userId={userId} />} />
+          <Route path={ROUTES.propertyTransferSubmitted} element={<TransferSubmittedPage />} />
+          {/* <Route path={ROUTES.reports} element={<MyReports userId={userId} />} />
+          <Route path={ROUTES.requests} element={<OwnerRequests />} /> */}
         </Route>
-
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -185,10 +248,25 @@ function RequireRole({
 }
 
 /** ---------- Admin nested helpers ---------- */
-function AdminPropertiesPage() {
+function DashboardPage({ userId, userType}: { userId: string, userType: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <Dashboard
+      userId={userId}
+      userType={userType}
+      onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
+      onAddProperty={() => navigate(ADMIN_ROUTES.properties.add)}
+    />
+  );
+}
+
+function AdminPropertiesPage({ userId, userType}: { userId: string, userType:string}) {
   const navigate = useNavigate();
   return (
     <PropertyManagement
+      userId={userId}
+      userType={userType}
       onViewProperty={(id: string) => navigate(ADMIN_ROUTES.properties.detail(id))}
     />
   );
@@ -206,12 +284,11 @@ function AdminPropertyDetailPage() {
 }
 
 /** ---------- Owner nested helpers ---------- */
-function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail: string }) {
+function OwnerPropertiesPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
-  // NOTE: you previously passed userId as ownerEmail; keep whichever your component expects.
   return (
     <MyProperties
-      ownerEmail={userId /* or userEmail if that's correct */}
+      ownerId={userId}
       onViewProperty={(id: string) => navigate(ROUTES.properties.detail(id))}
       onAddProperty={() => navigate(ROUTES.properties.add)}
     />
@@ -221,6 +298,12 @@ function OwnerPropertiesPage({ userId, userEmail }: { userId: string; userEmail:
 function OwnerPropertyDetailPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
+
+  console.log('OwnerPropertyDetailPage rendered');
+  console.log('propertyId from useParams:', propertyId);
+  console.log('All params:', useParams());
+  console.log('Current location:', window.location.pathname);
+  
   return (
     <PropertyDetail
       propertyId={propertyId!}
@@ -240,6 +323,20 @@ function OwnerDashboardPage({ userId }: { userId: string }) {
     />
   );
 }
+
+function TransferRequestRoute({ userId }: { userId: string }) {
+  const { id = "" } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  return (
+    <TransferRequestPage
+      propertyId={id}
+      userId={userId}
+      onViewTransfer={(pid) => navigate(ROUTES.propertyTransferPath(pid))} // use the *builder*
+    />
+  );
+}
+
+
 
 
 /** ---------- 404 ---------- */

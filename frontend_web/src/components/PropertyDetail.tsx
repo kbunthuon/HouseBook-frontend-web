@@ -2,830 +2,1774 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogOverlay } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ScrollArea } from "./ui/scroll-area";
-import { ArrowLeft, Edit, Key, FileText, Image, Clock, History } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { ArrowLeft, Edit, Key, FileText, Image, Clock, History, Save, X, Trash2, Plus, AlertCircle, Trash2Icon, Download, ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "./PinManagementDialog";
 import { PinTable } from "./PinTable";
 import { toast } from "sonner";
-import { getPropertyOwners, getPropertyDetails } from "../../../backend/FetchData";
-import { Property } from "../types/serverTypes";
-import { Owner } from "../types/serverTypes";
-import { AccessPin } from "./PinTable"
+import { Owner, ChangeLog, Property, Asset } from "../types/serverTypes";
 
-interface EditHistoryItem {
-  id: number;
-  date: string;
-  section: string;
-  field?: string;
-  description: string;
-  editedBy: string;
-}
+import { fetchJobsInfo, Job, JobAsset, deleteJob } from "../../../backend/JobService";
 
-// interface AccessPin {
-//   id: string;
-//   pin: string;
-//   accessibleSections: string[];
-//   isActive: boolean;
-//   createdAt: string;
-//   lastUsed?: string;
-// }
+import { 
+  updateProperty, 
+  updateSpace, 
+  updateAsset, 
+  deleteSpace,
+  deleteAsset,
+  createSpace,
+  createAsset,
+  updateFeatures,
+  deleteFeature,
+  getAssetTypes,
+  getPropertyForEdit,
+  PropertyUpdate, 
+  SpaceUpdate, 
+  AssetUpdate 
+} from "../../../backend/PropertyEditService";
+import { getPropertyHistory, getSpaceHistory, getAssetHistory, ChangeLogAction } from "../../../backend/ChangeLogService";
+import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
+import { apiClient } from "../api/wrappers";
+import SplashImageDialog from "./Dialogues/SplashImageSelect";
 
 interface PropertyDetailProps {
   propertyId: string;
   onBack: () => void;
 }
 
+type DialogMode = 'property' | 'space' | 'asset' | 'feature' | 'createSpace' | 'createAsset' | null;
+
+interface DialogContext {
+  mode: DialogMode;
+  spaceId?: string;
+  spaceName?: string;
+  assetId?: string;
+  assetType?: string;
+  featureName?: string;
+}
+
 export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState<string>("");
-  const [editingField, setEditingField] = useState<string>("");
-  const [selectedSectionForTimeline, setSelectedSectionForTimeline] = useState<string>("");
-  const [editDescription, setEditDescription] = useState("");
-  const [accessPins, setAccessPins] = useState<AccessPin[]>([
-    {
-      id: "1",
-      pin: "123456",
-      accessibleSections: ["General Details", "Exterior Specifications", "Property Images"],
-      isActive: true,
-      createdAt: "2024-01-15T10:30:00Z",
-      lastUsed: "2024-01-18T14:20:00Z"
-    },
-    {
-      id: "2", 
-      pin: "789012",
-      accessibleSections: ["Kitchen Appliances", "Bathroom Fixtures", "Lighting & Electrical"],
-      isActive: false,
-      createdAt: "2024-01-10T09:15:00Z",
-      lastUsed: "2024-01-12T16:45:00Z"
+  const [isAllHistoryDialogOpen, setIsAllHistoryDialogOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  
+  const [dialogContext, setDialogContext] = useState<DialogContext>({ mode: null });
+  const [formData, setFormData] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'space' | 'asset' | 'feature', id?: string, name?: string }>({ type: 'asset' });
+
+  const [property, setProperty] = useState<Property | null>(null);
+  const [owners, setOwners] = useState<Owner[] | null>(null);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [allJobAssets, setAllJobAssets] = useState<JobAsset[]>([]);
+  const [changelogHistory, setChangelogHistory] = useState<ChangeLog[]>([]);
+  const [spaceChangelogHistory, setSpaceChangelogHistory] = useState<ChangeLog[]>([]);
+  const [assetTypes, setAssetTypes] = useState<any[]>([]);
+  const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
+  const qrCodeRef = useRef<HTMLCanvasElement>(null);
+
+  // Image management states
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
+  const [isImageDeleteDialogOpen, setIsImageDeleteDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedImagesToDelete, setSelectedImagesToDelete] = useState<string[]>([]);
+  const [isImageConfirmOpen, setIsImageConfirmOpen] = useState(false);
+  const [imageAction, setImageAction] = useState<'upload' | 'delete' | 'setSplash'| null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isSplashDialogOpen, setIsSplashDialogOpen] = useState(false);
+  const [selectedSplashImage, setSelectedSplashImage] = useState<string | null>(null);
+
+  // New space creation state
+  const [newSpaceAssets, setNewSpaceAssets] = useState<Array<{
+    tempId: string;
+    assetTypeId: number;
+    assetTypeName: string;
+    description: string;
+    specifications: Record<string, any>;
+  }>>([]);
+  // Feature form visibility states
+  const [showFeatureFormAssetEdit, setShowFeatureFormAssetEdit] = useState(false);
+  const [showFeatureFormCreateAsset, setShowFeatureFormCreateAsset] = useState(false);
+  const [featureFormCreateSpaceIndex, setFeatureFormCreateSpaceIndex] = useState<number | null>(null);
+
+  // Small reusable in-place feature editor card (name + value)
+  function FeatureCard({
+    initialName = "",
+    initialValue = "",
+    onAdd,
+    onCancel,
+    className = "",
+  }: {
+    initialName?: string;
+    initialValue?: string;
+    onAdd: (name: string, value: string) => void;
+    onCancel: () => void;
+    className?: string;
+  }) {
+    const [name, setName] = useState(initialName);
+    const [value, setValue] = useState(initialValue);
+
+    return (
+      <div className={`pt-3 ${className}`}>
+        <Card className="w-full">
+          <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto pt-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label className="block">Feature name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <Label className="block">Feature value</Label>
+                <Input value={value} onChange={(e) => setValue(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+              <Button size="sm" onClick={() => { if (name.trim()) { onAdd(name.trim(), value); } }}>
+                OK
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    fetchData();
+    loadAssetTypes();
+    loadSpaceTypes();
+  }, [propertyId]);
+
+  // Keyboard navigation for image viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedImage || !property?.images) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateToPreviousImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateToNextImage();
+      } else if (e.key === 'Escape') {
+        closeImageViewer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImage, selectedImageIndex, property?.images]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("Fetching data for propertyId:", propertyId);
+      const result = await apiClient.getPropertyDetails(propertyId);
+      if (result) setProperty(result);
+      else setError("Property not found");
+
+      // Fetch images
+      const imagesResult = await apiClient.getPropertyImages(propertyId);
+      console.log(imagesResult);
+      // Update property with images without losing current state
+      setProperty((prev) => prev ? { ...prev, images: imagesResult.images } : prev);
+
+      const ownerResult = await apiClient.getPropertyOwners(propertyId);
+      if (ownerResult) setOwners(ownerResult);
+
+      const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
+      if (jobs) setAllJobs(jobs);
+      if (jobAssets) setAllJobAssets(jobAssets);
+
+      console.log("property:", property);
+    } catch (err: any) {
+      setError(err.message ?? "Unexpected error");
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  // Define all editable fields organized by section
-  const sectionFields = {
-    "General Details": [
-      "bedrooms",
-      "bathrooms", 
-      "livingAreas",
-      "garage",
-      "totalFloorArea",
-      "blockSize"
-    ],
-    "Walls & Ceilings": [
-      "paintColour",
-      "ceilingHeight",
-      "cornices"
-    ],
-    "Exterior Specifications": [
-      "roof",
-      "wallsBrick",
-      "renderFeature",
-      "windows",
-      "fasciaGutters",
-      "frontDoor",
-      "driveway",
-      "fencing"
-    ],
-    "Flooring": [
-      "livingAreas",
-      "bedrooms",
-      "wetAreas"
-    ],
-    "Cabinetry & Bench Tops": [
-      "kitchenCabinets",
-      "kitchenBenchtop",
-      "bathroomVanities",
-      "bathroomBenchtops"
-    ],
-    "Doors & Handles": [
-      "internalDoors",
-      "handles"
-    ],
-    "Kitchen Appliances": [
-      "oven",
-      "cooktop",
-      "rangehood",
-      "dishwasher"
-    ],
-    "Bathroom Fixtures": [
-      "showerScreens",
-      "bathtub",
-      "tapware",
-      "toilets"
-    ],
-    "Lighting & Electrical": [
-      "lighting",
-      "powerPoints",
-      "heatingCooling",
-      "hotWater"
-    ]
   };
 
-  // Mock edit history data - in real app this would come from API
-  const editHistory = {
-    generalDetails: [
-      {
-        id: 1,
-        date: "2024-01-15T10:30:00Z",
-        section: "General Details",
-        field: "bedrooms",
-        description: "Updated bedroom count from 3 to 3 + study",
-        editedBy: "John Smith"
-      },
-      {
-        id: 2,
-        date: "2024-01-10T14:15:00Z",
-        section: "General Details",
-        field: "totalFloorArea", 
-        description: "Initial property setup with basic details",
-        editedBy: "System"
-      }
-    ],
-    wallsCeilings: [
-      {
-        id: 3,
-        date: "2024-01-12T09:45:00Z",
-        section: "Walls & Ceilings",
-        field: "paintColour",
-        description: "Changed paint color from Vivid White to Natural White",
-        editedBy: "John Smith"
-      },
-      {
-        id: 4,
-        date: "2024-01-05T11:20:00Z",
-        section: "Walls & Ceilings",
-        field: "ceilingHeight",
-        description: "Updated ceiling height specification",
-        editedBy: "John Smith"
-      }
-    ],
-    exteriorSpecs: [
-      {
-        id: 5,
-        date: "2024-01-08T16:20:00Z",
-        section: "Exterior Specifications",
-        field: "roof",
-        description: "Updated roof color from Woodland Grey to Basalt",
-        editedBy: "John Smith"
-      }
-    ],
-    flooring: [
-      {
-        id: 6,
-        date: "2024-01-14T13:45:00Z",
-        section: "Flooring",
-        field: "bedrooms",
-        description: "Changed carpet color from Charcoal to Storm Grey",
-        editedBy: "John Smith"
-      }
-    ],
-    cabinetryBenchtops: [
-      {
-        id: 7,
-        date: "2024-01-11T15:30:00Z",
-        section: "Cabinetry & Bench Tops",
-        field: "kitchenCabinets",
-        description: "Updated kitchen cabinet finish",
-        editedBy: "John Smith"
-      }
-    ],
-    doorsHandles: [
-      {
-        id: 8,
-        date: "2024-01-09T10:15:00Z",
-        section: "Doors & Handles",
-        field: "handles",
-        description: "Changed handle finish to matte black",
-        editedBy: "John Smith"
-      }
-    ],
-    kitchenAppliances: [
-      {
-        id: 9,
-        date: "2024-01-13T14:20:00Z",
-        section: "Kitchen Appliances",
-        field: "cooktop",
-        description: "Upgraded cooktop from 600mm to 900mm induction",
-        editedBy: "John Smith"
-      }
-    ],
-    bathroomFixtures: [
-      {
-        id: 10,
-        date: "2024-01-07T12:30:00Z",
-        section: "Bathroom Fixtures",
-        field: "tapware",
-        description: "Updated tapware finish to matte black",
-        editedBy: "John Smith"
-      }
-    ],
-    lightingElectrical: [
-      {
-        id: 11,
-        date: "2024-01-16T09:15:00Z",
-        section: "Lighting & Electrical",
-        field: "lighting",
-        description: "Added pendant lighting specification",
-        editedBy: "John Smith"
-      }
-    ]
+  // Map backend-shaped property to the shared Property shape expected by some child components
+  const mapToSharedProperty = (bp: Property | null) => {
+    if (!bp) return null;
+    console.log("Mapping backend property to shared shape, images are", bp.images);
+    return {
+      propertyId: bp.propertyId,
+      address: bp.address || bp.address || "",
+      description: bp.description || "",
+      pin: "",
+      name: bp.name,
+      type: bp.totalFloorArea ? "" : "",
+      status: "",
+      lastUpdated: "",
+      completionStatus: 0,
+      totalFloorArea: bp.totalFloorArea,
+      spaces: bp.spaces?.map(s => ({
+        space_id: s.id,
+        name: s.name,
+        type: s.type || "",
+        assets: s.assets?.map(a => ({
+          assetId: a.id,
+          type: a.assetTypes?.name || a.type || "",
+          description: a.description || "",
+        })) || [],
+      })) || [],
+      images: bp.images || [],
+      created_at: "",
+    } as any;
   };
 
-  const handleEdit = (sectionTitle: string, specificField?: string) => {
-    setEditingSection(sectionTitle);
-    if (specificField) {
-      setEditingField(specificField);
-    } else {
-      // If no specific field provided, default to first field of the section
-      const fields = sectionFields[sectionTitle as keyof typeof sectionFields];
-      setEditingField(fields?.[0] || "");
+
+  const loadAssetTypes = async () => {
+    try {
+      const types = await getAssetTypes();
+      setAssetTypes(types);
+    } catch (error) {
+      console.error("Failed to load asset types:", error);
     }
-    setEditDescription("");
-    setIsEditDialogOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    // In real app, this would make an API call to save the edit
-    const currentTime = new Date().toISOString();
-    console.log({
-      section: editingSection,
-      field: editingField,
-      description: editDescription,
-      timestamp: currentTime
+  const loadSpaceTypes = async () => {
+    try {
+      const types = await fetchSpaceEnum();
+      setSpaceTypes(types || []);
+      // if creating a space and no type set, default to first enum
+      if (!formData.type && types && types.length > 0) {
+        setFormData((f: any) => ({ ...f, type: types[0] }));
+      }
+    } catch (err) {
+      console.error("Failed to load space types:", err);
+    }
+  };
+
+  // PROPERTY EDIT
+  const handleEditProperty = () => {
+    setDialogContext({ mode: 'property' });
+    setFormData({
+      name: property?.name || '',
+      description: property?.description || '',
+      address: property?.address || '',
+      type: 'Townhouse',
+      totalFloorArea: property?.totalFloorArea || 0
     });
+    setIsDialogOpen(true);
+  };
+
+  // SPACE EDIT
+  const handleEditSpace = (spaceId: string, spaceName: string) => {
+    const space = property?.spaces?.find(s => s.id === spaceId);
+    console.log("handleEditSpace: ", spaceId, spaceName);
+    setDialogContext({ mode: 'space', spaceId, spaceName });
+    setFormData({
+      name: space?.name || '',
+      type: space?.type || ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  // SPACE CREATE
+  const handleCreateSpace = () => {
+    setDialogContext({ mode: 'createSpace' });
+    setFormData({
+      name: '',
+      type: 'LIVING'
+    });
+    setNewSpaceAssets([]);
+    setIsDialogOpen(true);
+  };
+
+  // SPACE DELETE
+  const handleDeleteSpace = (spaceId: string, spaceName: string) => {
+    setDeleteTarget({ type: 'space', id: spaceId, name: spaceName });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // ASSET EDIT
+  const handleEditAsset = (spaceId: string, spaceName: string, assetId: string, assetType: string) => {
+    const space = property?.spaces?.find(s => s.id === spaceId);
+    const asset = space?.assets?.find(a => a.id === assetId);
+    console.log("handleEditAssets: spaceId: ", spaceId, ", spaceName: ", spaceName, ", assetId: ", assetId, ", assetType: ", assetType);
+    setDialogContext({ mode: 'asset', spaceId, spaceName, assetId, assetType });
+    setFormData({
+      description: asset?.description || '',
+      current_specifications: asset?.currentSpecifications || {}
+    });
+    setIsDialogOpen(true);
+  };
+
+  // ASSET CREATE
+  const handleCreateAsset = (spaceId: string, spaceName: string) => {
+    setDialogContext({ mode: 'createAsset', spaceId, spaceName });
+    setFormData({
+      assetTypeId: '',
+      description: '',
+      specifications: {}
+    });
+    setIsDialogOpen(true);
+  };
+
+  // ASSET DELETE
+  const handleDeleteAsset = (assetId: string, assetName: string) => {
+    setDeleteTarget({ type: 'asset', id: assetId, name: assetName });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // FEATURE DELETE
+  const handleDeleteFeature = (assetId: string, featureName: string) => {
+    setDeleteTarget({ type: 'feature', id: assetId, name: featureName });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // SAVE HANDLER
+  const handleSave = () => {
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setIsConfirmOpen(false);
+    setSaving(true);
+    console.log("DialogContext in handleConfirmSave: ", dialogContext);
+    try {
+      if (dialogContext.mode === 'property') {
+        const updates: PropertyUpdate = {
+          name: formData.name,
+          description: formData.description,
+          address: formData.address,
+          type: formData.type,
+          total_floor_area: formData.total_floor_area
+        };
+        await updateProperty(propertyId, updates);
+        toast.success("Property updated successfully");
+        
+      } else if (dialogContext.mode === 'space') {
+        const updates: SpaceUpdate = {
+          name: formData.name,
+          type: formData.type
+        };
+        await updateSpace(dialogContext.spaceId!, updates);
+        toast.success(`${dialogContext.spaceName} updated successfully`);
+        
+      } else if (dialogContext.mode === 'asset') {
+        const updates: AssetUpdate = {
+          description: formData.description,
+          current_specifications: formData.current_specifications
+        };
+        await updateAsset(dialogContext.assetId!, updates);
+        toast.success(`${dialogContext.assetType} updated successfully`);
+
+        console.log("Asset dialog context: ", dialogContext);
+        
+      } else if (dialogContext.mode === 'createSpace') {
+        await createSpace(
+          propertyId,
+          formData.name,
+          formData.type,
+          newSpaceAssets.map(a => ({
+            assetTypeId: a.assetTypeId,
+            description: a.description,
+            specifications: a.specifications
+          }))
+        );
+        toast.success("Space created successfully");
+        
+      } else if (dialogContext.mode === 'createAsset') {
+        await createAsset(
+          dialogContext.spaceId!,
+          parseInt(formData.assetTypeId),
+          formData.description,
+          formData.specifications
+        );
+        toast.success("Asset created successfully");
+      }
+      console.log("Dialog context: ", dialogContext);
+      await fetchData();
+      setIsDialogOpen(false);
+      setDialogContext({ mode: null });
+    } catch (error: any) {
+      console.error("Error saving:", error);
+      
+      toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // DELETE HANDLER
+  const handleConfirmDelete = async () => {
+    setIsDeleteConfirmOpen(false);
     
-    setIsEditDialogOpen(false);
-    setEditDescription("");
-    setEditingSection("");
-    setEditingField("");
+    try {
+      if (deleteTarget.type === 'space') {
+        await deleteSpace(deleteTarget.id!);
+        toast.success("Space deleted successfully");
+      } else if (deleteTarget.type === 'asset') {
+        await deleteAsset(deleteTarget.id!);
+        toast.success("Asset deleted successfully");
+      } else if (deleteTarget.type === 'feature') {
+        await deleteFeature(deleteTarget.id!, deleteTarget.name!);
+        toast.success("Feature deleted successfully");
+      }
+      
+      await fetchData();
+    } catch (error: any) {
+      console.error("Error deleting:", error);
+      console.log("Delete target: ", deleteTarget);
+      toast.error(`Failed to delete: ${error.message || 'Unknown error'}`);
+    }
   };
 
-  const handleFieldChange = (fieldValue: string) => {
-    setEditingField(fieldValue);
-  };
+  // History handlers
+  const handleShowTimeline = async (spaceName: string, spaceId?: string) => {
+    console.log("handleShowTimeline spaceId: ", spaceId);
+    console.log("handleShowTimeline spaceName: ", spaceName);
+    if (spaceId) {
+      try {
+        const history = await getSpaceHistory(spaceId);
+        setSpaceChangelogHistory(history);
+      } catch (error) {
+        console.error("Failed to load space history:", error);
+        setSpaceChangelogHistory([]);
+      }
+    }
 
-  // Get fields for the current editing section only
-  const getCurrentSectionFields = () => {
-    if (!editingSection) return [];
-    const fields = sectionFields[editingSection as keyof typeof sectionFields] || [];
-    return fields.map(field => ({
-      value: field,
-      label: field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-    }));
-  };
-
-  const handleShowTimeline = (sectionTitle: string) => {
-    setSelectedSectionForTimeline(sectionTitle);
+    console.log(spaceId, spaceName, spaceChangelogHistory);
     setIsTimelineDialogOpen(true);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const handleShowAllPropertyHistory = async () => {
+    try {
+      const history = await getPropertyHistory(propertyId);
+      setChangelogHistory(history);
+    } catch (error) {
+      console.error("Failed to load property history:", error);
+      setChangelogHistory([]);
+    }
+    setIsAllHistoryDialogOpen(true);
   };
 
-  const getSectionKey = (title: string): keyof typeof editHistory => {
-    const keyMap: Record<string, keyof typeof editHistory> = {
-      "General Details": "generalDetails",
-      "Walls & Ceilings": "wallsCeilings", 
-      "Exterior Specifications": "exteriorSpecs",
-      "Flooring": "flooring",
-      "Cabinetry & Bench Tops": "cabinetryBenchtops",
-      "Doors & Handles": "doorsHandles",
-      "Kitchen Appliances": "kitchenAppliances",
-      "Bathroom Fixtures": "bathroomFixtures",
-      "Lighting & Electrical": "lightingElectrical"
-    };
-    return keyMap[title] || "generalDetails";
+  // PIN handlers
+  const handleSavePin = async (job: Job, assetIds?: string[]) => {
+    const [jobs, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
+    if (jobs) setAllJobs(jobs);
+    if (jobAssets) setAllJobAssets(jobAssets);
+    toast.success("Job saved successfully");
   };
 
-  // PIN management functions
-  const handleSavePin = (pin: string, sections: string[]) => {
-    const newPin: AccessPin = {
-      id: Date.now().toString(),
-      pin,
-      accessibleSections: sections,
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
-    setAccessPins(prev => [...prev, newPin]);
-    toast.success("Access PIN created successfully");
+  const handleSaveJobEdits = async (updatedJob: Job) => {
+    setAllJobs(prev => prev.map(j => j.id === updatedJob.id ? updatedJob : j));
+    const [, jobAssets] = await fetchJobsInfo({ propertyId: propertyId });
+    if (jobAssets) setAllJobAssets(jobAssets);
+    toast.success("Job updated successfully");
   };
 
-  const handleUpdatePin = (pinId: string, sections: string[]) => {
-    setAccessPins(prev => prev.map(pin => 
-      pin.id === pinId ? { ...pin, accessibleSections: sections } : pin
-    ));
-  };
-
-  const handleDeletePin = (pinId: string) => {
-    setAccessPins(prev => prev.filter(pin => pin.id !== pinId));
-    toast.success("Access PIN deleted successfully");
-  };
-
-  const handleToggleActive = (pinId: string, isActive: boolean) => {
-    setAccessPins(prev => prev.map(pin => 
-      pin.id === pinId ? { ...pin, isActive } : pin
-    ));
-    toast.success(`PIN ${isActive ? 'activated' : 'deactivated'} successfully`);
-  };
-
-
-  // Mock property data - in real app this would come from API
-  /*
-  const propertyData = {
-    id: propertyId,
-    name: "Rose Wood Retreat",
-    description: "Single-storey contemporary home",
-    status: "Active",
-    owner: "John Smith",
-    pin: "123456",
-    address: "123 Maple Street, Downtown",
-    generalDetails: {
-      bedrooms: "3 + study",
-      bathrooms: "2",
-      livingAreas: "2 (Open-plan living/dining + separate lounge)",
-      garage: "Double garage with panel-lift door",
-      totalFloorArea: "212 m²",
-      blockSize: "590 m²"
-    },
-    exteriorSpecs: {
-      roof: "Colorbond steel in Basalt",
-      wallsBrick: "Clay bricks in Smokey Ash",
-      renderFeature: "Acrylic render in Shale Grey",
-      windows: "Aluminium framed in Black Matt with tinted double glazing",
-      fasciaGutters: "Colorbond Basalt",
-      frontDoor: "Solid Timber in Spotted Gum with vertical glass inserts",
-      driveway: "Stamped concrete in Charcoal Slate pattern",
-      fencing: "1.8m timber paling fence with stained finish in Walnut"
-    },
-    wallsCeilings: {
-      paintColour: "Dulux Natural White",
-      ceilingHeight: "2.55m, painted Dulux Ceiling White",
-      cornices: "Square set in living areas, 75mm cove in bedrooms"
-    },
-    flooring: {
-      livingAreas: "Hybrid vinyl planks in Spotted Gum",
-      bedrooms: "Plush twist carpet in Storm Grey",
-      wetAreas: "300x600 porcelain tiles in Travertine Beige"
-    },
-    cabinetryBenchtops: {
-      kitchenCabinets: "Laminex Blackbutt Natural finish with matte black handles",
-      kitchenBenchtop: "20mm Caesarstone Cloudburst Concrete",
-      bathroomVanities: "Laminex Whitewashed Oak",
-      bathroomBenchtops: "20mm Caesarstone Pure White"
-    },
-    doorsHandles: {
-      internalDoors: "Solid core profile doors, painted white",
-      handles: "Matte black lever"
-    },
-    kitchenAppliances: {
-      oven: "600mm electric oven, black glass finish",
-      cooktop: "900mm induction cooktop",
-      rangehood: "Concealed under-mount ducted",
-      dishwasher: "Stainless steel, semi-integrated"
-    },
-    bathroomFixtures: {
-      showerScreens: "Semi-frameless clear glass",
-      bathtub: "Back-to-wall acrylic tub, 1700mm",
-      tapware: "Matte black mixers",
-      toilets: "Wall-faced soft-close suites"
-    },
-    lightingElectrical: {
-      lighting: "LED downlights throughout, black pendant lights over kitchen island",
-      powerPoints: "Matte black finish",
-      heatingCooling: "Zoned ducted reverse-cycle system",
-      hotWater: "Electric heat pump hot water system"
+  const handleDeleteJob = async (jobId: string) => {
+    const success = await deleteJob(jobId);
+    if (success) {
+      setAllJobs(prev => prev.filter(j => j.id !== jobId));
+      setAllJobAssets(prev => prev.filter(a => a.job_id !== jobId));
+      toast.success("Job deleted successfully");
+    } else {
+      toast.error("Failed to delete job");
     }
   };
-  */
 
-  const [property, setProperty] = useState<Property | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [owners, setOwners] = useState<Owner[] | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("Fetching details for property ID:", propertyId);
-        const result = await getPropertyDetails(propertyId);
-        if (result) {
-          setProperty(result);
-        } else {
-          setError("Property not found");
-        }
-        console.log("Property images:", result?.images);
-        console.log("Spaces data:", result?.spaces);
-
-        const ownerResult = await getPropertyOwners(propertyId);
-        if (ownerResult) {
-          setOwners(ownerResult);
-        } else {
-          setError("Owner not found");
-        }
-      } catch (err: any) {
-        setError(err.message ?? "Unexpected error");
-      } finally {
-        setLoading(false);
+  const handleDownloadQRPDF = async () => {
+    try {
+      // Load jsPDF from CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      
+      // @ts-ignore - jsPDF is loaded globally
+      const { jsPDF } = window.jspdf;
+      
+      const doc = new jsPDF();
+      
+      // Add property information
+      doc.setFontSize(20);
+      doc.text(property?.name || 'Property', 20, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Address: ${property?.address || 'N/A'}`, 20, 35);
+      
+      if (owners && owners.length > 0) {
+        const ownerText = owners.length > 1 ? 'Owners:' : 'Owner:';
+        const ownerNames = owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ");
+        doc.text(`${ownerText} ${ownerNames}`, 20, 45);
       }
-    };
+      
+      doc.text(`Total Floor Area: ${property?.totalFloorArea || 0}m²`, 20, 55);
+      
+      // Add QR code
+      if (qrCodeRef.current) {
+        const qrImageData = qrCodeRef.current.toDataURL('image/png');
+        doc.addImage(qrImageData, 'PNG', 20, 70, 80, 80);
+      }
+      
+      doc.setFontSize(10);
+      doc.text(`Property ID: ${propertyId}`, 20, 160);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 167);
+      
+      // Save the PDF
+      doc.save(`${property?.name || 'property'}-QR.pdf`);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast.error("Failed to generate PDF");
+    }
+  };
 
-    fetchData();
-  }, [propertyId]); // re-run if the propertyId changes
+  // Image viewer navigation handlers
+  const openImageViewer = (url: string, index: number) => {
+    setSelectedImage(url);
+    setSelectedImageIndex(index);
+  };
 
-  const SpecificationSection = ({ title, items, children }: { title: string; items?: Record<string, string>; children?: React.ReactNode }) => (
+  const closeImageViewer = () => {
+    setSelectedImage(null);
+    setSelectedImageIndex(-1);
+  };
+
+  const navigateToNextImage = () => {
+    if (!property?.images || selectedImageIndex === -1) return;
+    const nextIndex = (selectedImageIndex + 1) % property.images.length;
+    setSelectedImageIndex(nextIndex);
+    setSelectedImage(property.images[nextIndex]);
+  };
+
+  const navigateToPreviousImage = () => {
+    if (!property?.images || selectedImageIndex === -1) return;
+    const prevIndex = selectedImageIndex === 0 ? property.images.length - 1 : selectedImageIndex - 1;
+    setSelectedImageIndex(prevIndex);
+    setSelectedImage(property.images[prevIndex]);
+  };
+
+  // Image management handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(filesArray);
+    }
+  };
+
+  const handleRemoveSelectedFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleOpenUploadDialog = () => {
+    setSelectedFiles([]);
+    setIsImageUploadDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setSelectedImagesToDelete([]);
+    setIsImageDeleteDialogOpen(true);
+  };
+
+  const handleToggleImageForDeletion = (url: string) => {
+    setSelectedImagesToDelete(prev => 
+      prev.includes(url) 
+        ? prev.filter(u => u !== url)
+        : [...prev, url]
+    );
+  };
+
+  const handleConfirmImageAction = (action: 'upload' | 'delete' | 'setSplash') => {
+    setImageAction(action);
+    setIsImageUploadDialogOpen(false);
+    setIsImageDeleteDialogOpen(false);
+    setIsSplashDialogOpen(false);
+    setIsImageConfirmOpen(true);
+  };
+
+  const handleFinalImageAction = async () => {
+    setIsImageConfirmOpen(false);
+    
+    try {
+      console.log("Performing image action:", imageAction, "selectedSplashImage:", selectedSplashImage);
+      if (imageAction === 'upload' && selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          await apiClient.uploadPropertyImage(propertyId, file);
+        }
+        toast.success(`${selectedFiles.length} image(s) uploaded successfully`);
+        setSelectedFiles([]);
+        
+      } else if (imageAction === 'delete' && selectedImagesToDelete.length > 0) {
+        await apiClient.deletePropertyImages(selectedImagesToDelete);
+        toast.success(`${selectedImagesToDelete.length} image(s) deleted successfully`);
+        setSelectedImagesToDelete([]);
+      } else if (imageAction === 'setSplash' && selectedSplashImage) {
+        await apiClient.updatePropertySplashImage(selectedSplashImage);
+        toast.success(`Splash image updated successfully`);
+      }
+      
+      await fetchData();
+      setImageAction(null);
+    } catch (error: any) {
+      console.error("Image operation failed:", error);
+      toast.error(`Failed: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleOpenSplashDialog = () => {
+    // Pre-select the current splash image when the dialog opens
+    setSelectedSplashImage(property?.splashImage || null);
+    setIsSplashDialogOpen(true);
+  };
+
+  const handleCloseSplashDialog = () => {
+    setIsSplashDialogOpen(false);
+  };
+
+
+  const formatSpecifications = (specs: Record<string, any>) => {
+    if (!specs || typeof specs !== 'object') return null;
+    
+    return Object.entries(specs).map(([key, value]) => (
+      <div key={key} className="text-sm flex justify-between items-center">
+        <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+        <span className="text-muted-foreground">{String(value)}</span>
+      </div>
+    ));
+  };
+
+  const SpecificationSection = ({ 
+    title, 
+    spaceId, 
+    spaceName,
+    assets 
+  }: { 
+    title: string; 
+    spaceId: string;
+    spaceName: string;
+    assets: Asset[];
+  }) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="font-semibold">{title}</CardTitle>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleShowTimeline(title)}
-            className="text-muted-foreground hover:text-foreground"
-          >
+          <Button variant="ghost" size="sm" onClick={() => handleShowTimeline(title, spaceId)}>
             <History className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEdit(title)}
-            className="text-muted-foreground hover:text-foreground"
-          >
+          <Button variant="ghost" size="sm" onClick={() => handleCreateAsset(spaceId, spaceName)}>
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleEditSpace(spaceId, spaceName)}>
             <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleDeleteSpace(spaceId, spaceName)}>
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        {items && (
-          <div className="space-y-2">
-            {Object.entries(items).map(([key, value]) => (
-              <div 
-                key={key} 
-                className="flex justify-between items-start group cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded"
-                onClick={() => handleEdit(title, key)}
-              >
-                <span className="font-medium capitalize text-muted-foreground">
-                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                </span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-right max-w-2xl">{value}</span>
-                  <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      <CardContent className="space-y-4 max-h-[50vh] overflow-auto">
+        {assets.map((asset) => (
+          <div key={asset.id} className="border rounded-lg p-3">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold">{asset.assetTypes.name}</span>
+                  <div className="flex items-center space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleEditAsset(spaceId, spaceName, asset.id, asset.assetTypes.name)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeleteAsset(asset.id, asset.assetTypes.name)}
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
+                {asset.description && (
+                  <p className="text-sm text-muted-foreground mb-2">{asset.description}</p>
+                )}
               </div>
-            ))}
+            </div>
+            
+            {asset.currentSpecifications && Object.keys(asset.currentSpecifications).length > 0 ? (
+              <div className="space-y-1 bg-muted/30 p-2 rounded">
+                {Object.entries(asset.currentSpecifications).map(([key, value]) => (
+                  <div key={key} className="text-sm flex justify-between items-center group">
+                    <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-muted-foreground">{String(value)}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={() => handleDeleteFeature(asset.id, key)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No specifications</p>
+            )}
           </div>
-        )}
-        {children}
+        ))}
       </CardContent>
     </Card>
   );
-  
-  const value = "https://house-book-frontend-web.vercel.app/owner";
 
-  // const length = 6;
+  const renderDialog = () => {
+    if (dialogContext.mode === 'property') {
+      return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent
+            className="overflow-y-auto"
+            style={{
+              width: 'clamp(400px, 33vw, 600px)',
+              height: 'clamp(350px, 33vh, 500px)',
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Edit Property Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Property Name</Label>
+                <Input value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input value={formData.address || ''} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+              </div>
+              <div>
+                <Label>Total Floor Area (m²)</Label>
+                <Input type="number" value={formData.total_floor_area || ''} onChange={(e) => setFormData({...formData, total_floor_area: parseFloat(e.target.value) || 0})} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}><X className="h-4 w-4 mr-2" />Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
 
-  // // make a fresh pin when length changes; user can also regenerate
-  // const [seed, setSeed] = useState(0);
-  // const pin = useMemo(() => generatePin(length), [length, seed]);
+    if (dialogContext.mode === 'space') {
+      return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="w-[80vw] max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit {dialogContext.spaceName}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Space Name</Label>
+                <Input value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div>
+                  <Label>Space Type</Label>
+                <Select value={formData.type} onValueChange={(value: string) => setFormData({...formData, type: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spaceTypes.map((st) => (
+                      <SelectItem key={st} value={st}>{st}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}><X className="h-4 w-4 mr-2" />Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
 
-  // const regenerate = () => setSeed(s => s + 1);
+    if (dialogContext.mode === 'asset') {
+      return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="w-[90vw] max-w-[90vh] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit {dialogContext.assetType}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Description</Label>
+                <Textarea value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} />
+              </div>
+              <Separator />
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-lg">Features / Specifications</Label>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowFeatureFormAssetEdit(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />Add Feature
+                  </Button>
+                </div>
 
-  // const copy = async () => {
-  //   await navigator.clipboard.writeText(pin);
-  //   alert("PIN copied!");
-  // };
+                {showFeatureFormAssetEdit && (
+                  <div className="mt-2">
+                    <FeatureCard
+                      className="w-full"
+                      onAdd={(name, value) => {
+                        setFormData({
+                          ...formData,
+                          current_specifications: {
+                            ...formData.current_specifications,
+                            [name]: value,
+                          },
+                        });
+                        setShowFeatureFormAssetEdit(false);
+                      }}
+                      onCancel={() => setShowFeatureFormAssetEdit(false)}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {Object.entries(formData.current_specifications || {}).map(([key, value]) => (
+                    <div key={key} className="flex items-center space-x-2 p-2 border rounded">
+                      <Input value={key} disabled className="flex-1 bg-muted" />
+                      <Input 
+                        value={String(value)} 
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          current_specifications: {
+                            ...formData.current_specifications,
+                            [key]: e.target.value
+                          }
+                        })}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          const specs = {...formData.current_specifications};
+                          delete specs[key];
+                          setFormData({...formData, current_specifications: specs});
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}><X className="h-4 w-4 mr-2" />Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    if (dialogContext.mode === 'createSpace') {
+      const canSave = formData.name && newSpaceAssets.length > 0 && newSpaceAssets.every(a => a.assetTypeId && Object.keys(a.specifications).length > 0);
+      
+      return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Space</DialogTitle>
+              <DialogDescription>Add a new space with at least one asset and one feature per asset</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Space Name *</Label>
+                  <Input value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g., Master Bedroom" />
+                </div>
+                <div>
+                  <Label>Space Type *</Label>
+                  <Select value={formData.type} onValueChange={(value: string) => setFormData({...formData, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spaceTypes.map((st) => (
+                        <SelectItem key={st} value={st}>{st}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-lg">Assets *</Label>
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      setNewSpaceAssets([...newSpaceAssets, {
+                        tempId: `temp-${Date.now()}`,
+                        assetTypeId: 0,
+                        assetTypeName: '',
+                        description: '',
+                        specifications: {}
+                      }]);
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />Add Asset
+                  </Button>
+                </div>
+                
+                {newSpaceAssets.map((asset, idx) => (
+                  <Card key={asset.tempId} className="mb-3 relative">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => setNewSpaceAssets(newSpaceAssets.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    <CardContent className="pt-4 space-y-3">
+                      <div>
+                        <Label>Asset Type *</Label>
+                        <Select 
+                          value={String(asset.assetTypeId)} 
+                          onValueChange={(value: string) => {
+                            const assetType = assetTypes.find(t => t.id === parseInt(value));
+                            const updated = [...newSpaceAssets];
+                            updated[idx] = {...asset, assetTypeId: parseInt(value), assetTypeName: assetType?.name || ''};
+                            setNewSpaceAssets(updated);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select asset type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {assetTypes.map(type => (
+                              <SelectItem key={type.id} value={String(type.id)}>{type.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Description</Label>
+                        <Textarea 
+                          value={asset.description} 
+                          onChange={(e) => {
+                            const updated = [...newSpaceAssets];
+                            updated[idx] = {...asset, description: e.target.value};
+                            setNewSpaceAssets(updated);
+                          }}
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <Label>Features * (at least one)</Label>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => { setFeatureFormCreateSpaceIndex(idx); setShowFeatureFormCreateAsset(true); }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />Add
+                          </Button>
+                        </div>
+
+                        {showFeatureFormCreateAsset && featureFormCreateSpaceIndex === idx && (
+                          <FeatureCard
+                            className="w-full mb-2"
+                            onAdd={(name, value) => {
+                              const updated = [...newSpaceAssets];
+                              updated[idx] = {
+                                ...asset,
+                                specifications: { ...asset.specifications, [name]: value },
+                              };
+                              setNewSpaceAssets(updated);
+                              setShowFeatureFormCreateAsset(false);
+                              setFeatureFormCreateSpaceIndex(null);
+                            }}
+                            onCancel={() => { setShowFeatureFormCreateAsset(false); setFeatureFormCreateSpaceIndex(null); }}
+                          />
+                        )}
+
+                        <div className="space-y-1">
+                          {Object.entries(asset.specifications).map(([key, value]) => (
+                            <div key={key} className="flex items-center space-x-2 text-sm">
+                              <span className="font-medium">{key}:</span>
+                              <span>{String(value)}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  const specs = {...asset.specifications};
+                                  delete specs[key];
+                                  const updated = [...newSpaceAssets];
+                                  updated[idx] = {...asset, specifications: specs};
+                                  setNewSpaceAssets(updated);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                          {Object.keys(asset.specifications).length === 0 && (
+                            <p className="text-xs text-destructive">At least one feature required</p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {newSpaceAssets.length === 0 && (
+                  <div className="text-center p-4 border border-dashed rounded">
+                    <p className="text-sm text-muted-foreground">No assets added yet. Click "Add Asset" to get started.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}><X className="h-4 w-4 mr-2" />Cancel</Button>
+              <Button onClick={handleSave} disabled={!canSave || saving}>
+                <Save className="h-4 w-4 mr-2" />{saving ? "Creating..." : "Create Space"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    if (dialogContext.mode === 'createAsset') {
+      const canSave = formData.assetTypeId && Object.keys(formData.specifications || {}).length > 0;
+      
+      return (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Asset in {dialogContext.spaceName}</DialogTitle>
+              <DialogDescription>Asset must have at least one feature</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Asset Type *</Label>
+                <Select value={formData.assetTypeId} onValueChange={(value: string) => setFormData({...formData, assetTypeId: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select asset type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetTypes.map(type => (
+                      <SelectItem key={type.id} value={String(type.id)}>{type.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} />
+              </div>
+              <Separator />
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-lg">Features * (at least one)</Label>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowFeatureFormCreateAsset(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />Add Feature
+                  </Button>
+                </div>
+                
+                {showFeatureFormCreateAsset && (
+                  <FeatureCard
+                    className="w-full mt-2"
+                    onAdd={(name, value) => {
+                      setFormData({
+                        ...formData,
+                        specifications: { ...(formData.specifications || {}), [name]: value },
+                      });
+                      setShowFeatureFormCreateAsset(false);
+                    }}
+                    onCancel={() => setShowFeatureFormCreateAsset(false)}
+                  />
+                )}
+                
+                <div className="space-y-2">
+                  {Object.entries(formData.specifications || {}).map(([key, value]) => (
+                    <div key={key} className="grid grid-cols-2 gap-2 items-center p-2 border rounded">
+                      <div className="font-medium">{key}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">{String(value)}</div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            const specs = {...formData.specifications};
+                            delete specs[key];
+                            setFormData({...formData, specifications: specs});
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(formData.specifications || {}).length === 0 && (
+                    <p className="text-sm text-destructive">At least one feature required</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}><X className="h-4 w-4 mr-2" />Cancel</Button>
+              <Button onClick={handleSave} disabled={!canSave || saving}><Save className="h-4 w-4 mr-2" />{saving ? "Creating..." : "Create Asset"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return null;
+  };
+
+  if (loading) return <div className="p-8 text-center">Loading property details...</div>;
+  if (error) return <div className="p-8 text-center text-destructive">Error: {error}</div>;
 
   return (
-    <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Properties
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Badge variant="default">{property?.status ?? "0%"}</Badge>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button variant="outline" size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-          </div>
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />Back to Properties
+          </Button>
         </div>
-
-      {/* Property Header */}
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <h1>{property?.name?? "No name"}</h1>
-          <p className="text-muted-foreground text-lg">{property?.description?? "..."}</p>
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>Owner: {owners?.[0] ? `${owners[0].first_name} ${owners[0].last_name}` : "N/A"}</span>
-            <span>•</span>
-            <span>Address: {property?.address?? "Missing address"}</span>
-          </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant="default">{(property && (property as any).status) ?? "Active"}</Badge>
+          <Button variant="outline" size="sm" onClick={handleEditProperty}>
+            <Edit className="h-4 w-4 mr-2" />Edit Property
+          </Button>
         </div>
-        
-
-        {/* Access Control Section */}
-        <div className="space-y-2 flex flex-col items-center">
-          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64 max-w-xs mx-auto">
-            <QRCodeCanvas
-              value={value}
-              size={200}        // size in px
-              level="H"         // error correction: L, M, Q, H
-              includeMargin={true}
-            />
-            
-          </div>
-          <Button 
-              onClick={() => setIsPinDialogOpen(true)}
-              className="w-64 max-w-xs mx-auto items-center justify-center"
-              size="sm"
-            >
-              Create a New Job
-            </Button>
-          </div>
       </div>
 
-      
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2 min-w-0">
+          <h1 className="break-words">{property?.name ?? "Property"}</h1>
+          <p className="text-muted-foreground text-lg break-words">{property?.description}</p>
+          <div className="flex items-center flex-wrap gap-2 text-sm text-muted-foreground">
+            <span className="break-words">
+              {owners && owners.length > 0 ? (
+                <>
+                  Owner{owners.length > 1 ? "s" : ""}:{" "}
+                  {owners.map((o) => `${o.firstName} ${o.lastName}`).join(", ")}
+                </>
+              ) : (
+                "Owner: N/A"
+              )}
+            </span>
+            <span>•</span>
+            <span className="break-words">{property?.address}</span>
+            <span>•</span>
+            <span>{property?.totalFloorArea ?? 0}m²</span>
+          </div>
+          <div className="pt-2 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleShowAllPropertyHistory}>
+              <History className="h-3 w-3 mr-1" />View All History
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadQRPDF}>
+              <Download className="h-3 w-3 mr-1" />Download QR PDF
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2 flex flex-col items-end">
+          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64">
+            <QRCodeCanvas ref={qrCodeRef} value={propertyId} size={200} level="H" />
+          </div>
+          <Button onClick={() => setIsPinDialogOpen(true)} className="w-64" size="sm">
+            Create New Job
+          </Button>
+        </div>
+      </div>
 
       <Separator />
 
-      {/* Property Images Placeholder */}
-      <Card>
-        <CardHeader>
+      {/* Property Images */}
+      <Card className="w-full max-w-full overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
           <CardTitle className="flex items-center">
             <Image className="h-5 w-5 mr-2" />
             Property Images
           </CardTitle>
+          <div className="flex items-center space-x-2 flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleOpenUploadDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Images
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!property?.images || property.images.length === 0}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Images
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!property?.images || property.images.length === 0}>
+              <Plus className="h-4 w-4 mr-2" />
+              Select splash image
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {property?.images && property?.images.length > 0 ? (
-              property?.images.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center"
-                >
-                  <img
-                    src={url}
-                    alt={`Property Image ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full text-center text-muted-foreground">
-                No images available
+          {property?.images && property.images.length > 0 ? (
+            <div className="overflow-x-auto py-4">
+              <div className="flex gap-6 w-max">
+                {property.images.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                    style={{ width: '320px', height: '320px' }}
+                    onClick={() => openImageViewer(url, idx)}
+                  >
+                    {/* property image - fixed 320px height (full card) */}
+                    <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
+                      <img
+                        src={url}
+                        alt={`Property Image ${idx + 1}`}
+                        className="w-full h-full"
+                        style={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              No images available
+            </div>
+          )}
         </CardContent>
       </Card>
 
-
-      {/* Specifications Grid */}
-
-      {/* 
-      <div className="grid gap-6 md:grid-cols-2">
-        
-        <SpecificationSection 
-          title="General Details" 
-          items={propertyData.generalDetails} 
-        />
-
-        <SpecificationSection 
-          title="Walls & Ceilings" 
-          items={propertyData.wallsCeilings} 
-        />
-
-        <SpecificationSection 
-          title="Exterior Specifications" 
-          items={propertyData.exteriorSpecs} 
-        />
-
-        <SpecificationSection 
-          title="Flooring" 
-          items={propertyData.flooring} 
-        />
-
-        <SpecificationSection 
-          title="Cabinetry & Bench Tops" 
-          items={propertyData.cabinetryBenchtops} 
-        />
-
-        <SpecificationSection 
-          title="Doors & Handles" 
-          items={propertyData.doorsHandles} 
-        />
-
-        <SpecificationSection 
-          title="Kitchen Appliances" 
-          items={propertyData.kitchenAppliances} 
-        />
-
-        <SpecificationSection 
-          title="Bathroom Fixtures" 
-          items={propertyData.bathroomFixtures} 
-        />
-
-        <SpecificationSection 
-          title="Lighting & Electrical" 
-          items={propertyData.lightingElectrical} 
-        />
-
-      </div>
-      */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {property?.spaces?.map((space) => (
-          <SpecificationSection
-            key={space.space_id}
-            title={space.name} // e.g. "Bedroom", "Kitchen", "Living Area"
-            items={
-              space.assets.reduce<Record<string, string>>((acc, asset) => {
-                acc[asset.type] =
-                  asset.description || "No description available";
-                return acc;
-              }, {})
+      {/* Image Viewer Overlay */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            animation: 'fadeIn 0.2s ease-in-out',
+          }}
+          onClick={closeImageViewer}
+        >
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
             }
+            @keyframes imageZoom {
+              from { transform: scale(0.95); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+
+          {/* Navigation Button - Previous */}
+          {property?.images && property.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToPreviousImage();
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+          )}
+
+          {/* Image Container */}
+          <div
+            className="relative flex items-center justify-center p-4"
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              animation: 'imageZoom 0.3s ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedImage}
+              alt="Property Image"
+              className="max-w-full max-h-full object-contain shadow-2xl"
+              style={{
+                borderRadius: '16px',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+              }}
+            />
+          </div>
+
+          {/* Navigation Button - Next */}
+          {property?.images && property.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToNextImage();
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
+          )}
+
+          {/* Close Button */}
+          <button
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all z-10"
+            style={{ backdropFilter: 'blur(10px)' }}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Image Counter */}
+          {property?.images && property.images.length > 1 && (
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-2 rounded-full text-sm z-10"
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              {selectedImageIndex + 1} / {property.images.length}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Spaces & Assets</h2>
+        <Button onClick={handleCreateSpace}>
+          <Plus className="h-4 w-4 mr-2" />Create New Space
+        </Button>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {property?.spaces?.filter(space => !space.deleted).map(space => (
+          <SpecificationSection
+            key={space.id}
+            title={space.name}
+            spaceId={space.id}
+            spaceName={space.name}
+            assets={(space.assets ?? []).filter(asset => !asset.deleted).map(asset => ({
+              id: asset.id,
+              description: asset.description,
+              discipline: asset.assetTypes?.discipline ?? "",
+              currentSpecifications: asset.currentSpecifications ?? {},
+              assetTypes: {
+                id: asset.assetTypes?.id ?? "",
+                name: asset.assetTypes?.name ?? "",
+                discipline: asset.assetTypes?.discipline ?? "",
+              },
+              deleted: asset.deleted ?? false,
+            }))}
           />
         ))}
       </div>
 
-      {/* Access PINs Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Key className="h-5 w-5 mr-2" />
-            Access PINs Management
+            <Key className="h-5 w-5 mr-2" />Jobs & Access Management
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PinTable 
+          <PinTable
             propertyId={propertyId}
-            pins={accessPins}
-            onUpdatePin={handleUpdatePin}
-            onDeletePin={handleDeletePin}
-            onToggleActive={handleToggleActive}
+            property={property}
+            jobs={allJobs}
+            jobAssets={allJobAssets}
+            onDeleteJob={handleDeleteJob}
+            onSaveJobEdits={handleSaveJobEdits}
           />
         </CardContent>
       </Card>
 
-      {/*
-      <div className="grid gap-6 md:grid-cols-2">
-        
-        <SpecificationSection 
-          title="General Details" 
-          items={propertyData.generalDetails} 
-        />
+      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(property)} onSave={handleSavePin} />
 
-        <SpecificationSection 
-          title="Exterior Specifications" 
-          items={propertyData.exteriorSpecs} 
-        />
+      {renderDialog()}
 
-        <SpecificationSection 
-          title="Bedroom" 
-          items={{"Flooring": propertyData.flooring.bedrooms, 
-                ...propertyData.wallsCeilings,
-                ...propertyData.doorsHandles
-              }} 
-        />
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save these changes? This action will be recorded in the changelog.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSave}>Save Changes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <SpecificationSection 
-          title="Living Area" 
-          items={{"Flooring": propertyData.flooring.livingAreas, 
-                ...propertyData.wallsCeilings,
-                ...propertyData.doorsHandles
-              }} 
-        />
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center text-destructive">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Confirm Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deleteTarget.name}? This will be recorded as a soft delete and can be viewed in the history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        <SpecificationSection 
-          title="Kitchen" 
-          items={{"Flooring": propertyData.flooring.livingAreas, 
-          ...propertyData.wallsCeilings,
-          ...propertyData.doorsHandles, 
-          "Benchtop": propertyData.cabinetryBenchtops.kitchenBenchtop, 
-          "Cabinets": propertyData.cabinetryBenchtops.kitchenCabinets,
-          ...propertyData.kitchenAppliances}} 
-        />
-
-        <SpecificationSection 
-          title="Bathroom" 
-          items={{"Flooring": propertyData.flooring.wetAreas, 
-          ...propertyData.wallsCeilings,
-          ...propertyData.doorsHandles,
-          "Benchtop": propertyData.cabinetryBenchtops.bathroomBenchtops, 
-          "Vanity": propertyData.cabinetryBenchtops.bathroomVanities,
-          ...propertyData.bathroomFixtures}} 
-        />
-
-        <SpecificationSection 
-          title="Hallway" 
-          items={{"Flooring": propertyData.flooring.livingAreas,
-          ...propertyData.wallsCeilings,
-          ...propertyData.doorsHandles}} 
-        />
-
-        <SpecificationSection 
-          title="Lighting" 
-          items={propertyData.lightingElectrical} 
-        />
-
-      </div>
-      */}
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-full sm:w-[400px]">
+      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+        <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Property Field</DialogTitle>
+            <DialogTitle className="flex items-center mb-4">
+              <History className="h-5 w-5 mr-2" />Space Edit History
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="datetime">Date & Time</Label>
-              <Input
-                id="datetime"
-                value={new Date().toLocaleString()}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="field">Editing Field</Label>
-              <Select 
-                value={editingField} 
-                onValueChange={handleFieldChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select field to edit" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
-                    {editingSection}
-                  </div>
-                  {getCurrentSectionFields().map((field) => (
-                    <SelectItem 
-                      key={field.value} 
-                      value={field.value}
-                      className="pl-4"
-                    >
-                      {field.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description of Update</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe the changes you're making..."
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
+          <div className="space-y-4">
+            {spaceChangelogHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No history available</p>
+            ) : (
+              spaceChangelogHistory.map((item) => (
+                <Card key={item.id} className={`border-l-4 ${item.actions === 'DELETED' ? 'border-l-destructive' : 'border-l-blue-500'}`}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={item.actions === 'DELETED' ? 'destructive' : item.actions === 'CREATED' ? 'default' : 'secondary'}>
+                          {item.actions}
+                        </Badge>
+                        <Badge variant="outline">{(item as any).Assets?.AssetTypes?.name}</Badge>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm mb-2">{item.changeDescription}</p>
+                    {item.specifications && Object.keys(item.specifications).length > 0 && (
+                      <div className="mt-2 p-2 bg-muted/50 rounded space-y-1">
+                        {formatSpecifications(item.specifications)}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
-          
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={!editDescription.trim() || !editingField}>
-            {/* <Button onClick={handleSaveEdit} disabled={!editDescription.trim() || !editingField}> */}
-              Save Changes
-            </Button>
-          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTimelineDialogOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* PIN Management Dialog */}
-      <section id="access-pins">
-        <PinManagementDialog 
-          open={isPinDialogOpen}
-          onOpenChange={setIsPinDialogOpen}
-          onSave={handleSavePin}
-          propertyId={propertyId}
-        />
-      </section>
+      <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
+        <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center mb-4">
+              <History className="h-5 w-5 mr-2" />Complete Property History
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {changelogHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No history available</p>
+            ) : (
+              changelogHistory.map((item) => (
+                <Card key={item.id} className={`border-l-4 ${item.actions === 'DELETED' ? 'border-l-destructive' : 'border-l-primary/50'}`}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={item.actions === 'DELETED' ? 'destructive' : item.actions === 'CREATED' ? 'default' : 'secondary'}>
+                          {item.actions}
+                        </Badge>
+                        <Badge variant="outline">{(item as any).Assets?.Spaces?.name}</Badge>
+                        <Badge variant="secondary">{(item as any).Assets?.AssetTypes?.name}</Badge>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm mb-2">{item.changeDescription}</p>
+                    {item.specifications && Object.keys(item.specifications).length > 0 && (
+                      <div className="mt-2 p-3 bg-muted/50 rounded space-y-1">
+                        {formatSpecifications(item.specifications)}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAllHistoryDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload Images</DialogTitle>
+            <DialogDescription>Select images to upload to this property</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Choose Images
+            </Button>
+            
+            {selectedFiles.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="relative border rounded-lg overflow-hidden">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => handleRemoveSelectedFile(idx)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="p-2 bg-muted">
+                      <p className="text-xs truncate">{file.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
+                No images selected
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />Cancel
+            </Button>
+            <Button 
+              onClick={() => { setImageAction('upload'); handleConfirmImageAction('upload'); }} 
+              disabled={selectedFiles.length === 0}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Delete Dialog */}
+      <Dialog open={isImageDeleteDialogOpen} onOpenChange={setIsImageDeleteDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Delete Images</DialogTitle>
+            <DialogDescription>Select images to delete from this property</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {property?.images && property.images.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {property.images.map((url, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      selectedImagesToDelete.includes(url) 
+                        ? 'border-destructive ring-2 ring-destructive' 
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => handleToggleImageForDeletion(url)}
+                  >
+                    <img
+                      src={url}
+                      alt={`Image ${idx + 1}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    {selectedImagesToDelete.includes(url) && (
+                      <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
+                        <div className="bg-destructive text-white rounded-full p-2">
+                          <Trash2 className="h-6 w-6" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No images available
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageDeleteDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => { setImageAction('delete'); handleConfirmImageAction('delete'); }} 
+              disabled={selectedImagesToDelete.length === 0}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete {selectedImagesToDelete.length > 0 && `(${selectedImagesToDelete.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Splash image selection*/}
+      <Dialog open={isSplashDialogOpen} onOpenChange={setIsSplashDialogOpen}>
+        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Splash Image</DialogTitle>
+            <DialogDescription>Choose an image to use as the main property splash image</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {property?.images && property.images.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+                {property.images.map((imgUrl, idx) => (
+                  <div
+                    key={imgUrl} // use url as key for uniqueness
+                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      selectedSplashImage === imgUrl
+                        ? 'border-primary ring-2 ring-primary'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                    onClick={() => setSelectedSplashImage(imgUrl)}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`Property Image ${idx + 1}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    {selectedSplashImage === imgUrl && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <div className="bg-primary text-white rounded-full p-2">
+                          <CheckCircle className="h-6 w-6" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No images available
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSplashDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              // Calls the handler, explicitly passing the 'setSplash' action.
+              onClick={() => handleConfirmImageAction('setSplash')} 
+              disabled={!selectedSplashImage}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Set as Splash Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Image Action Confirmation Dialog */}
+      <AlertDialog open={isImageConfirmOpen} onOpenChange={setIsImageConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {/* CORRECTED TITLE LOGIC */}
+              {imageAction === 'upload'
+                ? 'Confirm Image Upload'
+                : imageAction === 'delete'
+                ? 'Confirm Image Deletion'
+                : 'Confirm Splash Image Change'}
+            </AlertDialogTitle>
+            
+            <AlertDialogDescription>
+              {/* CORRECTED DESCRIPTION LOGIC */}
+              {imageAction === 'upload'
+                ? `Are you sure you want to upload ${selectedFiles.length} image(s)?`
+                : imageAction === 'delete'
+                ? `Are you sure you want to delete ${selectedImagesToDelete.length} image(s)? This action cannot be undone.`
+                : 'Are you sure you want to set the selected image as the new property splash image?'} 
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <AlertDialogFooter>
+            {/* Retain the setImageAction(null) on Cancel to clear the state */}
+            <AlertDialogCancel onClick={() => setImageAction(null)}>Cancel</AlertDialogCancel>
+            
+            <AlertDialogAction onClick={handleFinalImageAction}>
+              {/* CORRECTED ACTION BUTTON TEXT */}
+              {imageAction === 'upload'
+                ? 'Upload'
+                : imageAction === 'delete'
+                ? 'Delete'
+                : imageAction === 'setSplash'
+                ? 'Set Splash Image' // User-friendly text
+                : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

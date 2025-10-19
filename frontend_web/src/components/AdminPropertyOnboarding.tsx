@@ -8,49 +8,39 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
-import { Upload, CheckCircle, Building } from "lucide-react";
+import { Upload, CheckCircle, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "../../../backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "../../../backend/FetchAssetTypes";
 import { adminOnboardProperty } from "../../../backend/OnboardPropertyService";
-import { FormData, SpaceInt, OwnerData } from "../types/serverTypes";
+import { FormData, SpaceInt, Owner } from "../types/serverTypes";
 import { ADMIN_ROUTES } from "../Routes";
+import { useAdminFormContext } from "./FormContext";
+import { apiClient } from "../api/wrappers";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<{ id: string; name: string }[]>([]);
-  const [spaces, setSpaces] = useState<SpaceInt[]>([
-    {
-      type: "",
-      name: "",
-      assets: [
-        {
-          typeId: "",
-          name: "",
-          description: "",
-          features: [{ name: "" , value: ""}]
-        }
-      ]
-    }
-  ]);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    // General Information
-    propertyName: "",
-    propertyDescription: "",
-    address: "",
-    // Plans & Documents
-    floorPlans: [] as File[],
-    buildingPlans: [] as File[]
-  });
-  const [ownerData, setOwnerData] = useState<OwnerData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: ""
-  });
+
+  // Owner verification states
+  const [isOwnerVerified, setIsOwnerVerified] = useState(false);
+  const [isCheckingOwner, setIsCheckingOwner] = useState(false);
+  const [ownerCheckError, setOwnerCheckError] = useState<string | null>(null);
+  
+
+  const {
+      formData,
+      setFormData,
+      spaces,
+      setSpaces,
+      currentStep,
+      setCurrentStep,
+      resetForm,
+      owner,
+      setOwner
+    } = useAdminFormContext();
 
   const navigate = useNavigate();
 
@@ -70,6 +60,33 @@ export function AdminPropertyOnboarding() {
     getAssetTypes();
   }, []);
 
+  // Owner verification function
+  const checkOwnerInDatabase = async () => {
+    if (!owner.email.trim()) {
+      setOwnerCheckError("Please enter an email address");
+      return;
+    }
+
+    setIsCheckingOwner(true);
+    setOwnerCheckError(null);
+
+    try {
+      const exists = await apiClient.checkOwnerExists(owner.email);
+      if (exists) {
+        setIsOwnerVerified(true);
+        setOwnerCheckError(null);
+      } else {
+        setIsOwnerVerified(false);
+        setOwnerCheckError("Owner not found. Please create an owner account first.");
+      }
+    } catch (error) {
+      setOwnerCheckError("Failed to verify owner. Please try again.");
+      setIsOwnerVerified(false);
+    } finally {
+      setIsCheckingOwner(false);
+    }
+  };
+
   const steps = [
     { id: 1, title: "Owner details", description: "Get owner details to onboard property for" },
     { id: 2, title: "General Information", description: "Property details, location and images" },
@@ -83,12 +100,18 @@ export function AdminPropertyOnboarding() {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
-      // No longer Next button, this will be complete onboarding
-      // Let backend handle saving information in database
-      const propertyId = await adminOnboardProperty(ownerData, formData, spaces);
-      console.log(propertyId);
-      
-      navigate(ADMIN_ROUTES.properties.detail(propertyId));
+      try {
+        const propertyId = await adminOnboardProperty(owner, formData, spaces);
+        console.log(propertyId);
+        
+        // Reset the form data after successful submission
+        resetForm();
+        
+        navigate(ADMIN_ROUTES.properties.detail(propertyId));
+      } catch (error) {
+        console.error("Failed to onboard property:", error);
+        // Handle error (maybe show a toast or error message)
+      }
     }
   };
 
@@ -210,10 +233,11 @@ export function AdminPropertyOnboarding() {
   // Step validators
   const validateStep1 = () => {
     return (
-      ownerData.phone.trim() !== "" &&
-      ownerData.firstName.trim() !== "" &&
-      ownerData.lastName.trim() !== "" &&
-      ownerData.email.trim() !== ""
+      owner.phone.trim() !== "" &&
+      owner.firstName.trim() !== "" &&
+      owner.lastName.trim() !== "" &&
+      owner.email.trim() !== "" &&
+      isOwnerVerified  // Owner must be verified before proceeding
     );
   };
 
@@ -221,7 +245,8 @@ export function AdminPropertyOnboarding() {
     return (
       formData.propertyName.trim() !== "" &&        // Property name not null
       formData.propertyDescription.trim() !== "" && // Property description not null
-      formData.address.trim() !== ""                // Property address not null 
+      formData.address.trim() !== "" &&             // Property address not null
+      formData.totalFloorArea > 0                   // Total floor area must be greater than 0
     );
   };
 
@@ -259,16 +284,16 @@ export function AdminPropertyOnboarding() {
                 <Label htmlFor="Owner First Name">Owner First Name</Label>
                 <Input
                   id="ownerFirstName"
-                  value={ownerData.firstName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, firstName: e.target.value})}
+                  value={owner.firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, firstName: e.target.value})}
                 />
               </div>
               <div>
                 <Label htmlFor="OwnerLastName">Owner Last Name</Label>
                 <Input
                   id="ownerLastName"
-                  value={ownerData.lastName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, lastName: e.target.value})}
+                  value={owner.lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, lastName: e.target.value})}
                 />
               </div>
             </div>
@@ -277,17 +302,53 @@ export function AdminPropertyOnboarding() {
                 <Label htmlFor="Phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  value={ownerData.phone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, phone: e.target.value})}
+                  value={owner.phone}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwner({...owner, phone: e.target.value})}
                 />
               </div>
               <div>
-                <Label htmlFor="Email">Email</Label>
-                <Input
-                  id="email"
-                  value={ownerData.email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerData({...ownerData, email: e.target.value})}
-                />
+                <Label htmlFor="Email">Email *</Label>
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={owner.email}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setOwner({...owner, email: e.target.value});
+                        setIsOwnerVerified(false); // Reset verification when email changes
+                        setOwnerCheckError(null);
+                      }}
+                      onBlur={() => {
+                        // Auto-check on blur if email is filled
+                        if (owner.email.trim()) {
+                          setTimeout(() => checkOwnerInDatabase(), 500);
+                        }
+                      }}
+                    />
+                    {ownerCheckError && (
+                      <p className="text-sm text-red-600 mt-1">{ownerCheckError}</p>
+                    )}
+                    {isOwnerVerified && (
+                      <p className="text-sm text-green-600 mt-1">✓ Owner verified</p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={checkOwnerInDatabase}
+                    disabled={isCheckingOwner || !owner.email.trim()}
+                    className="shrink-0"
+                  >
+                    {isCheckingOwner ? "Checking..." : "Verify"}
+                  </Button>
+                  {isOwnerVerified && (
+                    <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-2" />
+                  )}
+                  {ownerCheckError && !isCheckingOwner && (
+                    <X className="h-5 w-5 text-red-600 shrink-0 mt-2" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -296,7 +357,7 @@ export function AdminPropertyOnboarding() {
       case 2:
         return (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <Label htmlFor="propertyName">Property Name</Label>
                 <Input
@@ -311,6 +372,17 @@ export function AdminPropertyOnboarding() {
                   id="propertyDescription"
                   value={formData.propertyDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, propertyDescription: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalFloorArea">Total Floor Area (m²)</Label>
+                <Input
+                  id="totalFloorArea"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.totalFloorArea || ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({...formData, totalFloorArea: parseFloat(e.target.value) || 0})}
                 />
               </div>
             </div>
