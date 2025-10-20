@@ -50,7 +50,7 @@ const queryClient = new QueryClient({
     },
   },
 });
-
+// Main func
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
