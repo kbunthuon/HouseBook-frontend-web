@@ -1,7 +1,13 @@
 // routes.ts
 // API Routes Configuration for Housebook Backend
 
-const BASE_URL = "https://housebook-backend.vercel.app/api";
+//const BASE_URL = "https://housebook-backend.vercel.app/api";
+
+// This is the url for backend on "move-refresh-to-ss" branch
+// As of now, refreshing token doesnt work properly for super short JWT TTLs, so set to 3600s (1 hour)
+// But this fixes the restrictive CORS policy on Vercel for all endpoints
+// Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
+const BASE_URL = "https://housebook-backend-acssgzvs5-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL

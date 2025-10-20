@@ -13,6 +13,7 @@ import { getOwnerId } from "../../../backend/FetchData";
 // Token management
 class TokenManager {
   private static ACCESS_TOKEN_KEY = "housebook_access_token";
+  private static REFRESH_TOKEN_KEY = "housebook_refresh_token";
   private static EXPIRES_AT_KEY = "housebook_expires_at";
 
   static setTokens(
@@ -21,6 +22,7 @@ class TokenManager {
     expiresAt?: number
   ) {
     sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
+    sessionStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     if (expiresAt) {
       sessionStorage.setItem(this.EXPIRES_AT_KEY, expiresAt.toString());
     }
@@ -30,6 +32,9 @@ class TokenManager {
     return sessionStorage.getItem(this.ACCESS_TOKEN_KEY);
   }
 
+  static getRefreshToken(): string | null {
+    return sessionStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
   static getExpiresAt(): number | null {
     const expiresAt = sessionStorage.getItem(this.EXPIRES_AT_KEY);
     return expiresAt ? parseInt(expiresAt) : null;
@@ -37,6 +42,7 @@ class TokenManager {
 
   static clearTokens() {
     sessionStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(this.EXPIRES_AT_KEY);
   }
 
@@ -51,24 +57,32 @@ class TokenManager {
 // API Client class
 class ApiClient {
   // Refresh the access token
+  private refreshPromise: Promise<boolean> | null = null;
+
   private async refreshAccessToken(): Promise<boolean> {
-    try {
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      const refreshToken = TokenManager.getRefreshToken();
+      if (!refreshToken) return false;
+
       const response = await fetch(API_ROUTES.AUTH.REFRESH, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include cookies for refresh token
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) return false;
 
       const data = await response.json();
-      TokenManager.setTokens(data.access_token, data.expires_at);
+      TokenManager.setTokens(data.access_token, data.refresh_token, data.expires_at);
       return true;
-    } catch (error) {
-      console.error("Failed to refresh token:", error);
-      return false;
+    })();
+
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
     }
   }
 
@@ -77,46 +91,41 @@ class ApiClient {
     url: string,
     options: RequestInit = {}
   ): Promise<Response> {
-    // Check if token needs refresh
+    // 1️⃣ Refresh if expired
     if (TokenManager.isTokenExpired()) {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        console.log("Tokens cleared from sessionStorage");
         throw new Error("Session expired. Please login again.");
       }
     }
 
-    const accessToken = TokenManager.getAccessToken();
-    if (!accessToken) {
-      throw new Error("No access token found. Please login.");
+    // 2️⃣ Add access token to headers
+    let accessToken = TokenManager.getAccessToken();
+    if (!accessToken) throw new Error("No access token found. Please login.");
+
+    const headers = { ...options.headers, Authorization: `Bearer ${accessToken}` };
+    let response: Response;
+
+    try {
+      response = await fetch(url, { ...options, headers });
+    } catch (err) {
+      console.error("Network error during fetch:", err);
+      throw err;
     }
 
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    // If unauthorized, try refreshing token once
+    // 3️⃣ Retry once if 401
     if (response.status === 401) {
       const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        const newAccessToken = TokenManager.getAccessToken();
-        return fetch(url, {
-          ...options,
-          headers: {
-            ...options.headers,
-            Authorization: `Bearer ${newAccessToken}`,
-          },
-        });
+      if (!refreshed) {
+        TokenManager.clearTokens();
+        throw new Error("Session expired. Please login again.");
       }
-      TokenManager.clearTokens();
-      throw new Error("Session expired. Please login again.");
+
+      // Retry request with new token
+      accessToken = TokenManager.getAccessToken()!;
+      const retryHeaders = { ...options.headers, Authorization: `Bearer ${accessToken}` };
+      response = await fetch(url, { ...options, headers: retryHeaders });
     }
 
     return response;
@@ -142,7 +151,7 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: "include",
+      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -237,7 +246,7 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: "include",
+      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -601,6 +610,7 @@ class ApiClient {
 
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {
+    console.log("Fetching transfers for propertyId:", propertyId);
     const response = await this.authenticatedRequest(
       API_ROUTES.TRANSFER.GET({ action: "byProperty", id: propertyId })
     );
@@ -615,6 +625,7 @@ class ApiClient {
   }
 
   async getTransfersByUser(userId: string) {
+    console.log("Fetching transfers for userId:", userId);
     const response = await this.authenticatedRequest(
       API_ROUTES.TRANSFER.GET({ action: "byOwner", id: userId })
     );
