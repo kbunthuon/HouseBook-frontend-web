@@ -657,7 +657,7 @@ class ApiClient {
     return data;
   }
 
-  async approveTransfer(transferId: string, ownerId: string) {
+  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
     const { approveTransfer } = await import(
       "../../../backend/TransferService"
     );
@@ -671,7 +671,7 @@ class ApiClient {
     }
   }
 
-  async rejectTransfer(transferId: string, ownerId: string) {
+  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
     const { rejectTransfer } = await import("../../../backend/TransferService");
     try {
       const result = await rejectTransfer(transferId, ownerId.ownerId);
