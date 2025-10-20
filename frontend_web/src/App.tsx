@@ -44,13 +44,13 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
-      cacheTime: 10 * 60 * 1000, // Cache persists for 10 minutes
+      gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
       retry: 1, // Retry failed requests once
     },
   },
 });
-
+// Main func
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<"admin" | "owner">("owner");
@@ -64,25 +64,33 @@ export default function App() {
     setUserId(user_id);
   };
 
-  const handleLogout = async () => {
-    try {
-      // First, logout from backend and clear all sessions/tokens
-      await apiClient.logout();
+const handleLogout = async () => {
+  try {
+    // 1. Clear React Query cache
+    queryClient.clear();
+    
+    // 2. Logout from backend (clears sessionStorage and Supabase session)
+    await apiClient.logout();
 
-      // Then clear local state
-      setIsAuthenticated(false);
-      setUserType("owner");
-      setUserEmail("");
-      setUserId("");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      // Still clear local state even if logout fails
-      setIsAuthenticated(false);
-      setUserType("owner");
-      setUserEmail("");
-      setUserId("");
-    }
-  };
+    // 3. Clear local state
+    setIsAuthenticated(false);
+    setUserType("owner");
+    setUserEmail("");
+    setUserId("");
+    
+    // Note: Navigation will happen automatically due to state change
+    // The RequireAuth guard will redirect to /login when isAuthenticated becomes false
+  } catch (error) {
+    console.error("Logout failed:", error);
+    
+    // Still clear everything even if logout fails
+    queryClient.clear();
+    setIsAuthenticated(false);
+    setUserType("owner");
+    setUserEmail("");
+    setUserId("");
+  }
+};
 
   {/*
   const handleViewProperty = (propertyId: string) => {
