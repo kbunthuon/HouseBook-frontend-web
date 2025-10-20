@@ -6,6 +6,9 @@ import {
 } from "./routes";
 import { SignupData } from "@housebookgroup/shared-types";
 import supabase from "../../../config/supabaseClient";
+import { rejectTransfer } from "../../../backend/TransferService";
+import { checkOwnerExists } from "../../../backend/OnboardPropertyService";
+import { getOwnerId } from "../../../backend/FetchData";
 
 // Token management
 class TokenManager {
@@ -339,9 +342,6 @@ class ApiClient {
   }
 
   async checkOwnerExists(email: string): Promise<boolean> {
-    const { checkOwnerExists } = await import(
-      "../../../backend/OnboardPropertyService"
-    );
     try {
       const exists = await checkOwnerExists(email);
       return exists;
@@ -657,7 +657,7 @@ class ApiClient {
     return data;
   }
 
-  async approveTransfer(transferId: string, ownerId: string) {
+  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
     const { approveTransfer } = await import(
       "../../../backend/TransferService"
     );
@@ -671,8 +671,7 @@ class ApiClient {
     }
   }
 
-  async rejectTransfer(transferId: string, ownerId: string) {
-    const { rejectTransfer } = await import("../../../backend/TransferService");
+  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
     try {
       const result = await rejectTransfer(transferId, ownerId);
       console.log("rejectTransfer response data:", result);
@@ -684,7 +683,6 @@ class ApiClient {
   }
 
   async getOwnerIdByUserId(userId: string) {
-    const { getOwnerId } = await import("../../../backend/FetchData");
     try {
       const ownerId = await getOwnerId(userId);
       console.log("getOwnerIdByUserId response:", ownerId);
