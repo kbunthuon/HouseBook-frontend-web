@@ -79,7 +79,7 @@ class ApiClient {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        console.log('Tokens cleared from sessionStorage');
+        console.log("Tokens cleared from sessionStorage");
         throw new Error("Session expired. Please login again.");
       }
     }
@@ -123,11 +123,11 @@ class ApiClient {
   async login(params: LoginParams) {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: "local" });
       TokenManager.clearTokens();
       // Clear all app-related sessionStorage
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("housebook_") || key.startsWith("sb-")) {
           sessionStorage.removeItem(key);
         }
       });
@@ -170,8 +170,8 @@ class ApiClient {
         throw new Error("Failed to restore Supabase session");
       }
 
-      console.log('New session created for:', data.user.email, data);
-      console.log('Supabase session restored');
+      console.log("New session created for:", data.user.email, data);
+      console.log("Supabase session restored");
     } catch (error) {
       console.error("Failed to set Supabase session:", error);
       throw error;
@@ -183,11 +183,11 @@ class ApiClient {
   async signup(params: SignupData) {
     // Clear any existing sessions/tokens first to ensure fresh signup
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: "local" });
       TokenManager.clearTokens();
       // Clear all app-related sessionStorage
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("housebook_") || key.startsWith("sb-")) {
           sessionStorage.removeItem(key);
         }
       });
@@ -230,8 +230,8 @@ class ApiClient {
         throw new Error("Failed to restore Supabase session");
       }
 
-      console.log('New session created for:', data.user.email);
-      console.log('Supabase session restored');
+      console.log("New session created for:", data.user.email);
+      console.log("Supabase session restored");
     } catch (error) {
       console.error("Failed to set Supabase session:", error);
       throw error;
@@ -256,29 +256,29 @@ class ApiClient {
       TokenManager.clearTokens();
 
       // 2. Clear all app-specific sessionStorage items
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('housebook_') || key.startsWith('sb-')) {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("housebook_") || key.startsWith("sb-")) {
           sessionStorage.removeItem(key);
         }
       });
 
       // 3. Sign out from Supabase (this might fail if session is already cleared, which is OK)
       try {
-        await supabase.auth.signOut({ scope: 'local' });
-        console.log('Supabase session cleared');
+        await supabase.auth.signOut({ scope: "local" });
+        console.log("Supabase session cleared");
       } catch (supabaseError) {
         console.warn("Supabase signOut warning (non-critical):", supabaseError);
         // This is OK - the session might already be cleared or invalid
       }
 
-      console.log('Logout successful - all local data cleared');
+      console.log("Logout successful - all local data cleared");
       return true;
     } catch (error) {
       console.error("Logout error:", error);
       // Even if logout fails, still clear local data
       TokenManager.clearTokens();
       sessionStorage.clear(); // Nuclear option: clear everything
-      console.log('Forced logout - all data cleared');
+      console.log("Forced logout - all data cleared");
       return true; // Return true anyway since we cleared the data
     }
   }
@@ -288,24 +288,24 @@ class ApiClient {
     const response = await this.authenticatedRequest(
       API_ROUTES.USER.INFO_BY_EMAIL(email)
     );
-    
+
     if (response.status === 404) {
       return null;
     }
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to fetch user info");
     }
-    
+
     const data = await response.json();
-    
+
     // Transform snake_case to camelCase
     return {
       userId: data.user_id,
       firstName: data.first_name,
       lastName: data.last_name,
-      phone: data.phone
+      phone: data.phone,
     };
   }
 
@@ -335,7 +335,6 @@ class ApiClient {
     };
   }
 
-
   // Owner methods
   async getOwnerId(userId: string) {
     const response = await this.authenticatedRequest(
@@ -351,7 +350,9 @@ class ApiClient {
   }
 
   async checkOwnerExists(email: string): Promise<boolean> {
-    const { checkOwnerExists } = await import("../../../backend/OnboardPropertyService");
+    const { checkOwnerExists } = await import(
+      "../../../backend/OnboardPropertyService"
+    );
     try {
       const exists = await checkOwnerExists(email);
       return exists;
@@ -542,10 +543,9 @@ class ApiClient {
       throw new Error(error.error || "Failed to update splash image");
     }
     const data = response.json();
-      console.log("updatePropertySplashImage response data:", data);
+    console.log("updatePropertySplashImage response data:", data);
     return data; // { result: ... }
   }
-
 
   // Changelog methods
   async getChangeLogs(propertyIds: string[]) {
@@ -564,7 +564,7 @@ class ApiClient {
     console.log("First change log entry (if exists):", data?.[0]);
     return data;
   }
-  
+
   async getAssetHistory(assetId: string) {
     console.log("Fetching asset history for assetId:", assetId);
     const url = API_ROUTES.CHANGELOG.ASSET_HISTORY(assetId);
@@ -610,7 +610,6 @@ class ApiClient {
     return response.json();
   }
 
-
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {
     const response = await this.authenticatedRequest(
@@ -623,7 +622,7 @@ class ApiClient {
     }
 
     const data = await response.json();
-    return data
+    return data;
   }
 
   async getTransfersByUser(userId: string) {
@@ -641,16 +640,23 @@ class ApiClient {
     return data;
   }
 
-  async initiateTransfer(propertyId: string, oldOwnerUserIds: string[], newOwnerUserIds: string[]) {
-    const response = await this.authenticatedRequest(API_ROUTES.TRANSFER.INITIATE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        propertyId,
-        oldOwnerUserIds,
-        newOwnerUserIds,
-      }),
-    });
+  async initiateTransfer(
+    propertyId: string,
+    oldOwnerUserIds: string[],
+    newOwnerUserIds: string[]
+  ) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.TRANSFER.INITIATE,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId,
+          oldOwnerUserIds,
+          newOwnerUserIds,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -662,11 +668,12 @@ class ApiClient {
     return data;
   }
 
-  
   async approveTransfer(transferId: string, ownerId: string) {
-    const { approveTransfer } = await import("../../../backend/TransferService");
+    const { approveTransfer } = await import(
+      "../../../backend/TransferService"
+    );
     try {
-      const result = await approveTransfer(transferId, ownerId);
+      const result = await approveTransfer(transferId, ownerId.ownerId);
       console.log("approveTransfer response data:", result);
       return result;
     } catch (error: any) {
@@ -678,7 +685,7 @@ class ApiClient {
   async rejectTransfer(transferId: string, ownerId: string) {
     const { rejectTransfer } = await import("../../../backend/TransferService");
     try {
-      const result = await rejectTransfer(transferId, ownerId);
+      const result = await rejectTransfer(transferId, ownerId.ownerId);
       console.log("rejectTransfer response data:", result);
       return result;
     } catch (error: any) {

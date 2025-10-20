@@ -4,52 +4,58 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // Transfer statuses
 // Database enum: transfer_status (PENDING, ACCEPTED, DECLINED)
 export enum TransferStatus {
-    PENDING = "PENDING",
-    APPROVED = "ACCEPTED",  // Note: Database uses "ACCEPTED" not "APPROVED"
-    DECLINED = "DECLINED",
+  PENDING = "PENDING",
+  APPROVED = "ACCEPTED", // Note: Database uses "ACCEPTED" not "APPROVED"
+  DECLINED = "DECLINED",
 }
 
 // Individual owner approval statuses
 // Database enum: Transfer_Accept_Status (ACCEPTED, REJECTED, PENDING)
 export enum TransferAcceptStatus {
-    PENDING = "PENDING",
-    APPROVED = "ACCEPTED",  // Note: Database uses "ACCEPTED" not "APPROVED"
-    REJECTED = "REJECTED",
+  PENDING = "PENDING",
+  APPROVED = "ACCEPTED", // Note: Database uses "ACCEPTED" not "APPROVED"
+  REJECTED = "REJECTED",
 }
 
 export type TransferNewOwner = {
-    transfer_id: string;
-    owner_id: string;
-    status: TransferAcceptStatus;
+  transfer_id: string;
+  owner_id: string;
+  status: TransferAcceptStatus;
 };
 
 export type TransferOldOwner = {
-    transfer_id: string;
-    owner_id: string;
-    status: TransferAcceptStatus;
+  transfer_id: string;
+  owner_id: string;
+  status: TransferAcceptStatus;
 };
 
 /**
  * Fetch transfers for a specific user (owner) - Legacy function
  */
-export async function fetchOldOwnerTransfers(sb: SupabaseClient, userId: string) {
+export async function fetchOldOwnerTransfers(
+  sb: SupabaseClient,
+  userId: string
+) {
   const { data, error } = await sb
     .from("Transfers")
-    .select(`
+    .select(
+      `
       transfer_id,
       created_at,
       property_id,
       status
-    `)
+    `
+    )
     .eq("TransferOldOwners.owner_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  return (data ?? []).filter(t =>
-    t.status === TransferStatus.PENDING ||
-    t.status === TransferStatus.APPROVED ||
-    t.status === TransferStatus.DECLINED
+  return (data ?? []).filter(
+    (t) =>
+      t.status === TransferStatus.PENDING ||
+      t.status === TransferStatus.APPROVED ||
+      t.status === TransferStatus.DECLINED
   );
 }
 
@@ -62,7 +68,8 @@ export async function getTransfersByOwner(ownerId: string) {
   // Get all transfers where this owner is involved (either old or new)
   const { data: oldOwnerTransfers, error: oldError } = await supabase
     .from("TransferOldOwners")
-    .select(`
+    .select(
+      `
       transfer_id,
       status,
       Transfers (
@@ -76,12 +83,14 @@ export async function getTransfersByOwner(ownerId: string) {
           address
         )
       )
-    `)
+    `
+    )
     .eq("owner_id", ownerId);
 
   const { data: newOwnerTransfers, error: newError } = await supabase
     .from("TransferNewOwners")
-    .select(`
+    .select(
+      `
       transfer_id,
       status,
       Transfers (
@@ -95,7 +104,8 @@ export async function getTransfersByOwner(ownerId: string) {
           address
         )
       )
-    `)
+    `
+    )
     .eq("owner_id", ownerId);
 
   if (oldError) throw oldError;
@@ -106,7 +116,7 @@ export async function getTransfersByOwner(ownerId: string) {
 
   // Process old owner transfers
   for (const item of oldOwnerTransfers || []) {
-    const transfer = (item.Transfers as any);
+    const transfer = item.Transfers as any;
     if (!transfer) continue;
 
     transferMap.set(transfer.transfer_id, {
@@ -122,7 +132,7 @@ export async function getTransfersByOwner(ownerId: string) {
 
   // Process new owner transfers (update or add)
   for (const item of newOwnerTransfers || []) {
-    const transfer = (item.Transfers as any);
+    const transfer = item.Transfers as any;
     if (!transfer) continue;
 
     if (transferMap.has(transfer.transfer_id)) {
@@ -149,7 +159,8 @@ export async function getTransfersByOwner(ownerId: string) {
     // Get all old owners
     const { data: oldOwners, error: oldOwnersQueryError } = await supabase
       .from("TransferOldOwners")
-      .select(`
+      .select(
+        `
         owner_id,
         status,
         Owner (
@@ -162,7 +173,8 @@ export async function getTransfersByOwner(ownerId: string) {
             email
           )
         )
-      `)
+      `
+      )
       .eq("transfer_id", transfer.transferId);
 
     if (oldOwnersQueryError) {
@@ -173,7 +185,8 @@ export async function getTransfersByOwner(ownerId: string) {
     // For NEW owners
     const { data: newOwners, error: newOwnersQueryError } = await supabase
       .from("TransferNewOwners")
-      .select(`
+      .select(
+        `
         owner_id,
         status,
         Owner (
@@ -186,7 +199,8 @@ export async function getTransfersByOwner(ownerId: string) {
             email
           )
         )
-      `)
+      `
+      )
       .eq("transfer_id", transfer.transferId);
 
     if (newOwnersQueryError) {
@@ -214,8 +228,10 @@ export async function getTransfersByOwner(ownerId: string) {
   }
 
   return {
-    transfers: transfers.sort((a, b) =>
-      new Date(b.transferCreatedAt).getTime() - new Date(a.transferCreatedAt).getTime()
+    transfers: transfers.sort(
+      (a, b) =>
+        new Date(b.transferCreatedAt).getTime() -
+        new Date(a.transferCreatedAt).getTime()
     ),
   };
 }
@@ -234,7 +250,7 @@ export async function initiateTransfer(
   console.log("initiateTransfer called with:", {
     propertyId,
     allOldOwnerIds,
-    newOwnerStateIds
+    newOwnerStateIds,
   });
 
   // 1. Check if there's already a pending transfer for this property
@@ -246,7 +262,9 @@ export async function initiateTransfer(
     .maybeSingle();
 
   if (existingTransfer) {
-    throw new Error("A pending transfer already exists for this property. Please complete or cancel the existing transfer first.");
+    throw new Error(
+      "A pending transfer already exists for this property. Please complete or cancel the existing transfer first."
+    );
   }
 
   // 2. Verify all old owners actually own this property
@@ -260,16 +278,24 @@ export async function initiateTransfer(
     throw new Error("Failed to verify property ownership");
   }
 
-  const currentOwnerIds = (currentOwnership || []).map(o => o.owner_id);
+  const currentOwnerIds = (currentOwnership || []).map((o) => o.owner_id);
 
   // Check that all provided old owners actually own the property
-  const invalidOldOwners = allOldOwnerIds.filter(id => !currentOwnerIds.includes(id));
+  const invalidOldOwners = allOldOwnerIds.filter(
+    (id) => !currentOwnerIds.includes(id)
+  );
   if (invalidOldOwners.length > 0) {
-    throw new Error(`The following owners do not own this property: ${invalidOldOwners.join(", ")}`);
+    throw new Error(
+      `The following owners do not own this property: ${invalidOldOwners.join(
+        ", "
+      )}`
+    );
   }
 
   // Check that all current owners are included in allOldOwnerIds
-  const missingOldOwners = currentOwnerIds.filter(id => !allOldOwnerIds.includes(id));
+  const missingOldOwners = currentOwnerIds.filter(
+    (id) => !allOldOwnerIds.includes(id)
+  );
   if (missingOldOwners.length > 0) {
     throw new Error("All current owners must be included in the transfer");
   }
@@ -291,7 +317,7 @@ export async function initiateTransfer(
   console.log("Transfer created:", transfer);
 
   // Insert all old owners into TransferOldOwners
-  const oldOwnersData = allOldOwnerIds.map(ownerId => ({
+  const oldOwnersData = allOldOwnerIds.map((ownerId) => ({
     transfer_id: transfer.transfer_id,
     owner_id: ownerId,
     status: TransferAcceptStatus.PENDING,
@@ -312,7 +338,7 @@ export async function initiateTransfer(
   console.log("Old owners inserted:", oldOwnersResult);
 
   // Insert new owner state into TransferNewOwners
-  const newOwnersData = newOwnerStateIds.map(ownerId => ({
+  const newOwnersData = newOwnerStateIds.map((ownerId) => ({
     transfer_id: transfer.transfer_id,
     owner_id: ownerId,
     status: TransferAcceptStatus.PENDING,
@@ -351,7 +377,10 @@ export async function approveTransfer(transferId: string, ownerId: string) {
     .eq("owner_id", ownerId)
     .select();
 
-  console.log("TransferOldOwners update:", { data: oldOwnerUpdate, error: oldOwnerError });
+  console.log("TransferOldOwners update:", {
+    data: oldOwnerUpdate,
+    error: oldOwnerError,
+  });
 
   // Update status in TransferNewOwners if owner exists there
   const { data: newOwnerUpdate, error: newOwnerError } = await supabase
@@ -361,12 +390,20 @@ export async function approveTransfer(transferId: string, ownerId: string) {
     .eq("owner_id", ownerId)
     .select();
 
-  console.log("TransferNewOwners update:", { data: newOwnerUpdate, error: newOwnerError });
+  console.log("TransferNewOwners update:", {
+    data: newOwnerUpdate,
+    error: newOwnerError,
+  });
 
   // If both updates returned empty arrays, the owner wasn't found in either table
-  if ((!oldOwnerUpdate || oldOwnerUpdate.length === 0) &&
-      (!newOwnerUpdate || newOwnerUpdate.length === 0)) {
-    console.error("Owner not found in either TransferOldOwners or TransferNewOwners");
+  console.log(oldOwnerUpdate + " _ " + newOwnerUpdate);
+  if (
+    (!oldOwnerUpdate || oldOwnerUpdate.length === 0) &&
+    (!newOwnerUpdate || newOwnerUpdate.length === 0)
+  ) {
+    console.error(
+      "Owner not found in either TransferOldOwners or TransferNewOwners"
+    );
     throw new Error(`Owner ${ownerId} not found in transfer ${transferId}`);
   }
 
@@ -385,17 +422,19 @@ export async function approveTransfer(transferId: string, ownerId: string) {
     oldOwners,
     oldOwnersError,
     newOwners,
-    newOwnersError
+    newOwnersError,
   });
 
   const allApproved =
-    oldOwners?.every(o => o.status === TransferAcceptStatus.APPROVED) &&
-    newOwners?.every(o => o.status === TransferAcceptStatus.APPROVED);
+    oldOwners?.every((o) => o.status === TransferAcceptStatus.APPROVED) &&
+    newOwners?.every((o) => o.status === TransferAcceptStatus.APPROVED);
 
   console.log("All approved?", allApproved);
 
   if (allApproved) {
-    console.log("All owners approved! Updating transfer status and executing ownership change");
+    console.log(
+      "All owners approved! Updating transfer status and executing ownership change"
+    );
     // Update main transfer status
     const { error: transferUpdateError } = await supabase
       .from("Transfers")
@@ -472,8 +511,8 @@ async function executePropertyOwnershipChange(transferId: string) {
   if (!oldOwners || !newOwners) throw new Error("Owner data not found");
 
   const propertyId = transfer.property_id;
-  const oldOwnerIds = oldOwners.map(o => o.owner_id);
-  const newOwnerIds = newOwners.map(o => o.owner_id);
+  const oldOwnerIds = oldOwners.map((o) => o.owner_id);
+  const newOwnerIds = newOwners.map((o) => o.owner_id);
 
   // Delete old owners from OwnerProperty
   await supabase
@@ -483,13 +522,10 @@ async function executePropertyOwnershipChange(transferId: string) {
     .in("owner_id", oldOwnerIds);
 
   // Insert new owners into OwnerProperty
-  const ownerPropertyData = newOwnerIds.map(ownerId => ({
+  const ownerPropertyData = newOwnerIds.map((ownerId) => ({
     property_id: propertyId,
     owner_id: ownerId,
   }));
 
-  await supabase
-    .from("OwnerProperty")
-    .insert(ownerPropertyData);
+  await supabase.from("OwnerProperty").insert(ownerPropertyData);
 }
-
