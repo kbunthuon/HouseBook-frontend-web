@@ -662,7 +662,7 @@ class ApiClient {
       "../../../backend/TransferService"
     );
     try {
-      const result = await approveTransfer(transferId, ownerId);
+      const result = await approveTransfer(transferId, ownerId.ownerId);
       console.log("approveTransfer response data:", result);
       return result;
     } catch (error: any) {
@@ -673,7 +673,7 @@ class ApiClient {
 
   async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
     try {
-      const result = await rejectTransfer(transferId, ownerId);
+      const result = await rejectTransfer(transferId, ownerId.ownerId);
       console.log("rejectTransfer response data:", result);
       return result;
     } catch (error: any) {
