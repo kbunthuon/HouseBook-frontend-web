@@ -535,10 +535,18 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     setSelectedImage(propertyWithImages.images[prevIndex]);
   };
 
-  // Image management handlers
+  // Media select handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
+      const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+      
+      filesArray.forEach(file => {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.warning(`${file.name} is larger than 4MB and may fail to upload`);
+        }
+      });
+      
       setSelectedFiles(filesArray);
     }
   };
@@ -1225,24 +1233,37 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
             <div className="overflow-x-auto py-4">
               <div className="flex gap-6 w-max">
-                {propertyWithImages.images.map((url: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                    style={{ width: '320px', height: '320px' }}
-                    onClick={() => openImageViewer(url, idx)}
-                  >
-                    {/* property image - fixed 320px height (full card) */}
-                    <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
-                      <img
-                        src={url}
-                        alt={`Property Image ${idx + 1}`}
-                        className="w-full h-full"
-                        style={{ objectFit: 'contain' }}
-                      />
+                {propertyWithImages.images.map((url: string, idx: number) => {
+                  const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
+                      style={{ width: '320px', height: '320px' }}
+                      onClick={() => openImageViewer(url, idx)}
+                    >
+                      <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
+                        {isVideo ? (
+                          <video
+                            src={url}
+                            className="w-full h-full"
+                            style={{ objectFit: 'contain' }}
+                            controls
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Property Image ${idx + 1}`}
+                            className="w-full h-full"
+                            style={{ objectFit: 'contain' }}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
@@ -1298,16 +1319,30 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={selectedImage}
-              alt="Property Image"
-              className="max-w-full max-h-full object-contain shadow-2xl"
-              style={{
-                borderRadius: '16px',
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-              }}
-            />
+            {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(selectedImage) ? (
+              <video
+                src={selectedImage}
+                className="max-w-full max-h-full object-contain shadow-2xl"
+                style={{
+                  borderRadius: '16px',
+                  maxWidth: '90vw',
+                  maxHeight: '90vh',
+                }}
+                controls
+                autoPlay
+              />
+            ) : (
+              <img
+                src={selectedImage}
+                alt="Property Image"
+                className="max-w-full max-h-full object-contain shadow-2xl"
+                style={{
+                  borderRadius: '16px',
+                  maxWidth: '90vw',
+                  maxHeight: '90vh',
+                }}
+              />
+            )}
           </div>
 
           {/* Navigation Button - Next */}
@@ -1526,7 +1561,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*"
+              accept="image/*,video/*"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -1538,30 +1573,45 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             
             {selectedFiles.length > 0 ? (
               <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {selectedFiles.map((file, idx) => (
-                  <div key={idx} className="relative border rounded-lg overflow-hidden">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => handleRemoveSelectedFile(idx)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <div className="p-2 bg-muted">
-                      <p className="text-xs truncate">{file.name}</p>
+                {selectedFiles.map((file, idx) => {
+                  const isVideo = file.type.startsWith('video/');
+                  
+                  return (
+                    <div key={idx} className="relative border rounded-lg overflow-hidden">
+                      {isVideo ? (
+                        <video
+                          src={URL.createObjectURL(file)}
+                          className="w-full h-48 object-cover"
+                          controls
+                        />
+                      ) : (
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="w-full h-48 object-cover"
+                        />
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveSelectedFile(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <div className="p-2 bg-muted">
+                        <p className="text-xs truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB {isVideo ? '(video)' : '(image)'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-                No images selected
+                No media selected
               </div>
             )}
           </div>
@@ -1590,39 +1640,43 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           </DialogHeader>
 
 
-          <div className="space-y-4">
-            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {propertyWithImages.images.map((url: string, idx: number) => (
-                  <div 
-                    key={idx} 
-                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      selectedImagesToDelete.includes(url) 
-                        ? 'border-destructive ring-2 ring-destructive' 
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => handleToggleImageForDeletion(url)}
-                  >
+          <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+            {propertyWithImages.images.map((url: string, idx: number) => {
+              const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+              
+              return (
+                <div 
+                  key={idx} 
+                  className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                    selectedImagesToDelete.includes(url) 
+                      ? 'border-destructive ring-2 ring-destructive' 
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
+                  onClick={() => handleToggleImageForDeletion(url)}
+                >
+                  {isVideo ? (
+                    <video
+                      src={url}
+                      className="w-full h-48 object-cover"
+                      muted
+                    />
+                  ) : (
                     <img
                       src={url}
                       alt={`Image ${idx + 1}`}
                       className="w-full h-48 object-cover"
                     />
-                    {selectedImagesToDelete.includes(url) && (
-                      <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
-                        <div className="bg-destructive text-white rounded-full p-2">
-                          <Trash2 className="h-6 w-6" />
-                        </div>
+                  )}
+                  {selectedImagesToDelete.includes(url) && (
+                    <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
+                      <div className="bg-destructive text-white rounded-full p-2">
+                        <Trash2 className="h-6 w-6" />
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No images available
-              </div>
-            )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           
           <DialogFooter>
@@ -1649,39 +1703,46 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             <DialogDescription>Choose an image to use as the main property splash image</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {propertyWithImages.images.map((imgUrl: string, idx: number) => (
-                  <div
-                    key={imgUrl} // use url as key for uniqueness
-                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      selectedSplashImage === imgUrl
-                        ? 'border-primary ring-2 ring-primary'
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => setSelectedSplashImage(imgUrl)}
-                  >
+          <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
+            {propertyWithImages.images.map((imgUrl: string, idx: number) => {
+              const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(imgUrl);
+              
+              // uncomment below if we want to disallow vids for splash img
+              // if (isVideo) return null;
+              
+              return (
+                <div
+                  key={imgUrl}
+                  className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                    selectedSplashImage === imgUrl
+                      ? 'border-primary ring-2 ring-primary'
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
+                  onClick={() => setSelectedSplashImage(imgUrl)}
+                >
+                  {isVideo ? (
+                    <video
+                      src={imgUrl}
+                      className="w-full h-48 object-cover"
+                      muted
+                    />
+                  ) : (
                     <img
                       src={imgUrl}
                       alt={`Property Image ${idx + 1}`}
                       className="w-full h-48 object-cover"
                     />
-                    {selectedSplashImage === imgUrl && (
-                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                        <div className="bg-primary text-white rounded-full p-2">
-                          <CheckCircle className="h-6 w-6" />
-                        </div>
+                  )}
+                  {selectedSplashImage === imgUrl && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <div className="bg-primary text-white rounded-full p-2">
+                        <CheckCircle className="h-6 w-6" />
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No images available
-              </div>
-            )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSplashDialogOpen(false)}>
