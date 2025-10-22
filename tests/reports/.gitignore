@@ -1,0 +1,15 @@
+*.html
+coverage/
+*.xml
+*.json
+
+# Test reports
+tests/reports/
+
+# Jest
+jest-cache/
+jest-coverage/
+
+# OS junk
+.DS_Store
+Thumbs.db

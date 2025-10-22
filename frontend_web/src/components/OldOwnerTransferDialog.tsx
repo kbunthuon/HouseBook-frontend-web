@@ -7,8 +7,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { toast } from "sonner";
-import { Copy, Send, ExternalLink, X, Check, Loader2 } from "lucide-react";
-import { Checkbox } from "./ui/checkbox";
+import { X, Loader2, Send } from "lucide-react";
 import { ROUTES } from "../Routes";
 import { apiClient } from "../api/wrappers";
 import { Owner } from "../types/serverTypes";
@@ -18,14 +17,7 @@ interface OldOwnerTransferDialogProps {
   onOpenChange: (open: boolean) => void;
   userID: string;
   onViewTransfer?: (propertyId: string) => void;
-  onInitiateTransfer?: (
-    propertyId: string,
-    allOldOwnerIds: string[],
-    newOwnerStateIds: string[]
-  ) => void;
-
 }
-
 
 interface InvitedOwner {
   email: string;
@@ -39,8 +31,7 @@ export default function OldOwnerTransferDialog({
   open,
   onOpenChange,
   userID,
-  onViewTransfer,
-  onInitiateTransfer,
+  onViewTransfer
 }: OldOwnerTransferDialogProps) {
   const [propertyId, setPropertyId] = React.useState<string>("");
   const [inviteEmail, setInviteEmail] = React.useState("");
@@ -49,7 +40,6 @@ export default function OldOwnerTransferDialog({
   const [checkedUserId, setCheckedUserId] = React.useState<string | null>(null);
   const [invitedOwners, setInvitedOwners] = React.useState<InvitedOwner[]>([]);
   const [currentOwners, setCurrentOwners] = React.useState<InvitedOwner[]>([]);
-  const [selectedOwnersMovingOut, setSelectedOwnersMovingOut] = React.useState<string[]>([]);
   const [loadingOwners, setLoadingOwners] = React.useState(false);
 
   const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
@@ -239,14 +229,6 @@ export default function OldOwnerTransferDialog({
     }
   };
 
-  const toggleOwnerMovingOut = (ownerId: string) => {
-    setSelectedOwnersMovingOut(prev =>
-      prev.includes(ownerId)
-        ? prev.filter(id => id !== ownerId)
-        : [...prev, ownerId]
-    );
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:w-[500px] max-h-[90vh] overflow-y-auto">
@@ -276,10 +258,10 @@ export default function OldOwnerTransferDialog({
             )}
           </div>
 
-          {/* Current Owners with checkbox selection for moving out */}
+          {/* Current Owners */}
           {propertyId && (
             <div>
-              <Label>Current Owners (Select who is moving out)</Label>
+              <Label>Current Owners</Label>
               {loadingOwners ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -288,38 +270,25 @@ export default function OldOwnerTransferDialog({
               ) : currentOwners.length > 0 ? (
                 <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20">
                   {currentOwners.map((owner, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 bg-background p-2 rounded"
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between bg-background p-2 rounded"
                     >
-                      <Checkbox
-                        id={`owner-${owner.userId}`}
-                        checked={selectedOwnersMovingOut.includes(owner.userId || '')}
-                        onCheckedChange={() => toggleOwnerMovingOut(owner.userId || '')}
-                      />
-                      <label
-                        htmlFor={`owner-${owner.userId}`}
-                        className="flex flex-col flex-1 cursor-pointer"
-                      >
+                      <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                          {owner.firstName && owner.lastName
+                          {owner.firstName && owner.lastName 
                             ? `${owner.firstName} ${owner.lastName}`
                             : owner.email}
                         </span>
                         {owner.firstName && owner.lastName && (
                           <span className="text-xs text-muted-foreground">{owner.email}</span>
                         )}
-                      </label>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground mt-2">No current owners found.</p>
-              )}
-              {selectedOwnersMovingOut.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedOwnersMovingOut.length} owner(s) selected to move out
-                </p>
               )}
             </div>
           )}
