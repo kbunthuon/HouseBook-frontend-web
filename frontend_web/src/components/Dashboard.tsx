@@ -1,18 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
-import { Badge } from "./ui/badge.tsx";
-import { Input } from "./ui/input.tsx";
-import { Label } from "./ui/label.tsx";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
-import { Button } from "./ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Property } from "@housebookgroup/shared-types";
-import { Owner } from "../types/serverTypes.ts";
-import { ChangeLogWithUser } from "../hooks/useQueries.ts";
+import { Owner } from "../types/serverTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { useAdminProperties, useAllOwners, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
+import { useAdminProperties, useAllOwners, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries";
 
 interface DashboardProps {
   userId: string;
@@ -228,7 +227,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableHead>Inspect</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="max-h-[300px] overflow-y-auto border rounded-lg">
+                <TableBody>
               {requests.filter((request) => request.status !== "ACCEPTED").length > 0 ? (
               requests
               .slice(0, 15)

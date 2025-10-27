@@ -9,7 +9,7 @@ def test_login_and_welcome():
     # Selenium 4+ auto-manages drivers in most cases
     driver = webdriver.Chrome()
     try:
-        driver.get(f"{https://house-book-frontend-web-mocha.vercel.app/}/login")
+        driver.get(f"{BASE_URL}/login")
 
         email = driver.find_element(By.NAME, "email")
         password = driver.find_element(By.NAME, "password")

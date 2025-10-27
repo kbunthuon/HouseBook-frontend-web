@@ -625,20 +625,20 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     ));
   };
 
-  const SpecificationSection = ({ 
-    title, 
-    spaceId, 
+  const SpecificationSection = ({
+    title,
+    spaceId,
     spaceName,
-    assets 
-  }: { 
-    title: string; 
+    assets
+  }: {
+    title: string;
     spaceId: string;
     spaceName: string;
     assets: Asset[];
   }) => (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="font-semibold">{title}</CardTitle>
+        <CardTitle className="font-semibold truncate">{title}</CardTitle>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" onClick={() => handleShowTimeline(title, spaceId)}>
             <History className="h-4 w-4" />
@@ -1142,11 +1142,11 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   if (error) return <div className="p-8 text-center text-destructive">Error: {error}</div>;
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />Back to Properties
+            <ArrowLeft className="h-4 w-4 mr-2" />Back to My Properties
           </Button>
         </div>
         <div className="flex items-center space-x-2">
@@ -1157,7 +1157,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2 w-full">
         <div className="space-y-2 min-w-0">
           <h1 className="break-words">{propertyWithImages?.name ?? "Property"}</h1>
           <p className="text-muted-foreground text-lg break-words">{propertyWithImages?.description}</p>
@@ -1200,7 +1200,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       <Separator />
 
       {/* Property Images */}
-      <Card className="w-full max-w-full overflow-hidden">
+      <Card className="w-full overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
           <CardTitle className="flex items-center">
             <Image className="h-5 w-5 mr-2" />
@@ -1221,10 +1221,10 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-            <div className="overflow-x-auto py-4">
-              <div className="flex gap-6 w-max">
+            <div className="py-4">
+              <div className="flex gap-6 min-w-min">
                 {propertyWithImages.images.map((url: string, idx: number) => (
                   <div
                     key={idx}
@@ -1352,7 +1352,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 w-full">
         {propertyWithImages?.spaces?.filter((space: Space) => !space.deleted).map((space: Space) => (
           <SpecificationSection
             key={space.id}
@@ -1375,13 +1375,13 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         ))}
       </div>
 
-      <Card>
+      <Card className="w-full overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Key className="h-5 w-5 mr-2" />Jobs & Access Management
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <PinTable
             propertyId={propertyId}
             property={propertyWithImages}

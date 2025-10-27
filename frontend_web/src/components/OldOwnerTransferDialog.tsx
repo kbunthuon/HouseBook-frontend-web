@@ -17,6 +17,7 @@ interface OldOwnerTransferDialogProps {
   onOpenChange: (open: boolean) => void;
   userID: string;
   onViewTransfer?: (propertyId: string) => void;
+  onInitiateTransfer?: (propertyId: string, allOldOwnerIds: string[], newOwnerStateIds: string[]) => Promise<void>;
 }
 
 interface InvitedOwner {
@@ -31,7 +32,8 @@ export default function OldOwnerTransferDialog({
   open,
   onOpenChange,
   userID,
-  onViewTransfer
+  onViewTransfer,
+  onInitiateTransfer
 }: OldOwnerTransferDialogProps) {
   const [propertyId, setPropertyId] = React.useState<string>("");
   const [inviteEmail, setInviteEmail] = React.useState("");
@@ -41,6 +43,7 @@ export default function OldOwnerTransferDialog({
   const [invitedOwners, setInvitedOwners] = React.useState<InvitedOwner[]>([]);
   const [currentOwners, setCurrentOwners] = React.useState<InvitedOwner[]>([]);
   const [loadingOwners, setLoadingOwners] = React.useState(false);
+  const [selectedOwnersMovingOut, setSelectedOwnersMovingOut] = React.useState<string[]>([]);
 
   const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
@@ -261,7 +264,7 @@ export default function OldOwnerTransferDialog({
           {/* Current Owners */}
           {propertyId && (
             <div>
-              <Label>Current Owners</Label>
+              <Label>Current Owners (check to remove)</Label>
               {loadingOwners ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -270,19 +273,34 @@ export default function OldOwnerTransferDialog({
               ) : currentOwners.length > 0 ? (
                 <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-2 bg-muted/20">
                   {currentOwners.map((owner, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="flex items-center justify-between bg-background p-2 rounded"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium">
-                          {owner.firstName && owner.lastName 
-                            ? `${owner.firstName} ${owner.lastName}`
-                            : owner.email}
-                        </span>
-                        {owner.firstName && owner.lastName && (
-                          <span className="text-xs text-muted-foreground">{owner.email}</span>
-                        )}
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedOwnersMovingOut.includes(owner.userId || '')}
+                          onChange={(e) => {
+                            const userId = owner.userId || '';
+                            if (e.target.checked) {
+                              setSelectedOwnersMovingOut([...selectedOwnersMovingOut, userId]);
+                            } else {
+                              setSelectedOwnersMovingOut(selectedOwnersMovingOut.filter(id => id !== userId));
+                            }
+                          }}
+                          className="h-4 w-4"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {owner.firstName && owner.lastName
+                              ? `${owner.firstName} ${owner.lastName}`
+                              : owner.email}
+                          </span>
+                          {owner.firstName && owner.lastName && (
+                            <span className="text-xs text-muted-foreground">{owner.email}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

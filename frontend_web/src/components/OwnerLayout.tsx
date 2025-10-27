@@ -106,8 +106,8 @@ export function OwnerLayout({ children, currentPage, onPageChange, onLogout, own
         </Sidebar>
         
         <SidebarInset className="flex-1">
-          <div className="h-full w-full overflow-auto">
-            <div className="p-8 w-full">{children}</div>
+          <div className="h-full w-full overflow-y-auto overflow-x-hidden">
+            <div className="p-8 w-full max-w-full">{children}</div>
           </div>
         </SidebarInset>
       </div>

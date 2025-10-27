@@ -94,8 +94,8 @@ export function Layout({ children, currentPage, onPageChange, onLogout }: Layout
 
         {/* SidebarInset with constrained height and independent scrolling */}
         <SidebarInset className="flex flex-col h-screen overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-8">{children}</div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="p-8 max-w-full">{children}</div>
           </div>
         </SidebarInset>
       </div>

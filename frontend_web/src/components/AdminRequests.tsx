@@ -1,17 +1,16 @@
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card.tsx";
-import { Badge } from "./ui/badge.tsx";
-import { Input } from "./ui/input.tsx";
-import { Label } from "./ui/label.tsx";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.tsx";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table.tsx";
-import { Button } from "./ui/button.tsx";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Button } from "./ui/button";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useMemo } from "react";
 import { Property } from "@housebookgroup/shared-types";
-import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { useAdminProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
+import { useAdminProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries";
 
 interface AdminRequestProps {
   userId: string;
@@ -114,7 +113,7 @@ function formatDateTime(timestamp: string | number | Date) {
                     <TableHead>Inspect</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="overflow-y:auto height:200px">
+                <TableBody>
                   {requests.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="font-medium">
@@ -168,7 +167,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                   </div>
                                 <div>
                                   <Label>Field Specification</Label>
-                                  <td className="px-4 py-2">
+                                  <div className="px-4 py-2 border rounded-md bg-muted/50">
                                     <ul className="text-xs space-y-1">
                                       {Object.entries(request.specifications??{}).map(([key, value]) => (
                                         <li key={key}>
@@ -176,7 +175,7 @@ function formatDateTime(timestamp: string | number | Date) {
                                         </li>
                                       ))}
                                     </ul>
-                                  </td>
+                                  </div>
                                 </div>
                                 <div className="flex justify-end space-x-2">
                                   <Button
