@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - testing
+      - frontendtesting
   pull_request:
     branches:
       - main
       - testing
+      - frontendtesting
 
 jobs:
   test:
@@ -22,16 +24,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
       - name: Run Vitest (unit tests)
         run: npm run test:vitest:run
