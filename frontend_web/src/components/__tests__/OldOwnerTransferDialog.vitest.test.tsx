@@ -1,30 +1,27 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import OldOwnerTransferDialog from '../OldOwnerTransferDialog';
+import { apiClient } from '../../api/wrappers';
 
 // Mock API client
-const mockGetPropertyList = vi.fn();
-const mockGetPropertyOwners = vi.fn();
-const mockGetUserInfoByEmail = vi.fn();
-
 vi.mock('../../api/wrappers', () => ({
   apiClient: {
-    getPropertyList: mockGetPropertyList,
-    getPropertyOwners: mockGetPropertyOwners,
-    getUserInfoByEmail: mockGetUserInfoByEmail
+    getPropertyList: vi.fn(),
+    getPropertyOwners: vi.fn(),
+    getUserInfoByEmail: vi.fn()
   }
 }));
 
 describe('OldOwnerTransferDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetPropertyList.mockResolvedValue([
+    vi.mocked(apiClient.getPropertyList).mockResolvedValue([
       { propertyId: 'prop-1', name: 'Property 1' }
     ]);
-    mockGetPropertyOwners.mockResolvedValue([
+    vi.mocked(apiClient.getPropertyOwners).mockResolvedValue([
       { email: 'owner@example.com' }
     ]);
-    mockGetUserInfoByEmail.mockResolvedValue({
+    vi.mocked(apiClient.getUserInfoByEmail).mockResolvedValue({
       userId: 'user-123',
       firstName: 'John',
       lastName: 'Doe',

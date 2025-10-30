@@ -1,28 +1,30 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { Reports } from '../Reports';
+import { apiClient } from '../../api/wrappers';
 
 // Mock API client
-const mockGetUserInfoByEmail = vi.fn();
-const mockGetPropertyList = vi.fn();
-
 vi.mock('../../api/wrappers', () => ({
   apiClient: {
-    getUserInfoByEmail: mockGetUserInfoByEmail,
-    getPropertyList: mockGetPropertyList
+    getUserInfoByEmail: vi.fn(),
+    getPropertyList: vi.fn(),
+    getAdminProperties: vi.fn()
   }
 }));
 
 describe('Reports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUserInfoByEmail.mockResolvedValue({
+    vi.mocked(apiClient.getUserInfoByEmail).mockResolvedValue({
       userId: 'user-123',
       firstName: 'John',
       lastName: 'Doe',
       phone: '1234567890'
     });
-    mockGetPropertyList.mockResolvedValue([
+    vi.mocked(apiClient.getPropertyList).mockResolvedValue([
+      { propertyId: 'prop-1', name: 'Property 1' }
+    ]);
+    vi.mocked(apiClient.getAdminProperties).mockResolvedValue([
       { propertyId: 'prop-1', name: 'Property 1' }
     ]);
   });
@@ -31,7 +33,7 @@ describe('Reports', () => {
     render(<Reports userId="user-123" userType="owner" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/reports/i)).toBeInTheDocument();
+      expect(screen.getByText(/generate new report/i)).toBeInTheDocument();
     });
   });
 

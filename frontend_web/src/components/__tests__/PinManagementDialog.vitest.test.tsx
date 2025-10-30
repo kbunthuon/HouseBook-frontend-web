@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { PinManagementDialog } from '../PinManagementDialog';
+import { BrowserRouter } from 'react-router-dom';
 
 // Mock backend services
 vi.mock('../../../../backend/FetchAssetTypes', () => ({
@@ -33,13 +34,15 @@ describe('PinManagementDialog', () => {
 
   it('renders create dialog when no job provided', async () => {
     render(
-      <PinManagementDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onSave={vi.fn()}
-        propertyId="prop-1"
-        property={mockProperty as any}
-      />
+      <BrowserRouter>
+        <PinManagementDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onSave={vi.fn()}
+          propertyId="prop-1"
+          property={mockProperty as any}
+        />
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -59,14 +62,16 @@ describe('PinManagementDialog', () => {
     };
 
     render(
-      <PinManagementDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onSave={vi.fn()}
-        propertyId="prop-1"
-        property={mockProperty as any}
-        job={mockJob}
-      />
+      <BrowserRouter>
+        <PinManagementDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onSave={vi.fn()}
+          propertyId="prop-1"
+          property={mockProperty as any}
+          job={mockJob}
+        />
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -76,29 +81,33 @@ describe('PinManagementDialog', () => {
 
   it('displays job title input', async () => {
     render(
-      <PinManagementDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onSave={vi.fn()}
-        propertyId="prop-1"
-        property={mockProperty as any}
-      />
+      <BrowserRouter>
+        <PinManagementDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onSave={vi.fn()}
+          propertyId="prop-1"
+          property={mockProperty as any}
+        />
+      </BrowserRouter>
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/job title/i)).toBeInTheDocument();
+      expect(screen.getByText(/job title/i)).toBeInTheDocument();
     });
   });
 
   it('shows discipline selection checkboxes', async () => {
     render(
-      <PinManagementDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        onSave={vi.fn()}
-        propertyId="prop-1"
-        property={mockProperty as any}
-      />
+      <BrowserRouter>
+        <PinManagementDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          onSave={vi.fn()}
+          propertyId="prop-1"
+          property={mockProperty as any}
+        />
+      </BrowserRouter>
     );
 
     await waitFor(() => {

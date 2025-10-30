@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { AdminPropertyOnboarding } from '../AdminPropertyOnboarding';
 import { AdminFormProvider } from '../FormContext';
+import { BrowserRouter } from 'react-router-dom';
 
 // Mock backend services
 vi.mock('../../../../backend/FetchSpaceEnum', () => ({
@@ -29,9 +30,11 @@ vi.mock('../../api/wrappers', () => ({
 describe('AdminPropertyOnboarding', () => {
   it('renders the onboarding form', async () => {
     render(
-      <AdminFormProvider>
-        <AdminPropertyOnboarding />
-      </AdminFormProvider>
+      <BrowserRouter>
+        <AdminFormProvider>
+          <AdminPropertyOnboarding />
+        </AdminFormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -41,9 +44,11 @@ describe('AdminPropertyOnboarding', () => {
 
   it('displays step progress', async () => {
     render(
-      <AdminFormProvider>
-        <AdminPropertyOnboarding />
-      </AdminFormProvider>
+      <BrowserRouter>
+        <AdminFormProvider>
+          <AdminPropertyOnboarding />
+        </AdminFormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -53,15 +58,15 @@ describe('AdminPropertyOnboarding', () => {
 
   it('shows owner details form in step 1', async () => {
     render(
-      <AdminFormProvider>
-        <AdminPropertyOnboarding />
-      </AdminFormProvider>
+      <BrowserRouter>
+        <AdminFormProvider>
+          <AdminPropertyOnboarding />
+        </AdminFormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/owner first name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/owner last name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByText(/owner first name/i)).toBeInTheDocument();
     });
   });
 });

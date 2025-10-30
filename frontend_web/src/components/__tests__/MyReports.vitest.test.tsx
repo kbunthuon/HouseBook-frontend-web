@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { MyReports } from '../MyReports';
+import { apiClient } from '../../api/wrappers';
 
 // Mock backend services
 vi.mock('../../../../backend/JobService', () => ({
@@ -10,39 +11,34 @@ vi.mock('../../../../backend/JobService', () => ({
 }));
 
 // Mock API client
-const mockGetUserInfoByEmail = vi.fn();
-const mockGetPropertyList = vi.fn();
-const mockGetPropertyDetails = vi.fn();
-const mockGetPropertyImages = vi.fn();
-
 vi.mock('../../api/wrappers', () => ({
   apiClient: {
-    getUserInfoByEmail: mockGetUserInfoByEmail,
-    getPropertyList: mockGetPropertyList,
-    getPropertyDetails: mockGetPropertyDetails,
-    getPropertyImages: mockGetPropertyImages
-  }
+    getUserInfoByEmail: vi.fn(),
+    getPropertyList: vi.fn(),
+    getPropertyDetails: vi.fn(),
+    getPropertyImages: vi.fn(),
+  },
 }));
 
 describe('MyReports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUserInfoByEmail.mockResolvedValue({
+    vi.mocked(apiClient.getUserInfoByEmail).mockResolvedValue({
       userId: 'user-123',
       firstName: 'John',
       lastName: 'Doe',
       phone: '1234567890'
     });
-    mockGetPropertyList.mockResolvedValue([
+    vi.mocked(apiClient.getPropertyList).mockResolvedValue([
       { propertyId: 'prop-1', name: 'Property 1' }
     ]);
-    mockGetPropertyDetails.mockResolvedValue({
+    vi.mocked(apiClient.getPropertyDetails).mockResolvedValue({
       name: 'Test Property',
       description: 'Test Description',
       address: '123 Test St',
       spaces: []
     });
-    mockGetPropertyImages.mockResolvedValue([]);
+    vi.mocked(apiClient.getPropertyImages).mockResolvedValue([]);
   });
 
   it('renders report generation form', async () => {
@@ -65,7 +61,7 @@ describe('MyReports', () => {
     render(<MyReports ownerEmail="test@example.com" />);
 
     await waitFor(() => {
-      expect(screen.getByText(/report type/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/report type/i).length).toBeGreaterThan(0);
     });
   });
 

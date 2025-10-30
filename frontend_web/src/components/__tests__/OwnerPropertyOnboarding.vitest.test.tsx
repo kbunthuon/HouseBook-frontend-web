@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { OwnerPropertyOnboarding } from '../OwnerPropertyOnboarding';
 import { FormProvider } from '../FormContext';
+import { BrowserRouter } from 'react-router-dom';
 
 // Mock backend services
 vi.mock('../../../../backend/FetchSpaceEnum', () => ({
@@ -23,9 +24,11 @@ vi.mock('../../../../backend/OnboardPropertyService', () => ({
 describe('OwnerPropertyOnboarding', () => {
   it('renders the onboarding form', async () => {
     render(
-      <FormProvider>
-        <OwnerPropertyOnboarding userId="user-123" />
-      </FormProvider>
+      <BrowserRouter>
+        <FormProvider>
+          <OwnerPropertyOnboarding userId="user-123" />
+        </FormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -35,9 +38,11 @@ describe('OwnerPropertyOnboarding', () => {
 
   it('displays step progress', async () => {
     render(
-      <FormProvider>
-        <OwnerPropertyOnboarding userId="user-123" />
-      </FormProvider>
+      <BrowserRouter>
+        <FormProvider>
+          <OwnerPropertyOnboarding userId="user-123" />
+        </FormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
@@ -47,9 +52,11 @@ describe('OwnerPropertyOnboarding', () => {
 
   it('shows general information form in step 1', async () => {
     render(
-      <FormProvider>
-        <OwnerPropertyOnboarding userId="user-123" />
-      </FormProvider>
+      <BrowserRouter>
+        <FormProvider>
+          <OwnerPropertyOnboarding userId="user-123" />
+        </FormProvider>
+      </BrowserRouter>
     );
 
     await waitFor(() => {
