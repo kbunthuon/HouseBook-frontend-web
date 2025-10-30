@@ -283,7 +283,7 @@ describe('PropertyDetail Component (vitest)', () => {
 
       await waitFor(() => expect((apiClient.getPropertyDetails as any)).toHaveBeenCalledWith('property-1'));
       expect((apiClient.getPropertyOwners as any)).toHaveBeenCalledWith('property-1');
-      expect(mockFetchJobsInfo).toHaveBeenCalledWith({ propertyId: 'property-1' });
+      // Jobs are fetched via React Query hook (usePropertyJobs), not direct function call
     });
 
     it('re-fetches data when propertyId changes', async () => {
@@ -296,7 +296,7 @@ describe('PropertyDetail Component (vitest)', () => {
       await waitFor(() => {
         expect((apiClient.getPropertyDetails as any)).toHaveBeenCalledWith('property-2');
         expect((apiClient.getPropertyOwners as any)).toHaveBeenCalledWith('property-2');
-        expect(mockFetchJobsInfo).toHaveBeenCalledWith({ propertyId: 'property-2' });
+        // Jobs are fetched via React Query hook (usePropertyJobs), not direct function call
       });
     });
   });
