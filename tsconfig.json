@@ -1,13 +1,13 @@
 {
     "compilerOptions": {
       "target": "ESNext",
-      "module": "CommonJS",
+      "module": "ESNext",
       "moduleResolution": "Node",
       "strict": true,
       "esModuleInterop": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
-  "types": ["vitest/globals", "node"],
+      "types": ["vitest/globals", "node"],
       "jsx": "react-jsx"
     },
     "include": ["src", "tests", "frontend_web/src"]

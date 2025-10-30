@@ -46,7 +46,9 @@ export default defineConfig(async () => {
       environment: 'jsdom',
       globals: true,
       setupFiles: ['./frontend_web/src/setupTests.vitest.ts'],
-      include: ['frontend_web/src/**/*.vitest.test.[jt]s?(x)'],
+      include: ['frontend_web/src/**/*.vitest.test.[jt]s?(x)']
+    },
+    server: {
       deps: {
         // Inline some dependencies that need pre-bundling to avoid ESM/CJS
         // resolution issues when Vitest/Vite transform modules during tests.
