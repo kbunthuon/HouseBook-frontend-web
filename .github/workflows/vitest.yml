@@ -4,12 +4,10 @@ on:
   push:
     branches:
       - main
-      - testing
       - frontendtesting
   pull_request:
     branches:
       - main
-      - testing
       - frontendtesting
 
 jobs:
