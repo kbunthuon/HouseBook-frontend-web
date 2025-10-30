@@ -1,5 +1,5 @@
 // backend/ChangeLogService.ts
-import supabase from "../config/supabaseClient";
+import { supabase } from "../config/supabaseClient";
 import { ChangeLog } from "@housebookgroup/shared-types";
 import { apiClient } from "../frontend_web/src/api/wrappers";
 

@@ -1,4 +1,4 @@
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 import { Property, Space, Asset, Owner, AssetType, ChangeLog, ChangeLogAction, ChangeLogStatus } from "@housebookgroup/shared-types";
 
 interface OwnerChangeLog {

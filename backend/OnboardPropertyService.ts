@@ -1,4 +1,4 @@
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 import { getOwnerId } from "./FetchData";
 
 // Setting what OwnerData looks like

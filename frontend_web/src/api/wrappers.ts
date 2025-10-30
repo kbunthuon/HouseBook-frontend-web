@@ -5,7 +5,7 @@ import {
   AdminOnboardParams,
 } from "./routes";
 import { SignupData } from "@housebookgroup/shared-types";
-import supabase from "../../../config/supabaseClient";
+import { supabase } from "../../../config/supabaseClient";
 import { rejectTransfer } from "../../../backend/TransferService";
 import { checkOwnerExists } from "../../../backend/OnboardPropertyService";
 import { getOwnerId } from "../../../backend/FetchData";
@@ -21,6 +21,11 @@ class TokenManager {
     refreshToken: string,
     expiresAt?: number
   ) {
+    console.log("Setting tokens in TokenManager");
+    console.log("Access Token:", accessToken ? accessToken : "null");
+    console.log("Refresh Token:", refreshToken ? refreshToken : "null");
+    console.log("Expires At:", expiresAt);  
+
     sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
     sessionStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     if (expiresAt) {
@@ -60,6 +65,7 @@ class ApiClient {
   private refreshPromise: Promise<boolean> | null = null;
 
   private async refreshAccessToken(): Promise<boolean> {
+    console.log("Refreshing access token...");
     if (this.refreshPromise) return this.refreshPromise;
 
     this.refreshPromise = (async () => {
@@ -83,6 +89,7 @@ class ApiClient {
       return await this.refreshPromise;
     } finally {
       this.refreshPromise = null;
+      console.log("Token refresh process completed.");
     }
   }
 
@@ -232,7 +239,7 @@ class ApiClient {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
       // Clear Supabase session
-      await supabase.auth.signOut({ scope: "local" });
+      //await supabase.auth.signOut({ scope: "local" });
 
       // Nuclear option: Clear ALL sessionStorage
       sessionStorage.clear();
@@ -264,6 +271,7 @@ class ApiClient {
     );
 
     // Restore Supabase session
+    /*
     try {
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: data.user.accessToken,
@@ -280,6 +288,7 @@ class ApiClient {
       console.error("Failed to set Supabase session:", error);
       throw error;
     }
+    */
 
     return data.user;
   }

@@ -1,4 +1,4 @@
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Transfer statuses

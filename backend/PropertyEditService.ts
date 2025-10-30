@@ -1,5 +1,5 @@
 // backend/PropertyEditService.ts
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 import { createChangeLogEntry, ChangeLogAction } from "./ChangeLogService";
 
 // Types for update operations
