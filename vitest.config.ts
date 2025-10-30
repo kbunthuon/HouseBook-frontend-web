@@ -15,7 +15,7 @@ function versionStripAlias() {
 }
 
 export default defineConfig({
-  plugins: [react() as any],
+  plugins: [react()],
   resolve: {
     alias: [versionStripAlias() as any]
   },
