@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">31.47% </span>
+                <span class="strong">29.72% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>107/340</span>
+                <span class='fraction'>107/360</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">31.47% </span>
+                <span class="strong">29.72% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>107/340</span>
+                <span class='fraction'>107/360</span>
             </div>
         
             
@@ -402,7 +402,27 @@
 <a name='L337'></a><a href='#L337'>337</a>
 <a name='L338'></a><a href='#L338'>338</a>
 <a name='L339'></a><a href='#L339'>339</a>
-<a name='L340'></a><a href='#L340'>340</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a>
+<a name='L348'></a><a href='#L348'>348</a>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a>
+<a name='L355'></a><a href='#L355'>355</a>
+<a name='L356'></a><a href='#L356'>356</a>
+<a name='L357'></a><a href='#L357'>357</a>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -539,6 +559,16 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -611,6 +641,16 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -860,7 +900,7 @@ export interface FetchJobInfoParams {
 <span class="cstat-no" title="statement not covered" >  // Validate required fields</span>
 <span class="cstat-no" title="statement not covered" >  if (!job.propertyId) throw new Error(`Missing "propertyId".`);</span>
 <span class="cstat-no" title="statement not covered" >  if (!job.title) throw new Error(`Missing "title".`);</span>
-<span class="cstat-no" title="statement not covered" >  if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);</span>
+<span class="cstat-no" title="statement not covered" >  // if (job.expired === undefined || job.expired === null) throw new Error(`Missing "expired".`);</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >  // Insert job</span>
 <span class="cstat-no" title="statement not covered" >  const { data, error } = await supabase.from("Jobs").insert([</span>
@@ -868,15 +908,25 @@ export interface FetchJobInfoParams {
 <span class="cstat-no" title="statement not covered" >      property_id: job.propertyId,</span>
 <span class="cstat-no" title="statement not covered" >      title: job.title,</span>
 <span class="cstat-no" title="statement not covered" >      end_time: job.endTime ? new Date(job.endTime).toISOString() : oneHourFromNowISO(),</span>
-<span class="cstat-no" title="statement not covered" >      expired: false, // Just created, cannot be expired</span>
-<span class="cstat-no" title="statement not covered" >    } </span>
+<span class="cstat-no" title="statement not covered" >      // expired: false, // Just created, cannot be expired</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" >  ]).select(); // returns the inserted row</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >  if (error) throw new Error(error.message);</span>
 <span class="cstat-no" title="statement not covered" >  if (!data || data.length === 0) return null;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >  // Return the inserted job</span>
-<span class="cstat-no" title="statement not covered" >  return data[0] as Job;</span>
+<span class="cstat-no" title="statement not covered" >  // Map database response (snake_case) to Job interface (camelCase)</span>
+<span class="cstat-no" title="statement not covered" >  const insertedJob: Job = {</span>
+<span class="cstat-no" title="statement not covered" >    id: data[0].id,</span>
+<span class="cstat-no" title="statement not covered" >    propertyId: data[0].property_id,</span>
+<span class="cstat-no" title="statement not covered" >    title: data[0].title,</span>
+<span class="cstat-no" title="statement not covered" >    createdAt: data[0].created_at,</span>
+<span class="cstat-no" title="statement not covered" >    endTime: data[0].end_time,</span>
+<span class="cstat-no" title="statement not covered" >    expired: data[0].expired,</span>
+<span class="cstat-no" title="statement not covered" >    pin: data[0].pin,</span>
+<span class="cstat-no" title="statement not covered" >  };</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  return insertedJob;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 /**
@@ -957,8 +1007,7 @@ export interface FetchJobInfoParams {
 <span class="cstat-no" title="statement not covered" >    .from("Jobs")</span>
 <span class="cstat-no" title="statement not covered" >    .update({</span>
 <span class="cstat-no" title="statement not covered" >      title: job.title,</span>
-<span class="cstat-no" title="statement not covered" >      endTime: job.endTime ? new Date(job.endTime).toISOString() : null,</span>
-<span class="cstat-no" title="statement not covered" >      expired: job.expired,</span>
+<span class="cstat-no" title="statement not covered" >      end_time: job.endTime ? new Date(job.endTime).toISOString() : null,</span>
 <span class="cstat-no" title="statement not covered" >      pin: job.pin,</span>
 <span class="cstat-no" title="statement not covered" >    })</span>
 <span class="cstat-no" title="statement not covered" >    .eq("id", job.id)</span>
@@ -967,7 +1016,18 @@ export interface FetchJobInfoParams {
 <span class="cstat-no" title="statement not covered" >  if (error) throw new Error(`Failed to update job: ${error.message}`);</span>
 <span class="cstat-no" title="statement not covered" >  if (!data || data.length === 0) throw new Error("No job updated");</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >  return data[0] as Job;</span>
+<span class="cstat-no" title="statement not covered" >  // Map database response (snake_case) to Job interface (camelCase)</span>
+<span class="cstat-no" title="statement not covered" >  const updatedJob: Job = {</span>
+<span class="cstat-no" title="statement not covered" >    id: data[0].id,</span>
+<span class="cstat-no" title="statement not covered" >    propertyId: data[0].property_id,</span>
+<span class="cstat-no" title="statement not covered" >    title: data[0].title,</span>
+<span class="cstat-no" title="statement not covered" >    createdAt: data[0].created_at,</span>
+<span class="cstat-no" title="statement not covered" >    endTime: data[0].end_time,</span>
+<span class="cstat-no" title="statement not covered" >    expired: data[0].expired,</span>
+<span class="cstat-no" title="statement not covered" >    pin: data[0].pin,</span>
+<span class="cstat-no" title="statement not covered" >  };</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  return updatedJob;</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 /**
@@ -1087,7 +1147,7 @@ export interface FetchJobInfoParams {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-19T12:07:01.318Z
+                at 2025-10-20T13:15:24.376Z
             </div>
         <script src="../prettify.js"></script>
         <script>

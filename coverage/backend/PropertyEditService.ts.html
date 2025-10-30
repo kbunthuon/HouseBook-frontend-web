@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/529</span>
+                <span class='fraction'>0/526</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/529</span>
+                <span class='fraction'>0/526</span>
             </div>
         
             
@@ -588,13 +588,7 @@
 <a name='L523'></a><a href='#L523'>523</a>
 <a name='L524'></a><a href='#L524'>524</a>
 <a name='L525'></a><a href='#L525'>525</a>
-<a name='L526'></a><a href='#L526'>526</a>
-<a name='L527'></a><a href='#L527'>527</a>
-<a name='L528'></a><a href='#L528'>528</a>
-<a name='L529'></a><a href='#L529'>529</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L526'></a><a href='#L526'>526</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -1529,33 +1523,30 @@
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >    if (!asset) throw new Error("Asset not found");</span>
 <span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // Store the deleted feature for the changelog</span>
+<span class="cstat-no" title="statement not covered" >    const deletedFeature = { [featureName]: asset.current_specifications[featureName] };</span>
+<span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >    // Remove feature</span>
 <span class="cstat-no" title="statement not covered" >    const updatedSpecifications = { ...asset.current_specifications };</span>
 <span class="cstat-no" title="statement not covered" >    delete updatedSpecifications[featureName];</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >    // Update asset</span>
-<span class="cstat-no" title="statement not covered" >    const { data, error } = await supabase</span>
+<span class="cstat-no" title="statement not covered" >    const { error } = await supabase</span>
 <span class="cstat-no" title="statement not covered" >      .from("Assets")</span>
 <span class="cstat-no" title="statement not covered" >      .update({ current_specifications: updatedSpecifications })</span>
-<span class="cstat-no" title="statement not covered" >      .eq("id", assetId)</span>
-<span class="cstat-no" title="statement not covered" >      .select(`</span>
-<span class="cstat-no" title="statement not covered" >        *,</span>
-<span class="cstat-no" title="statement not covered" >        AssetTypes!inner(id, name, discipline),</span>
-<span class="cstat-no" title="statement not covered" >        Spaces!inner(id, name, property_id)</span>
-<span class="cstat-no" title="statement not covered" >      `)</span>
-<span class="cstat-no" title="statement not covered" >      .single();</span>
+<span class="cstat-no" title="statement not covered" >      .eq("id", assetId);</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >    if (error) throw error;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >    // Create changelog entry</span>
+<span class="cstat-no" title="statement not covered" >    // Create changelog entry with the deleted feature (not the updated state)</span>
 <span class="cstat-no" title="statement not covered" >    await createChangeLogEntry(</span>
 <span class="cstat-no" title="statement not covered" >      assetId,</span>
 <span class="cstat-no" title="statement not covered" >      `Feature deleted: ${featureName}`,</span>
-<span class="cstat-no" title="statement not covered" >      ChangeLogAction.UPDATED,</span>
-<span class="cstat-no" title="statement not covered" >      updatedSpecifications</span>
+<span class="cstat-no" title="statement not covered" >      ChangeLogAction.DELETED,</span>
+<span class="cstat-no" title="statement not covered" >      deletedFeature</span>
 <span class="cstat-no" title="statement not covered" >    );</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >    return data;</span>
+<span class="cstat-no" title="statement not covered" >    return { success: true, updatedSpecifications };</span>
 <span class="cstat-no" title="statement not covered" >  } catch (error) {</span>
 <span class="cstat-no" title="statement not covered" >    console.error("Error in deleteFeature:", error);</span>
 <span class="cstat-no" title="statement not covered" >    throw error;</span>
@@ -1654,7 +1645,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-19T12:07:01.318Z
+                at 2025-10-20T13:15:24.376Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">91.17% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>31/34</span>
+                <span class='fraction'>0/34</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/5</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">91.17% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>31/34</span>
+                <span class='fraction'>0/34</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -96,80 +96,80 @@
 <a name='L31'></a><a href='#L31'>31</a>
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">20x</span>
+<a name='L34'></a><a href='#L34'>34</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">20x</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">21x</span></td><td class="text"><pre class="prettyprint lang-js">import supabase from "../config/supabaseClient";
-&nbsp;
-export type AssetType = {
-  id: string;
-  name: string; 
-  discipline: string;
-};
-&nbsp;
-export async function fetchAssetTypes(): Promise&lt;AssetType[]&gt; {
-  const { data, error } = await supabase
-    .from("AssetTypes")
-    .select("*");
-&nbsp;
-  if (error) {
-    console.error("Error fetching asset types:", error.message);
-    return [];
-<span class="branch-0 cbranch-no" title="branch not covered" >  }</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import supabase from "../config/supabaseClient";<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export type AssetType = {</span>
+<span class="cstat-no" title="statement not covered" >  id: string;</span>
+<span class="cstat-no" title="statement not covered" >  name: string; </span>
+<span class="cstat-no" title="statement not covered" >  discipline: string;</span>
+<span class="cstat-no" title="statement not covered" >};</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export async function fetchAssetTypes(): Promise&lt;AssetType[]&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  const { data, error } = await supabase</span>
+<span class="cstat-no" title="statement not covered" >    .from("AssetTypes")</span>
+<span class="cstat-no" title="statement not covered" >    .select("*");</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  if (error) {</span>
+<span class="cstat-no" title="statement not covered" >    console.error("Error fetching asset types:", error.message);</span>
+<span class="cstat-no" title="statement not covered" >    return [];</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
 <span class="cstat-no" title="statement not covered" >  console.log(data);</span>
 <span class="cstat-no" title="statement not covered" >  return data || [];</span>
-};
-&nbsp;
-// Calls the fetchAssetType function and then group the AssetTypes together by trade discipline
-// Outputs: {discipline : list of asset types}
-export async function fetchAssetTypesGroupedByDiscipline(): Promise&lt;Record&lt;string, string[]&gt;&gt; {
-  const byDiscipline: Record&lt;string, string[]&gt; = {};
-  fetchAssetTypes().then((flatArray) =&gt; {
-    // Group by discipline
-    flatArray.forEach(({ name, discipline }) =&gt; {
+<span class="cstat-no" title="statement not covered" >};</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Calls the fetchAssetType function and then group the AssetTypes together by trade discipline</span>
+<span class="cstat-no" title="statement not covered" >// Outputs: {discipline : list of asset types}</span>
+<span class="cstat-no" title="statement not covered" >export async function fetchAssetTypesGroupedByDiscipline(): Promise&lt;Record&lt;string, string[]&gt;&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  const byDiscipline: Record&lt;string, string[]&gt; = {};</span>
+<span class="cstat-no" title="statement not covered" >  fetchAssetTypes().then((flatArray) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    // Group by discipline</span>
+<span class="cstat-no" title="statement not covered" >    flatArray.forEach(({ name, discipline }) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >      (byDiscipline[discipline] ||= []).push(name);</span>
-    });
-  });
-&nbsp;
-  return byDiscipline;
-}</pre></td></tr></table></pre>
+<span class="cstat-no" title="statement not covered" >    });</span>
+<span class="cstat-no" title="statement not covered" >  });</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  return byDiscipline;</span>
+<span class="cstat-no" title="statement not covered" >}</span></pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-19T12:07:01.318Z
+                at 2025-10-20T13:15:24.376Z
             </div>
         <script src="../prettify.js"></script>
         <script>
