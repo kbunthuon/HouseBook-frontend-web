@@ -8,7 +8,7 @@
 // ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
 // But this fixes the restrictive CORS policy on Vercel for all endpoints
 // Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
-const BASE_URL = "https://housebook-backend-sdvcpeff6-kenneth-lims-projects-dffe5cf5.vercel.app/api";
+const BASE_URL = "https://housebook-backend-5v23yigxj-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -35,13 +35,13 @@ export const API_ROUTES = {
   // Owner Routes
   OWNER: {
     GET_ID: (userId: string) => `${BASE_URL}/owner?userId=${userId}`,
-    ONBOARD_PROPERTY: `${BASE_URL}/owner`,
+    ONBOARD_PROPERTY: `${BASE_URL}/owner?action=onboarding`,
     GET_OWNER_ID_BY_USER: (userId: string) => `${BASE_URL}/owner/id?userId=${userId}`,
   },
 
   // Admin Routes
   ADMIN: {
-    ONBOARD_PROPERTY: `${BASE_URL}/admin`,
+    ONBOARD_PROPERTY: `${BASE_URL}/admin?action=onboarding`,
     GET_ADMIN_PROPERTIES: (userId: string, userType: string) => 
       `${BASE_URL}/admin?action=getAdminProperty&userId=${encodeURIComponent(userId)}&userType=${encodeURIComponent(userType)}`,
     GET_ALL_OWNERS: `${BASE_URL}/admin?action=getAllOwners`,
