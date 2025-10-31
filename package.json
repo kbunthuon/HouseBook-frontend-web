@@ -61,17 +61,20 @@
             "@testing-library/user-event": "^14.6.1",
             "@types/node": "^20.10.0",
             "@types/react": "^19.1.13",
-            "@vitejs/plugin-react-swc": "^3.10.2",
-            "@vitest/coverage-v8": "^1.6.1",
+            "@vitejs/plugin-react-swc": "^4.2.0",
+            "@vitest/coverage-v8": "^4.0.5",
+            "@vitest/ui": "^4.0.5",
             "identity-obj-proxy": "^3.0.0",
+            "jsdom": "^27.0.1",
             "vite": "^7.1.4",
-            "vitest": "^1.4.4"
+            "vitest": "^4.0.5"
       },
       "scripts": {
             "dev": "vite",
             "build": "vite build",
             "preview": "vite preview",
             "test:vitest": "vitest",
-            "test:vitest:run": "vitest run --reporter=dot"
+            "test:vitest:run": "vitest run --reporter=dot",
+            "test:vitest:ui": "vitest --ui"
       }
 }

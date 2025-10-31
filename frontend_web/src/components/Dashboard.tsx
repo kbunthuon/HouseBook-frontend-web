@@ -9,7 +9,7 @@ import { Building, FileText, Key, Plus, TrendingUp, Calendar } from "lucide-reac
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Property } from "@housebookgroup/shared-types";
-import { Owner } from "../types/serverTypes.ts";
+import { Owner } from "../types/serverTypes";
 import { ChangeLogWithUser } from "../hooks/useQueries.ts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useAdminProperties, useAllOwners, useChangeLogs, useApproveEdit, useRejectEdit } from "../hooks/useQueries.ts";
