@@ -510,18 +510,21 @@ class ApiClient {
     return response.json();
   }
 
-  // deletes image based on signed URL
+  // deletes image(s) based on signed URL(s)
   async deletePropertyImages(signedUrls: string | string[]) {
-    const body = { signedUrls };
+    // Ensure signedUrls is an array
+    const urls = Array.isArray(signedUrls) ? signedUrls : [signedUrls];
+
+    // Construct query string
+    const query = `?signedUrls=${urls.map(encodeURIComponent).join(",")}`;
 
     const response = await this.authenticatedRequest(
-      API_ROUTES.IMAGES.DELETE, // make sure you have this route defined
+      `${API_ROUTES.IMAGES.DELETE}${query}`,
       {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
       }
     );
 
@@ -530,7 +533,7 @@ class ApiClient {
       throw new Error(error.error || "Failed to delete images");
     }
 
-    return response.json(); // returns array of results from backend
+    return response.json();
   }
 
   // Updates the property's splash image
