@@ -34,7 +34,6 @@ import {
   SpaceUpdate,
   AssetUpdate
 } from "../../../backend/PropertyEditService";
-import { getPropertyHistory, getSpaceHistory } from "../../../backend/ChangeLogService";
 import { apiClient } from "../api/wrappers";
 
 interface PropertyDetailProps {

@@ -8,7 +8,6 @@ import { SignupData } from "@housebookgroup/shared-types";
 import { supabase } from "../../../config/supabaseClient";
 import { rejectTransfer } from "../../../backend/TransferService";
 import { checkOwnerExists } from "../../../backend/OnboardPropertyService";
-import { getOwnerId } from "../../../backend/FetchData";
 
 // Token management
 class TokenManager {
@@ -707,7 +706,7 @@ class ApiClient {
 
   async getOwnerIdByUserId(userId: string) {
     try {
-      const ownerId = await getOwnerId(userId);
+      const ownerId = await apiClient.getOwnerId(userId);
       console.log("getOwnerIdByUserId response:", ownerId);
       return ownerId;
     } catch (error: any) {
