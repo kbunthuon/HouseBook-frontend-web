@@ -1217,15 +1217,15 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           <div className="flex items-center space-x-2 flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleOpenUploadDialog}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Images
+              Add Image/Video
             </Button>
             <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete Images
+              Delete Image/Video
             </Button>
             <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
               <Plus className="h-4 w-4 mr-2" />
-              Select splash image
+              Select splash image/video
             </Button>
           </div>
         </CardHeader>
@@ -1707,8 +1707,8 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
             {propertyWithImages.images.map((imgUrl: string, idx: number) => {
               const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(imgUrl);
               
-              // uncomment below if we want to disallow vids for splash img
-              // if (isVideo) return null;
+              // comment below if we want to allow vids for splash img
+              if (isVideo) return null;
               
               return (
                 <div
