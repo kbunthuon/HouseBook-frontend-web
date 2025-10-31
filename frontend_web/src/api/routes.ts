@@ -8,7 +8,7 @@
 // ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
 // But this fixes the restrictive CORS policy on Vercel for all endpoints
 // Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
-const BASE_URL = "https://housebook-backend-5v23yigxj-kenneth-lims-projects-dffe5cf5.vercel.app/api";
+const BASE_URL = "https://housebook-backend-c1ubnalyr-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -55,7 +55,29 @@ export const API_ROUTES = {
       `${BASE_URL}/property?action=owners&propertyId=${propertyId}`,
     DETAILS: (propertyId: string) =>
       `${BASE_URL}/property?action=details&propertyId=${propertyId}`,
+
+    ASSET_TYPES: `${BASE_URL}/property?action=assetTypes`,
+
+    // Update routes (PATCH)
+    UPDATE_PROPERTY: `${BASE_URL}/property?action=updateProperty`,
+    UPDATE_SPACE: `${BASE_URL}/property?action=updateSpace`,
+    UPDATE_ASSET: `${BASE_URL}/property?action=updateAsset`,
+    UPDATE_FEATURES: `${BASE_URL}/property?action=updateFeatures`,
+
+    // Create routes (POST)
+    CREATE_SPACE: `${BASE_URL}/property?action=createSpace`,
+    CREATE_ASSET: `${BASE_URL}/property?action=createAsset`,
+
+    // Delete routes (DELETE)
+    DELETE_SPACE: (spaceId: string) =>
+      `${BASE_URL}/property?action=deleteSpace&spaceId=${spaceId}`,
+    DELETE_ASSET: (assetId: string) =>
+      `${BASE_URL}/property?action=deleteAsset&assetId=${assetId}`,
+    DELETE_FEATURE: (assetId: string, featureName: string) =>
+      `${BASE_URL}/property?action=deleteFeature&assetId=${assetId}&featureName=${encodeURIComponent(featureName)}`,
   },
+
+
 
   // Images Routes
   IMAGES: {
