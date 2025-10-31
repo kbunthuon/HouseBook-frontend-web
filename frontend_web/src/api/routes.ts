@@ -35,13 +35,13 @@ export const API_ROUTES = {
   // Owner Routes
   OWNER: {
     GET_ID: (userId: string) => `${BASE_URL}/owner?userId=${userId}`,
-    ONBOARD_PROPERTY: `${BASE_URL}/owner/onboard`,
+    ONBOARD_PROPERTY: `${BASE_URL}/owner`,
     GET_OWNER_ID_BY_USER: (userId: string) => `${BASE_URL}/owner/id?userId=${userId}`,
   },
 
   // Admin Routes
   ADMIN: {
-    ONBOARD_PROPERTY: `${BASE_URL}/admin/onboard`,
+    ONBOARD_PROPERTY: `${BASE_URL}/admin`,
     GET_ADMIN_PROPERTIES: (userId: string, userType: string) => 
       `${BASE_URL}/admin?action=getAdminProperty&userId=${encodeURIComponent(userId)}&userType=${encodeURIComponent(userType)}`,
     GET_ALL_OWNERS: `${BASE_URL}/admin?action=getAllOwners`,
