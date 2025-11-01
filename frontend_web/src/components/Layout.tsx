@@ -10,8 +10,8 @@ import {
   SidebarTrigger,
   SidebarInset,
   useSidebar,
-} from "./ui/sidebar";
-import { Button } from "./ui/button";
+} from "@ui/sidebar";
+import { Button } from "@ui/button";
 import { Home, Building, Users, FileText, Settings, LogOut, UserPen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ADMIN_ROUTES } from "../Routes";

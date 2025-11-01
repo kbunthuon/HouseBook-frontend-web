@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import { MyReports } from '../MyReports';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 
 // Mock backend services
 vi.mock('../../../../backend/JobService', () => ({
@@ -11,7 +11,7 @@ vi.mock('../../../../backend/JobService', () => ({
 }));
 
 // Mock API client
-vi.mock('../../api/wrappers', () => ({
+vi.mock('@shared/api/wrappers', () => ({
   apiClient: {
     getUserInfoByEmail: vi.fn(),
     getPropertyList: vi.fn(),

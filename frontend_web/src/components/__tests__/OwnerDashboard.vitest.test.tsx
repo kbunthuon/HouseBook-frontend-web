@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { OwnerDashboard } from '../OwnerDashboard';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 import { getChangeLogs } from '../../../../backend/FetchData';
 
 // Mock backend modules and supabase

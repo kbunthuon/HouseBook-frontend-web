@@ -12,32 +12,32 @@ import { Toaster } from "sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
-import { Auth } from "./components/Auth";
+import { Auth } from "@features/auth/pages/Auth";
 import { Layout } from "./components/Layout";
-import { Dashboard } from "./components/Dashboard";
-import { OwnerPropertyOnboarding } from "./components/OwnerPropertyOnboarding";
-import { AdminPropertyOnboarding } from "./components/AdminPropertyOnboarding";
-import { PropertyManagement } from "./components/PropertyManagement";
-import { PropertyDetail } from "./components/PropertyDetail";
-import { AdminFunctions } from "./components/AdminFunctions";
-import { Reports } from "./components/Reports";
-import TransferRequestPage from "./components/TransferRequestPage";
-import TransferSubmittedPage from "./components/TransferSubmittedPage";
+import { Dashboard } from "@features/admin/pages/Dashboard";
+import { OwnerPropertyOnboarding } from "@features/owner/pages/OwnerPropertyOnboarding";
+import { AdminPropertyOnboarding } from "@features/admin/pages/AdminPropertyOnboarding";
+import { PropertyManagement } from "@features/property/pages/PropertyManagement";
+import { PropertyDetail } from "@features/property/pages/PropertyDetail";
+import { AdminFunctions } from "@features/admin/components/AdminFunctions";
+import { Reports } from "@features/reports/pages/Reports";
+import TransferRequestPage from "@features/owner/pages/TransferRequestPage";
+import TransferSubmittedPage from "@features/owner/pages/TransferSubmittedPage";
 
-import { AdminRequests } from "./components/AdminRequests";
-import { UserManagementPage } from "./components/UserManagement";
+import { AdminRequests } from "@features/admin/pages/AdminRequests";
+import { UserManagementPage } from "@features/users/pages/UserManagement";
 
 // Owner-specific components
 import { OwnerLayout } from "./components/OwnerLayout";
-import { OwnerDashboard } from "./components/OwnerDashboard";
-import { MyProperties } from "./components/MyProperties";
-import { MyReports } from "./components/MyReports";
-import { OwnerRequests } from "./components/OwnerRequests";
+import { OwnerDashboard } from "@features/owner/pages/OwnerDashboard";
+import { MyProperties } from "@features/property/pages/MyProperties";
+import { MyReports } from "@features/reports/pages/MyReports";
+import { OwnerRequests } from "@features/owner/pages/OwnerRequests";
 
-import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes"
+import { ROUTES, DASHBOARD, ADMIN_ROUTES, LOGIN, SIGNUP } from "./Routes";
 
-import { FormProvider, AdminFormProvider } from "./components/FormContext";
-import { apiClient } from "./api/wrappers";
+import { FormProvider, AdminFormProvider } from "@app/providers/FormContext";
+import { apiClient } from "@shared/api/wrappers";
 
 // Create a React Query client with optimized defaults
 const queryClient = new QueryClient({

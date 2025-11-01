@@ -21,7 +21,7 @@ vi.mock('../../../../backend/OnboardPropertyService', () => ({
   adminOnboardProperty: vi.fn(() => Promise.resolve('property-123'))
 }));
 
-vi.mock('../../api/wrappers', () => ({
+vi.mock('@shared/api/wrappers', () => ({
   apiClient: {
     checkOwnerExists: vi.fn(() => Promise.resolve(true))
   }

@@ -3,7 +3,7 @@ import { getOwnerId } from "./FetchData";
 
 // Setting what OwnerData looks like
 import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
-import { apiClient } from "../frontend_web/src/api/wrappers";
+import { apiClient } from "../frontend_web/src/shared/api/wrappers";
 
 export async function ownerOnboardProperty(userId: string, formData: FormData, spaces: SpaceInt[]) {
   const { data: { session } } = await supabase.auth.getSession();

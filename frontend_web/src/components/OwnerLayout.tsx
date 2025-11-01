@@ -1,4 +1,4 @@
-import { Button } from "./ui/button";
+import { Button } from "@ui/button";
 import { Home, Building, FileText, Plus, LogOut, UserPen } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { ROUTES } from "../Routes";
@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
   SidebarInset,
   useSidebar,
-} from "./ui/sidebar";
+} from "@ui/sidebar";
 
 interface OwnerLayoutProps {
   children: React.ReactNode;

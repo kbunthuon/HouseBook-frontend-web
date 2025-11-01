@@ -2,10 +2,10 @@ import { render, screen } from '../../test-utils';
 import { vi } from 'vitest';
 import TransferRequestPage from '../TransferRequestPage';
 import { BrowserRouter } from 'react-router-dom';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 
 // Mock API client
-vi.mock('../../api/wrappers', () => ({
+vi.mock('@shared/api/wrappers', () => ({
   apiClient: {
     getTransfersByUser: vi.fn(),
     getPropertyDetails: vi.fn()

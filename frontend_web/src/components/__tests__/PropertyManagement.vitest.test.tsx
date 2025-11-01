@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { vi } from 'vitest';
 import { PropertyManagement } from '../PropertyManagement';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 
 // Mock API client to prevent real network calls
 vi.mock('../../api/wrappers');

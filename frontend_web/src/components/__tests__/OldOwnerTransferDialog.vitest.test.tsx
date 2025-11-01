@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
 import OldOwnerTransferDialog from '../OldOwnerTransferDialog';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 
 // Mock API client
-vi.mock('../../api/wrappers', () => ({
+vi.mock('@shared/api/wrappers', () => ({
   apiClient: {
     getPropertyList: vi.fn(),
     getPropertyOwners: vi.fn(),

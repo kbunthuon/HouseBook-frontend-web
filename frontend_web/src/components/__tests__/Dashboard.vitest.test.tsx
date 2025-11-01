@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { vi } from 'vitest';
 import { Dashboard } from '../Dashboard';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 
 // Ensure we can control apiClient calls used by the hooks
 // (useAdminProperties uses apiClient.getAdminProperties)

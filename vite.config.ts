@@ -8,6 +8,15 @@
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
+        '@app': path.resolve(__dirname, './frontend_web/src/app'),
+        '@features': path.resolve(__dirname, './frontend_web/src/features'),
+        '@shared': path.resolve(__dirname, './frontend_web/src/shared'),
+        '@backend': path.resolve(__dirname, './backend'),
+  '@config': path.resolve(__dirname, './config'),
+  'Routes': path.resolve(__dirname, './frontend_web/src/Routes'),
+        '@types': path.resolve(__dirname, './frontend_web/src/shared/types'),
+        '@hooks': path.resolve(__dirname, './frontend_web/src/shared/hooks'),
+        '@ui': path.resolve(__dirname, './frontend_web/src/shared/ui'),
         'vaul@1.1.2': 'vaul',
         'sonner@2.0.3': 'sonner',
         'recharts@2.15.2': 'recharts',

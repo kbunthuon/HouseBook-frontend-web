@@ -2,11 +2,11 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { vi } from 'vitest';
 import { Auth } from '../Auth';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 import * as AuthService from '../../../../backend/AuthService';
 
 // Mock the API client to prevent real network calls
-vi.mock('../../api/wrappers');
+vi.mock('@shared/api/wrappers');
 
 // Mock the AuthService validation functions
 vi.mock('../../../../backend/AuthService', () => ({

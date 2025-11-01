@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { MyProperties } from '../MyProperties';
-import { apiClient } from '../../api/wrappers';
+import { apiClient } from '@shared/api/wrappers';
 import { getOwnerId } from '../../../../backend/FetchData';
 
 vi.mock('../../../../backend/FetchData');
