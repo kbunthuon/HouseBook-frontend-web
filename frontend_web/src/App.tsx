@@ -20,7 +20,7 @@ import { AdminPropertyOnboarding } from "@features/admin/pages/AdminPropertyOnbo
 import { PropertyManagement } from "@features/property/pages/PropertyManagement";
 import { PropertyDetail } from "@features/property/pages/PropertyDetail";
 import { AdminFunctions } from "@features/admin/components/AdminFunctions";
-import { Reports } from "@features/reports/pages/Reports";
+import { Reports } from "@features/reports/pages/Reports.tsx";
 import TransferRequestPage from "@features/owner/pages/TransferRequestPage";
 import TransferSubmittedPage from "@features/owner/pages/TransferSubmittedPage";
 
