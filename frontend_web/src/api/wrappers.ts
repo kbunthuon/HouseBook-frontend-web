@@ -679,6 +679,43 @@ class ApiClient {
     return response.json();
   }
 
+  // Create a changelog
+  async createChangeLogEntry(
+    assetId: string,
+    changeDescription: string,
+    action?: 'CREATED' | 'UPDATED' | 'DELETED',
+    currentSpecifications?: Record<string, any>
+  ) {
+    console.log("Creating changelog entry for asset:", assetId);
+    console.log("Change description:", changeDescription);
+    console.log("Action:", action || 'UPDATED');
+    
+    const url = API_ROUTES.CHANGELOG.CREATE;
+    console.log("Posting to:", url);
+    
+    const response = await this.authenticatedRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assetId,
+        changeDescription,
+        action: action || 'UPDATED',
+        currentSpecifications: currentSpecifications || {},
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create changelog entry");
+    }
+    
+    const data = await response.json();
+    console.log("API RESPONSE - createChangeLogEntry:", data);
+    return data;
+  }
+
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {
     console.log("Fetching transfers for propertyId:", propertyId);
