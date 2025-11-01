@@ -8,7 +8,7 @@
 // ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
 // But this fixes the restrictive CORS policy on Vercel for all endpoints
 // Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
-const BASE_URL = "https://housebook-backend-1j81kqfs4-kenneth-lims-projects-dffe5cf5.vercel.app/api";
+const BASE_URL = "https://housebook-backend-gqpqo1pz9-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -127,6 +127,39 @@ export const API_ROUTES = {
       `${BASE_URL}/transfer?action=reject&transferId=${transferId}&ownerId=${ownerId}`,
     GET_BY_PROPERTY: (propertyId: string) => `${BASE_URL}/transfer?propertyId=${encodeURIComponent(propertyId)}`,
     GET_BY_USER: (userId: string) => `${BASE_URL}/transfer?userId=${encodeURIComponent(userId)}`,
+  },
+
+    // Jobs Routes
+  JOBS: {
+    // Fetch jobs for a property
+    FETCH_JOBS: (propertyId: string, expired?: boolean | null, last?: number | null) => {
+      let url = `${BASE_URL}/jobs?action=fetchJobs&propertyId=${encodeURIComponent(propertyId)}`;
+      if (expired !== null && expired !== undefined) {
+        url += `&expired=${expired}`;
+      }
+      if (last !== null && last !== undefined) {
+        url += `&last=${last}`;
+      }
+      return url;
+    },
+
+    // Fetch job assets (with optional details)
+    FETCH_JOB_ASSETS: (jobId: string, withDetails?: boolean) => {
+      let url = `${BASE_URL}/jobs?action=fetchJobAssets&jobId=${encodeURIComponent(jobId)}`;
+      if (withDetails) {
+        url += `&withDetails=true`;
+      }
+      return url;
+    },
+
+    // Create job (POST)
+    CREATE_JOB: `${BASE_URL}/jobs?action=createJob`,
+
+    // Update job (POST)
+    UPDATE_JOB: `${BASE_URL}/jobs?action=updateJob`,
+
+    // Delete job (POST)
+    DELETE_JOB: `${BASE_URL}/jobs?action=deleteJob`,
   },
 
 } as const;
