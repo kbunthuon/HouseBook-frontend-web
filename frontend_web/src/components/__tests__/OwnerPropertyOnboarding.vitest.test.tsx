@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { OwnerPropertyOnboarding } from 'components/OwnerPropertyOnboarding';
-import { FormProvider } from 'components/FormContext';
+import { OwnerPropertyOnboarding } from '@features/owner/pages/OwnerPropertyOnboarding';
+import { FormProvider } from '@app/providers/FormContext';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock backend services
