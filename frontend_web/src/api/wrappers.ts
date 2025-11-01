@@ -402,7 +402,27 @@ class ApiClient {
       throw new Error(error.error || "Failed to onboard property");
     }
 
-    return response.json();
+    const data = await response.json();
+    const propertyId = data.propertyId;
+    if (!propertyId) throw new Error("Property ID not returned from onboarding");
+
+    const { userId, formData, spaces } = params;
+
+    const allFiles: File[] = [
+      ...(formData.floorPlans || []),
+      ...(formData.buildingPlans || []),
+    ];
+
+    if (allFiles.length > 0) {
+      // Upload images concurrently
+      await Promise.all(
+        allFiles.map((file) =>
+          this.uploadPropertyImage(propertyId, file, file.name || undefined)
+        )
+      );
+    }
+
+    return propertyId;
   }
 
   // Admin methods
@@ -421,7 +441,28 @@ class ApiClient {
       throw new Error(error.error || "Failed to onboard property as admin");
     }
 
-    return response.json();
+    const data = await response.json();
+    const propertyId = data.propertyId;
+    if (!propertyId) throw new Error("Property ID not returned from onboarding");
+
+    const { ownerData, formData, spaces } = params;
+
+    // Step 2 — Upload floorPlans and buildingPlans
+    const allFiles: File[] = [
+      ...(formData.floorPlans || []),
+      ...(formData.buildingPlans || []),
+    ];
+
+    if (allFiles.length > 0) {
+      // Upload images concurrently
+      await Promise.all(
+        allFiles.map((file) =>
+          this.uploadPropertyImage(propertyId, file, file.name || undefined)
+        )
+      );
+    }
+
+    return propertyId;
   }
 
   async getAdminProperties(userId: string, userType: string) {

@@ -8,7 +8,7 @@
 // ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
 // But this fixes the restrictive CORS policy on Vercel for all endpoints
 // Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
-const BASE_URL = "https://housebook-backend-c1ubnalyr-kenneth-lims-projects-dffe5cf5.vercel.app/api";
+const BASE_URL = "https://housebook-backend-3rhvwu611-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -136,6 +136,7 @@ export interface LoginParams {
 }
 
 export interface OwnerOnboardParams {
+  userId: string;
   formData: any;
   spaces: any[];
 }

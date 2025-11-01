@@ -61,12 +61,12 @@ const initialOwnerData : Owner = {
 
 export function FormProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
-    const [spaces, setSpaces] = useState<SpaceInt[]>(initialSpaces);
+    const [spaces, setSpaces] = useState<SpaceInt[]>([]);
     const [currentStep, setCurrentStep] = useState(1);
     const resetForm = () => {
-    setFormData(initialFormData);
-    setSpaces(initialSpaces);
-    setCurrentStep(1);
+        setFormData(initialFormData);
+        setSpaces([]);
+        setCurrentStep(1);
     };
 
     return (
@@ -88,13 +88,13 @@ export function FormProvider({ children }: { children: ReactNode }) {
 
 export function AdminFormProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
-    const [spaces, setSpaces] = useState<SpaceInt[]>(initialSpaces);
+    const [spaces, setSpaces] = useState<SpaceInt[]>([]);
     const [currentStep, setCurrentStep] = useState(1);
     const [owner, setOwner] = useState<Owner>(initialOwnerData);
     const resetForm = () => {
-    setFormData(initialFormData);
-    setSpaces(initialSpaces);
-    setCurrentStep(1);
+        setFormData(initialFormData);
+        setSpaces([]);
+        setCurrentStep(1);
     };
 
     return (
