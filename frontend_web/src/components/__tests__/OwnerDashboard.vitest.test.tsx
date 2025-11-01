@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { OwnerDashboard } from '../OwnerDashboard';
 import { apiClient } from '@shared/api/wrappers';
-import { getChangeLogs } from '../../../../backend/FetchData';
 
 // Mock backend modules and supabase
 vi.mock('../../../../backend/FetchData');
@@ -19,7 +18,7 @@ vi.mock('../../../../config/supabaseClient.ts', () => ({
 }));
 
 // Casts
-const mockGetChangeLogs = getChangeLogs as any;
+const mockGetChangeLogs = apiClient.getChangeLogs as any;
 
 const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 

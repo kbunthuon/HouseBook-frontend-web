@@ -5,14 +5,33 @@ import {
   AdminOnboardParams,
 } from "./routes";
 import { SignupData } from "@housebookgroup/shared-types";
-import supabase from "@config/supabaseClient";
+import { supabase } from "@config/supabaseClient";
 import { rejectTransfer } from "@backend/TransferService";
 import { checkOwnerExists } from "@backend/OnboardPropertyService";
-import { getOwnerId } from "@backend/FetchData";
+import { PropertyUpdate, SpaceUpdate, AssetUpdate } from "@backend/PropertyEditService";
 
+// TODO: Move these types to shared package
+export interface CreateSpaceParams {
+  propertyId: string;
+  spaceName: string;
+  spaceType: string;
+  assets: Array<{
+    assetTypeId: number;
+    description: string;
+    specifications: Record<string, any>;
+  }>;
+}
+
+export interface CreateAssetParams {
+  spaceId: string;
+  assetTypeId: number;
+  description: string;
+  specifications: Record<string, any>;
+}
 // Token management
 class TokenManager {
   private static ACCESS_TOKEN_KEY = "housebook_access_token";
+  private static REFRESH_TOKEN_KEY = "housebook_refresh_token";
   private static EXPIRES_AT_KEY = "housebook_expires_at";
 
   static setTokens(
@@ -20,7 +39,13 @@ class TokenManager {
     refreshToken: string,
     expiresAt?: number
   ) {
+    console.log("Setting tokens in TokenManager");
+    console.log("Access Token:", accessToken ? accessToken : "null");
+    console.log("Refresh Token:", refreshToken ? refreshToken : "null");
+    console.log("Expires At:", expiresAt);  
+
     sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
+    sessionStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     if (expiresAt) {
       sessionStorage.setItem(this.EXPIRES_AT_KEY, expiresAt.toString());
     }
@@ -30,6 +55,9 @@ class TokenManager {
     return sessionStorage.getItem(this.ACCESS_TOKEN_KEY);
   }
 
+  static getRefreshToken(): string | null {
+    return sessionStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
   static getExpiresAt(): number | null {
     const expiresAt = sessionStorage.getItem(this.EXPIRES_AT_KEY);
     return expiresAt ? parseInt(expiresAt) : null;
@@ -37,6 +65,7 @@ class TokenManager {
 
   static clearTokens() {
     sessionStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(this.REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(this.EXPIRES_AT_KEY);
   }
 
@@ -51,24 +80,34 @@ class TokenManager {
 // API Client class
 class ApiClient {
   // Refresh the access token
+  private refreshPromise: Promise<boolean> | null = null;
+
   private async refreshAccessToken(): Promise<boolean> {
-    try {
+    console.log("Refreshing access token...");
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      const refreshToken = TokenManager.getRefreshToken();
+      if (!refreshToken) return false;
+
       const response = await fetch(API_ROUTES.AUTH.REFRESH, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include cookies for refresh token
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) return false;
 
       const data = await response.json();
-      TokenManager.setTokens(data.access_token, data.expires_at);
+      TokenManager.setTokens(data.access_token, data.refresh_token, data.expires_at);
       return true;
-    } catch (error) {
-      console.error("Failed to refresh token:", error);
-      return false;
+    })();
+
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
+      console.log("Token refresh process completed.");
     }
   }
 
@@ -77,46 +116,41 @@ class ApiClient {
     url: string,
     options: RequestInit = {}
   ): Promise<Response> {
-    // Check if token needs refresh
+    // 1️⃣ Refresh if expired
     if (TokenManager.isTokenExpired()) {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
         TokenManager.clearTokens();
-        console.log("Tokens cleared from sessionStorage");
         throw new Error("Session expired. Please login again.");
       }
     }
 
-    const accessToken = TokenManager.getAccessToken();
-    if (!accessToken) {
-      throw new Error("No access token found. Please login.");
+    // 2️⃣ Add access token to headers
+    let accessToken = TokenManager.getAccessToken();
+    if (!accessToken) throw new Error("No access token found. Please login.");
+
+    const headers = { ...options.headers, Authorization: `Bearer ${accessToken}` };
+    let response: Response;
+
+    try {
+      response = await fetch(url, { ...options, headers });
+    } catch (err) {
+      console.error("Network error during fetch:", err);
+      throw err;
     }
 
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    // If unauthorized, try refreshing token once
+    // 3️⃣ Retry once if 401
     if (response.status === 401) {
       const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        const newAccessToken = TokenManager.getAccessToken();
-        return fetch(url, {
-          ...options,
-          headers: {
-            ...options.headers,
-            Authorization: `Bearer ${newAccessToken}`,
-          },
-        });
+      if (!refreshed) {
+        TokenManager.clearTokens();
+        throw new Error("Session expired. Please login again.");
       }
-      TokenManager.clearTokens();
-      throw new Error("Session expired. Please login again.");
+
+      // Retry request with new token
+      accessToken = TokenManager.getAccessToken()!;
+      const retryHeaders = { ...options.headers, Authorization: `Bearer ${accessToken}` };
+      response = await fetch(url, { ...options, headers: retryHeaders });
     }
 
     return response;
@@ -142,7 +176,7 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: "include",
+      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -223,7 +257,7 @@ class ApiClient {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
       // Clear Supabase session
-      await supabase.auth.signOut({ scope: "local" });
+      //await supabase.auth.signOut({ scope: "local" });
 
       // Nuclear option: Clear ALL sessionStorage
       sessionStorage.clear();
@@ -237,7 +271,7 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      credentials: "include",
+      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -255,6 +289,7 @@ class ApiClient {
     );
 
     // Restore Supabase session
+    /*
     try {
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: data.user.accessToken,
@@ -271,6 +306,7 @@ class ApiClient {
       console.error("Failed to set Supabase session:", error);
       throw error;
     }
+    */
 
     return data.user;
   }
@@ -366,7 +402,27 @@ class ApiClient {
       throw new Error(error.error || "Failed to onboard property");
     }
 
-    return response.json();
+    const data = await response.json();
+    const propertyId = data.propertyId;
+    if (!propertyId) throw new Error("Property ID not returned from onboarding");
+
+    const { userId, formData, spaces } = params;
+
+    const allFiles: File[] = [
+      ...(formData.floorPlans || []),
+      ...(formData.buildingPlans || []),
+    ];
+
+    if (allFiles.length > 0) {
+      // Upload images concurrently
+      await Promise.all(
+        allFiles.map((file) =>
+          this.uploadPropertyImage(propertyId, file, file.name || undefined)
+        )
+      );
+    }
+
+    return propertyId;
   }
 
   // Admin methods
@@ -385,7 +441,28 @@ class ApiClient {
       throw new Error(error.error || "Failed to onboard property as admin");
     }
 
-    return response.json();
+    const data = await response.json();
+    const propertyId = data.propertyId;
+    if (!propertyId) throw new Error("Property ID not returned from onboarding");
+
+    const { ownerData, formData, spaces } = params;
+
+    // Step 2 — Upload floorPlans and buildingPlans
+    const allFiles: File[] = [
+      ...(formData.floorPlans || []),
+      ...(formData.buildingPlans || []),
+    ];
+
+    if (allFiles.length > 0) {
+      // Upload images concurrently
+      await Promise.all(
+        allFiles.map((file) =>
+          this.uploadPropertyImage(propertyId, file, file.name || undefined)
+        )
+      );
+    }
+
+    return propertyId;
   }
 
   async getAdminProperties(userId: string, userType: string) {
@@ -492,18 +569,21 @@ class ApiClient {
     return response.json();
   }
 
-  // deletes image based on signed URL
+  // deletes image(s) based on signed URL(s)
   async deletePropertyImages(signedUrls: string | string[]) {
-    const body = { signedUrls };
+    // Ensure signedUrls is an array
+    const urls = Array.isArray(signedUrls) ? signedUrls : [signedUrls];
+
+    // Construct query string
+    const query = `?signedUrls=${urls.map(encodeURIComponent).join(",")}`;
 
     const response = await this.authenticatedRequest(
-      API_ROUTES.IMAGES.DELETE, // make sure you have this route defined
+      `${API_ROUTES.IMAGES.DELETE}${query}`,
       {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
       }
     );
 
@@ -512,7 +592,7 @@ class ApiClient {
       throw new Error(error.error || "Failed to delete images");
     }
 
-    return response.json(); // returns array of results from backend
+    return response.json();
   }
 
   // Updates the property's splash image
@@ -599,8 +679,46 @@ class ApiClient {
     return response.json();
   }
 
+  // Create a changelog
+  async createChangeLogEntry(
+    assetId: string,
+    changeDescription: string,
+    action?: 'CREATED' | 'UPDATED' | 'DELETED',
+    currentSpecifications?: Record<string, any>
+  ) {
+    console.log("Creating changelog entry for asset:", assetId);
+    console.log("Change description:", changeDescription);
+    console.log("Action:", action || 'UPDATED');
+    
+    const url = API_ROUTES.CHANGELOG.CREATE;
+    console.log("Posting to:", url);
+    
+    const response = await this.authenticatedRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        assetId,
+        changeDescription,
+        action: action || 'UPDATED',
+        currentSpecifications: currentSpecifications || {},
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create changelog entry");
+    }
+    
+    const data = await response.json();
+    console.log("API RESPONSE - createChangeLogEntry:", data);
+    return data;
+  }
+
   // Transfer methods
   async getTransfersByProperty(propertyId: string) {
+    console.log("Fetching transfers for propertyId:", propertyId);
     const response = await this.authenticatedRequest(
       API_ROUTES.TRANSFER.GET({ action: "byProperty", id: propertyId })
     );
@@ -615,6 +733,7 @@ class ApiClient {
   }
 
   async getTransfersByUser(userId: string) {
+    console.log("Fetching transfers for userId:", userId);
     const response = await this.authenticatedRequest(
       API_ROUTES.TRANSFER.GET({ action: "byOwner", id: userId })
     );
@@ -657,10 +776,10 @@ class ApiClient {
     return data;
   }
 
-  async approveTransfer(transferId: string, ownerId: string) {
+  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
     const { approveTransfer } = await import("@backend/TransferService");
     try {
-      const result = await approveTransfer(transferId, ownerId);
+      const result = await approveTransfer(transferId, ownerId.ownerId);
       console.log("approveTransfer response data:", result);
       return result;
     } catch (error: any) {
@@ -669,9 +788,9 @@ class ApiClient {
     }
   }
 
-  async rejectTransfer(transferId: string, ownerId: string) {
+  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
     try {
-      const result = await rejectTransfer(transferId, ownerId);
+      const result = await rejectTransfer(transferId, ownerId.ownerId);
       console.log("rejectTransfer response data:", result);
       return result;
     } catch (error: any) {
@@ -682,7 +801,7 @@ class ApiClient {
 
   async getOwnerIdByUserId(userId: string) {
     try {
-      const ownerId = await getOwnerId(userId);
+      const ownerId = await apiClient.getOwnerId(userId);
       console.log("getOwnerIdByUserId response:", ownerId);
       return ownerId;
     } catch (error: any) {
@@ -690,6 +809,224 @@ class ApiClient {
       throw new Error(error.message || "Failed to get owner ID");
     }
   }
+
+
+  // Property Editing methods 
+
+  /**
+   * Get all available asset types
+   */
+  async getAssetTypes() {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.ASSET_TYPES
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to fetch asset types");
+    }
+
+    const data = await response.json();
+    return data.assetTypes;
+  }
+
+  // Update Methods (PATCH)
+  /**
+   * Update property information
+   */
+  async updateProperty(propertyId: string, updates: PropertyUpdate) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.UPDATE_PROPERTY,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId, updates }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update property");
+    }
+
+    const data = await response.json();
+    return data.property;
+  }
+
+  /**
+   * Update space information
+   */
+  async updateSpace(spaceId: string, updates: SpaceUpdate) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.UPDATE_SPACE,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spaceId, updates }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update space");
+    }
+
+    const data = await response.json();
+    return data.space;
+  }
+
+  /**
+   * Update asset information
+   */
+  async updateAsset(assetId: string, updates: AssetUpdate) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.UPDATE_ASSET,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId, updates }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update asset");
+    }
+
+    const data = await response.json();
+    return data.asset;
+  }
+
+  /**
+   * Update or add features to an asset
+   */
+  async updateFeatures(assetId: string, features: Record<string, any>) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.UPDATE_FEATURES,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId, features }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to update features");
+    }
+
+    const data = await response.json();
+    return data.asset;
+  }
+
+
+  // Create Methods (POST)
+
+  /**
+   * Create a new space with assets
+   */
+  async createSpace(params: CreateSpaceParams) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.CREATE_SPACE,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create space");
+    }
+
+    const data = await response.json();
+    return data.space;
+  }
+
+  /**
+   * Create a new asset in an existing space
+   */
+  async createAsset(params: CreateAssetParams) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.CREATE_ASSET,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to create asset");
+    }
+
+    const data = await response.json();
+    return data.asset;
+  }
+
+  // Delete Methods (DELETE)
+
+  /**
+   * Soft delete a space (also deletes all assets in the space)
+   */
+  async deleteSpace(spaceId: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.DELETE_SPACE(spaceId),
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete space");
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Soft delete an asset
+   */
+  async deleteAsset(assetId: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.DELETE_ASSET(assetId),
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete asset");
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete a specific feature from an asset
+   */
+  async deleteFeature(assetId: string, featureName: string) {
+    const response = await this.authenticatedRequest(
+      API_ROUTES.PROPERTY.DELETE_FEATURE(assetId, featureName),
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to delete feature");
+    }
+
+    const data = await response.json();
+    return data.asset;
+  }
+
+
 }
 
 // Export singleton instance

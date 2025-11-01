@@ -14,12 +14,6 @@ import { Checkbox } from "@ui/checkbox";
 import { Badge } from "@ui/badge";
 import { Progress } from "@ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
-import {
-  //getPropertyDetails,
-  getProperty,
-  getUserIdByEmail,
-  //getAdminProperty
-} from "@backend/FetchData";
 import { getPropertyImages } from "@backend/ImageUpload";
 import { apiClient } from "@shared/api/wrappers";
 

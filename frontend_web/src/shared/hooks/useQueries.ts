@@ -296,7 +296,7 @@ export const useApproveEdit = () => {
 
   return useMutation({
     mutationFn: async (changelogId: string) => {
-  const { default: supabase } = await import('@config/supabaseClient');
+      const { supabase } = await import('@config/supabaseClient');
 
       // First, get the changelog to retrieve asset_id and specifications
       const { data: changelog, error: fetchError } = await supabase
@@ -342,7 +342,7 @@ export const useRejectEdit = () => {
 
   return useMutation({
     mutationFn: async (changelogId: string) => {
-  const { default: supabase } = await import('@config/supabaseClient');
+  const { supabase } = await import('@config/supabaseClient');
       const { data, error } = await supabase
         .from("ChangeLog")
         .update({ status: "DECLINED" })
@@ -367,7 +367,7 @@ export const useApproveTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.approveTransfer(transferId, ownerId);
+      return await apiClient.approveTransfer(transferId, { ownerId });
     },
     onSuccess: (_, variables) => {
       // Invalidate transfers to refetch updated data
@@ -386,7 +386,7 @@ export const useRejectTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.rejectTransfer(transferId, ownerId);
+      return await apiClient.rejectTransfer(transferId, { ownerId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });

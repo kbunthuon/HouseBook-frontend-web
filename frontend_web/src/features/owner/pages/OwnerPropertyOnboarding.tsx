@@ -14,10 +14,11 @@ import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "@backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "@backend/FetchAssetTypes";
-import { ownerOnboardProperty} from "@backend/OnboardPropertyService";
 import { FormData, SpaceInt} from "@shared/types/serverTypes";
 import { ROUTES } from "Routes";
 import { useFormContext } from "@app/providers/FormContext";
+import { apiClient } from "@shared/api/wrappers";
+
 
 export function OwnerPropertyOnboarding({userId}: {userId: string}) {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
@@ -70,10 +71,15 @@ export function OwnerPropertyOnboarding({userId}: {userId: string}) {
     } else if (currentStep == steps.length) {
       try {
         console.log("Starting property onboarding...");
+        console.log("userId:", userId);
         console.log("Form data:", formData);
         console.log("Spaces data:", spaces);
 
-        const propertyId = await ownerOnboardProperty(userId, formData, spaces);
+        const propertyId = await apiClient.ownerOnboardProperty({
+          userId,
+          formData,
+          spaces,
+        });
         console.log("Property onboarded successfully with ID:", propertyId);
 
         // Reset the form data after successful submission

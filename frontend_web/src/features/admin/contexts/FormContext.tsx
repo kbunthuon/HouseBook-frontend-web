@@ -1,6 +1,16 @@
-// Admin Form Context
+// FormContext.tsx - Create this new file
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { FormData, SpaceInt, Owner } from "@shared/types/serverTypes";
+
+interface FormContextType {
+    formData: FormData;
+    setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    spaces: SpaceInt[];
+    setSpaces: React.Dispatch<React.SetStateAction<SpaceInt[]>>;
+    currentStep: number;
+    setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+    resetForm: () => void;
+}
 
 interface AdminFormContextType {
     formData: FormData;
@@ -9,11 +19,12 @@ interface AdminFormContextType {
     setSpaces: React.Dispatch<React.SetStateAction<SpaceInt[]>>;
     currentStep: number;
     setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
-    owner: any;
-    setOwner: React.Dispatch<React.SetStateAction<any>>;
+    owner: Owner;
+    setOwner: React.Dispatch<React.SetStateAction<Owner>>;
     resetForm: () => void;
 }
 
+const FormContext = createContext<FormContextType | undefined>(undefined);
 const AdminFormContext = createContext<AdminFormContextType | undefined>(undefined);
 
 const initialFormData: FormData = {
@@ -27,66 +38,97 @@ const initialFormData: FormData = {
 
 const initialSpaces: SpaceInt[] = [
     {
-        type: "",
+    type: "",
+    name: "",
+    assets: [
+        {
+        typeId: "",
         name: "",
-        assets: [
-            {
-                typeId: "",
-                name: "",
-                description: "",
-                features: [{ name: "", value: "" }]
-            }
-        ]
+        description: "",
+        features: [{ name: "", value: "" }]
+        }
+    ]
     }
 ];
 
-const initialOwner: any = {
-    userId: "",
-    name: "",
+const initialOwnerData : Owner = {
+    ownerId: "",
+    firstName: "",
+    lastName: "",
     email: "",
-    propertyCount: 0
+    phone: ""
 };
 
-interface AdminFormProviderProps {
-    children: ReactNode;
-}
-
-export const AdminFormProvider: React.FC<AdminFormProviderProps> = ({ children }) => {
+export function FormProvider({ children }: { children: ReactNode }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
-    const [spaces, setSpaces] = useState<SpaceInt[]>(initialSpaces);
-    const [currentStep, setCurrentStep] = useState<number>(0);
-    const [owner, setOwner] = useState<any>(initialOwner);
-
+    const [spaces, setSpaces] = useState<SpaceInt[]>([]);
+    const [currentStep, setCurrentStep] = useState(1);
     const resetForm = () => {
         setFormData(initialFormData);
-        setSpaces(initialSpaces);
-        setCurrentStep(0);
-        setOwner(initialOwner);
+        setSpaces([]);
+        setCurrentStep(1);
     };
 
     return (
-        <AdminFormContext.Provider
-            value={{
-                formData,
-                setFormData,
-                spaces,
-                setSpaces,
-                currentStep,
-                setCurrentStep,
-                owner,
-                setOwner,
-                resetForm
-            }}
-        >
-            {children}
-        </AdminFormContext.Provider>
+    <FormContext.Provider
+        value={{
+        formData,
+        setFormData,
+        spaces,
+        setSpaces,
+        currentStep,
+        setCurrentStep,
+        resetForm
+        }}
+    >
+        {children}
+    </FormContext.Provider>
     );
-};
+}
 
-export const useAdminFormContext = () => {
-    const context = useContext(AdminFormContext);
+export function AdminFormProvider({ children }: { children: ReactNode }) {
+    const [formData, setFormData] = useState<FormData>(initialFormData);
+    const [spaces, setSpaces] = useState<SpaceInt[]>([]);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [owner, setOwner] = useState<Owner>(initialOwnerData);
+    const resetForm = () => {
+        setFormData(initialFormData);
+        setSpaces([]);
+        setCurrentStep(1);
+    };
+
+    return (
+    <AdminFormContext.Provider
+        value={{
+        formData,
+        setFormData,
+        spaces,
+        setSpaces,
+        currentStep,
+        setCurrentStep,
+        owner,
+        setOwner,
+        resetForm
+        }}
+    >
+        {children}
+    </AdminFormContext.Provider>
+    );
+}
+
+
+export function useFormContext() {
+    const context = useContext(FormContext);
     if (context === undefined) {
-        throw new Error('useAdminFormContext must be used within a AdminFormProvider');
+    throw new Error('useFormContext must be used within a FormProvider');
     }
     return context;
-};
+}
+
+export function useAdminFormContext() {
+    const context = useContext(AdminFormContext);
+    if (context === undefined) {
+    throw new Error('useFormContext must be used within a FormProvider');
+    }
+    return context;
+}

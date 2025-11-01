@@ -1,7 +1,14 @@
 // routes.ts
 // API Routes Configuration for Housebook Backend
 
-const BASE_URL = "https://housebook-backend.vercel.app/api";
+//const BASE_URL = "https://housebook-backend.vercel.app/api";
+
+// This is the url for backend on "move-refresh-to-ss" branch
+// As of now, refreshing token doesnt work properly for super short JWT TTLs, so set to 3600s (1 hour)
+// ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
+// But this fixes the restrictive CORS policy on Vercel for all endpoints
+// Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
+const BASE_URL = "https://housebook-backend-1j81kqfs4-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -28,13 +35,13 @@ export const API_ROUTES = {
   // Owner Routes
   OWNER: {
     GET_ID: (userId: string) => `${BASE_URL}/owner?userId=${userId}`,
-    ONBOARD_PROPERTY: `${BASE_URL}/owner/onboard`,
+    ONBOARD_PROPERTY: `${BASE_URL}/owner?action=onboarding`,
     GET_OWNER_ID_BY_USER: (userId: string) => `${BASE_URL}/owner/id?userId=${userId}`,
   },
 
   // Admin Routes
   ADMIN: {
-    ONBOARD_PROPERTY: `${BASE_URL}/admin/onboard`,
+    ONBOARD_PROPERTY: `${BASE_URL}/admin?action=onboarding`,
     GET_ADMIN_PROPERTIES: (userId: string, userType: string) => 
       `${BASE_URL}/admin?action=getAdminProperty&userId=${encodeURIComponent(userId)}&userType=${encodeURIComponent(userType)}`,
     GET_ALL_OWNERS: `${BASE_URL}/admin?action=getAllOwners`,
@@ -48,7 +55,29 @@ export const API_ROUTES = {
       `${BASE_URL}/property?action=owners&propertyId=${propertyId}`,
     DETAILS: (propertyId: string) =>
       `${BASE_URL}/property?action=details&propertyId=${propertyId}`,
+
+    ASSET_TYPES: `${BASE_URL}/property?action=assetTypes`,
+
+    // Update routes (PATCH)
+    UPDATE_PROPERTY: `${BASE_URL}/property?action=updateProperty`,
+    UPDATE_SPACE: `${BASE_URL}/property?action=updateSpace`,
+    UPDATE_ASSET: `${BASE_URL}/property?action=updateAsset`,
+    UPDATE_FEATURES: `${BASE_URL}/property?action=updateFeatures`,
+
+    // Create routes (POST)
+    CREATE_SPACE: `${BASE_URL}/property?action=createSpace`,
+    CREATE_ASSET: `${BASE_URL}/property?action=createAsset`,
+
+    // Delete routes (DELETE)
+    DELETE_SPACE: (spaceId: string) =>
+      `${BASE_URL}/property?action=deleteSpace&spaceId=${spaceId}`,
+    DELETE_ASSET: (assetId: string) =>
+      `${BASE_URL}/property?action=deleteAsset&assetId=${assetId}`,
+    DELETE_FEATURE: (assetId: string, featureName: string) =>
+      `${BASE_URL}/property?action=deleteFeature&assetId=${assetId}&featureName=${encodeURIComponent(featureName)}`,
   },
+
+
 
   // Images Routes
   IMAGES: {
@@ -81,6 +110,8 @@ export const API_ROUTES = {
     // Fetch property history
     PROPERTY_HISTORY: (propertyId: string) =>
       `${BASE_URL}/changelog?action=getPropertyHistory&propertyId=${encodeURIComponent(propertyId)}`,
+    // Create changelog entry
+    CREATE: `${BASE_URL}/changelog`,
   },
 
 
@@ -107,6 +138,7 @@ export interface LoginParams {
 }
 
 export interface OwnerOnboardParams {
+  userId: string;
   formData: any;
   spaces: any[];
 }

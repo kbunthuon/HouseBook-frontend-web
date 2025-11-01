@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllOwners } from '@backend/FetchData';
+// import { getAllOwners } from '@backend/FetchData';
 import {
   Table,
   TableBody,
@@ -30,6 +30,9 @@ import {
 } from '@ui/dropdown-menu';
 import { Owner } from '@housebookgroup/shared-types';
 
+import { apiClient } from '@shared/api/wrappers.ts';
+
+
 export const UserManagementPage = () => {
   const [owners, setOwners] = useState<Owner[]>([{
     ownerId: "",
@@ -47,7 +50,7 @@ export const UserManagementPage = () => {
     const fetchOwners = async () => {
       try {
         setLoading(true);
-        const data = await getAllOwners();
+        const data = await apiClient.getAllOwners();
         
         if (data) {
           setOwners(data);

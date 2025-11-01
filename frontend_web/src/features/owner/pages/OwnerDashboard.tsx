@@ -10,11 +10,8 @@ import { Button } from "@ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useState, useEffect} from "react";
-import { getOwnerId, getProperty, getPropertyImages, getChangeLogs } from "@backend/FetchData";
-import { Property } from "@housebookgroup/shared-types";
 import { ChangeLogWithUser } from "@hooks/useQueries";
-import supabase from "@config/supabaseClient"
-
+import { Property } from "@housebookgroup/shared-types";
 import { apiClient } from "@shared/api/wrappers";
 import { useProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "@hooks/useQueries";
 

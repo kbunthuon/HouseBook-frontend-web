@@ -1,6 +1,7 @@
 // backend/PropertyEditService.ts
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 import { createChangeLogEntry, ChangeLogAction } from "./ChangeLogService";
+import { apiClient } from "../frontend_web/src/api/wrappers";
 
 // Types for update operations
 export interface PropertyUpdate {
@@ -29,6 +30,9 @@ export interface FeatureUpdate {
  * Updates property information
  */
 export async function updateProperty(propertyId: string, updates: PropertyUpdate): Promise<any> {
+  // backend
+  return await apiClient.updateProperty(propertyId, updates);
+  //
   try {
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -48,7 +52,7 @@ export async function updateProperty(propertyId: string, updates: PropertyUpdate
 
     if (error) {
       console.error("Error updating property:", error);
-      throw new Error(`Failed to update property: ${error.message}`);
+      throw new Error(`Failed to update property: ${error?.message || 'Unknown error'}`);
     }
 
     return data;
@@ -62,6 +66,8 @@ export async function updateProperty(propertyId: string, updates: PropertyUpdate
  * Updates space information
  */
 export async function updateSpace(spaceId: string, updates: SpaceUpdate): Promise<any> {
+  // backend
+  return await apiClient.updateSpace(spaceId, updates);
   try {
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -76,7 +82,7 @@ export async function updateSpace(spaceId: string, updates: SpaceUpdate): Promis
 
     if (error) {
       console.error("Error updating space:", error);
-      throw new Error(`Failed to update space: ${error.message}`);
+      throw new Error(`Failed to update space: ${error?.message || 'Unknown error'}`);
     }
 
     return data;
@@ -90,17 +96,22 @@ export async function updateSpace(spaceId: string, updates: SpaceUpdate): Promis
  * Soft deletes a space by setting deleted = TRUE
  */
 export async function deleteSpace(spaceId: string): Promise<boolean> {
+  // Try using the API client first
   try {
-    // First, soft delete all assets in the space
-    const { data: assets } = await supabase
-      .from("Assets")
-      .select("id, current_specifications, AssetTypes!inner(name)")
-      .eq("space_id", spaceId)
-      .eq("deleted", false);
+    return await apiClient.deleteSpace(spaceId);
+  } catch (apiError) {
+    // Fallback to direct database operation if the API call fails
+    try {
+      // First, soft delete all assets in the space
+      const { data: assets } = await supabase
+        .from("Assets")
+        .select("id, current_specifications, AssetTypes!inner(name)")
+        .eq("space_id", spaceId)
+        .eq("deleted", false);
 
-    // Create changelog entries for all deleted assets
-    if (assets) {
-      for (const asset of assets) {
+      // Create changelog entries for all deleted assets
+      const assetsArray = assets || [];
+      for (const asset of assetsArray) {
         await createChangeLogEntry(
           asset.id,
           `Asset deleted as part of space deletion`,
@@ -108,31 +119,31 @@ export async function deleteSpace(spaceId: string): Promise<boolean> {
           asset.current_specifications
         );
       }
+
+      // Soft delete all assets
+      const { error: assetsError } = await supabase
+        .from("Assets")
+        .update({ deleted: true })
+        .eq("space_id", spaceId);
+
+      if (assetsError) throw assetsError;
+
+      // Soft delete the space
+      const { error } = await supabase
+        .from("Spaces")
+        .update({ deleted: true })
+        .eq("id", spaceId);
+
+      if (error) {
+        console.error("Error deleting space:", error);
+        throw new Error(`Failed to delete space: ${error?.message || 'Unknown error'}`);
+      }
+
+      return true;
+    } catch (dbError) {
+      console.error("Error in deleteSpace:", dbError);
+      throw dbError;
     }
-
-    // Soft delete all assets
-    const { error: assetsError } = await supabase
-      .from("Assets")
-      .update({ deleted: true })
-      .eq("space_id", spaceId);
-
-    if (assetsError) throw assetsError;
-
-    // Soft delete the space
-    const { error } = await supabase
-      .from("Spaces")
-      .update({ deleted: true })
-      .eq("id", spaceId);
-
-    if (error) {
-      console.error("Error deleting space:", error);
-      throw new Error(`Failed to delete space: ${error.message}`);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error in deleteSpace:", error);
-    throw error;
   }
 }
 
@@ -145,6 +156,8 @@ export async function createSpace(
   spaceType: string,
   assets: Array<{ assetTypeId: number; description: string; specifications: Record<string, any> }>
 ): Promise<any> {
+  // backend
+  return await apiClient.createSpace({propertyId, spaceName, spaceType, assets});
   try {
     // Validate at least one asset
     if (!assets || assets.length === 0) {
@@ -206,6 +219,9 @@ export async function createSpace(
  * Updates asset description and creates changelog
  */
 export async function updateAsset(assetId: string, updates: AssetUpdate): Promise<any> {
+  // backend
+  return await apiClient.updateAsset(assetId, updates);
+
   try {
     const updateData: any = {};
     
@@ -230,7 +246,7 @@ export async function updateAsset(assetId: string, updates: AssetUpdate): Promis
 
     if (error) {
       console.error("Error updating asset:", error);
-      throw new Error(`Failed to update asset: ${error.message}`);
+      throw new Error(`Failed to update asset: ${error?.message || 'Unknown error'}`);
     }
 
     // Create changelog entry with full snapshot
@@ -252,6 +268,8 @@ export async function updateAsset(assetId: string, updates: AssetUpdate): Promis
  * Soft deletes an asset
  */
 export async function deleteAsset(assetId: string): Promise<boolean> {
+  // backend
+  return await apiClient.deleteAsset(assetId);
   try {
     // Get current asset data
     const { data: asset } = await supabase
@@ -278,7 +296,7 @@ export async function deleteAsset(assetId: string): Promise<boolean> {
 
     if (error) {
       console.error("Error deleting asset:", error);
-      throw new Error(`Failed to delete asset: ${error.message}`);
+      throw new Error(`Failed to delete asset: ${error?.message || 'Unknown error'}`);
     }
 
     return true;
@@ -297,6 +315,8 @@ export async function createAsset(
   description: string,
   specifications: Record<string, any>
 ): Promise<any> {
+  // backend
+  return await apiClient.createAsset({spaceId, assetTypeId, description, specifications});
   try {
     // Validate at least one feature
     if (!specifications || Object.keys(specifications).length === 0) {
@@ -320,7 +340,7 @@ export async function createAsset(
 
     if (error) {
       console.error("Error creating asset:", error);
-      throw new Error(`Failed to create asset: ${error.message}`);
+      throw new Error(`Failed to create asset: ${error?.message || 'Unknown error'}`);
     }
 
     // Create changelog entry
@@ -345,15 +365,19 @@ export async function updateFeatures(
   assetId: string,
   features: FeatureUpdate
 ): Promise<any> {
+  // backend
+  return await apiClient.updateFeatures(assetId, features);
   try {
     // Get current asset
-    const { data: asset } = await supabase
+    const { data: queriedAsset } = await supabase
       .from("Assets")
       .select("current_specifications, AssetTypes!inner(name), Spaces!inner(name)")
       .eq("id", assetId)
       .single();
 
-    if (!asset) throw new Error("Asset not found");
+    if (!queriedAsset) throw new Error("Asset not found");
+
+    const asset = queriedAsset as { current_specifications: Record<string, any> };
 
     // Merge new features with existing
     const updatedSpecifications = {
@@ -398,15 +422,19 @@ export async function deleteFeature(
   assetId: string,
   featureName: string
 ): Promise<any> {
+  // backend
+  return await apiClient.deleteFeature(assetId, featureName);
   try {
     // Get current asset
-    const { data: asset } = await supabase
+    const { data: queriedAsset } = await supabase
       .from("Assets")
       .select("current_specifications, AssetTypes!inner(name), Spaces!inner(name)")
       .eq("id", assetId)
       .single();
 
-    if (!asset) throw new Error("Asset not found");
+    if (!queriedAsset) throw new Error("Asset not found");
+
+    const asset = queriedAsset as { current_specifications: Record<string, any> };
 
     // Store the deleted feature for the changelog
     const deletedFeature = { [featureName]: asset.current_specifications[featureName] };
@@ -439,78 +467,11 @@ export async function deleteFeature(
 }
 
 /**
- * Gets property details with all related data (excluding soft-deleted items)
- */
-export async function getPropertyForEdit(propertyId: string): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from("Property")
-      .select(`
-        *,
-        Spaces!inner(
-          id,
-          name,
-          type,
-          deleted,
-          Assets!inner(
-            id,
-            description,
-            current_specifications,
-            deleted,
-            AssetTypes!inner(id, name, discipline)
-          )
-        )
-      `)
-      .eq("property_id", propertyId)
-      .eq("Spaces.deleted", false)
-      .eq("Spaces.Assets.deleted", false)
-      .single();
-
-    if (error) {
-      console.error("Error fetching property for edit:", error);
-      throw new Error(`Failed to fetch property: ${error.message}`);
-    }
-
-    // Transform the data to match expected format
-    if (data) {
-      return {
-        propertyId: data.property_id,
-        name: data.name,
-        description: data.description,
-        address: data.address,
-        totalFloorArea: data.total_floor_area,
-        images: data.images || [],
-        spaces: (data.Spaces || []).map((space: any) => ({
-          id: space.id,
-          name: space.name,
-          type: space.type,
-          deleted: space.deleted,
-          assets: (space.Assets || []).map((asset: any) => ({
-            id: asset.id,
-            description: asset.description,
-            currentSpecifications: asset.current_specifications,
-            deleted: asset.deleted,
-            assetTypes: {
-              id: asset.AssetTypes.id,
-              name: asset.AssetTypes.name,
-              discipline: asset.AssetTypes.discipline
-            }
-          }))
-        }))
-      };
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error in getPropertyForEdit:", error);
-    throw error;
-  }
-}
-
-/**
  * Gets all asset types for dropdown selection
  */
 export async function getAssetTypes(): Promise<any[]> {
+  // backend
+  return await apiClient.getAssetTypes();
   try {
     const { data, error } = await supabase
       .from("AssetTypes")

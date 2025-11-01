@@ -14,11 +14,11 @@ import { Trash2 } from "lucide-react";
 
 import { fetchSpaceEnum } from "@backend/FetchSpaceEnum";
 import { fetchAssetTypes } from "@backend/FetchAssetTypes";
-import { adminOnboardProperty } from "@backend/OnboardPropertyService";
 import { FormData, SpaceInt, Owner } from "@shared/types/serverTypes";
 import { ADMIN_ROUTES } from "@features/admin/routes";
 import { useAdminFormContext } from "@app/providers/FormContext";
 import { apiClient } from "@shared/api/wrappers";
+import { AdminOnboardParams } from "@shared/api/routes";
 
 export function AdminPropertyOnboarding() {
   const [spaceTypes, setSpaceTypes] = useState<string[]>([]);
@@ -101,7 +101,7 @@ export function AdminPropertyOnboarding() {
       setCurrentStep(currentStep + 1);
     } else if (currentStep == steps.length) {
       try {
-        const propertyId = await adminOnboardProperty(owner, formData, spaces);
+        const propertyId = await apiClient.adminOnboardProperty({ ownerData: owner, formData, spaces } as AdminOnboardParams);
         console.log(propertyId);
         
         // Reset the form data after successful submission
