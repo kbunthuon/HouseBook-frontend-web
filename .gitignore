@@ -21,7 +21,7 @@ build/
 # Test coverage and reports
 coverage/
 coverage-final.json
-reports/
+# reports/
 tests/reports/
 
 # Vitest / test caches
