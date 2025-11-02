@@ -1,6 +1,6 @@
 // backend/JobService.ts
 /// <reference types="vite/client" />
-import supabase from "../config/supabaseClient";
+import {supabase} from "../config/supabaseClient";
 
 export interface JobAsset {
   asset_id: string;

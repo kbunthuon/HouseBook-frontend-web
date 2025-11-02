@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom';
+// Removed stray opening code fence
+import { vi } from 'vitest';
+// Always stub HTMLCanvasElement.prototype.getContext in tests. JSDOM's
+// implementation throws "Not implemented" when components (like QR code
+// renderers) call getContext. Replacing it with a safe stub prevents noisy
+// errors and keeps tests deterministic.
 
 // Always stub HTMLCanvasElement.prototype.getContext in tests. JSDOM's
 // implementation throws "Not implemented" when components (like QR code
@@ -50,6 +56,25 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 if (typeof globalThis.fetch === 'undefined') {
 	// @ts-ignore - test shim
 	globalThis.fetch = async () => ({ ok: true, json: async () => [] } as any);
+}
+
+// Provide a fake access token and long-lived expiry for unit tests so that
+// ApiClient.authenticatedRequest does not attempt to refresh tokens (which
+// would hit network / non-mocked endpoints). Individual tests that need to
+// exercise auth behaviour should override these values explicitly.
+try {
+	const ACCESS_KEY = 'housebook_access_token';
+	const EXPIRES_KEY = 'housebook_expires_at';
+	if (!sessionStorage.getItem(ACCESS_KEY)) {
+		sessionStorage.setItem(ACCESS_KEY, 'test-access-token');
+	}
+	// Expires in 1 hour from now
+	if (!sessionStorage.getItem(EXPIRES_KEY)) {
+		const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+		sessionStorage.setItem(EXPIRES_KEY, String(expiresAt));
+	}
+} catch (e) {
+	// sessionStorage may not be available in some environments; ignore failures
 }
 
 // QueryClientProvider is intentionally not provided globally here; tests

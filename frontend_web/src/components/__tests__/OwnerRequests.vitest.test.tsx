@@ -1,11 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { OwnerRequests } from '../OwnerRequests';
-import * as useQueries from '../../hooks/useQueries';
+import { OwnerRequests } from '@features/owner/pages/OwnerRequests';
+import * as useQueries from '@hooks/useQueries';
 
-// Mock custom hooks
-vi.mock('../../hooks/useQueries');
+// Mock custom hooks (use the aliased path so component imports match test mocks)
+vi.mock('@hooks/useQueries');
 
 describe('OwnerRequests Component', () => {
   // Mock properties owned by the user

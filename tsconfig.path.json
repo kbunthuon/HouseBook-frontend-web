@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": "frontend_web/src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@features/*": ["features/*"],
+      "@shared/*": ["shared/*"],
+      "@backend/*": ["../../backend/*"],
+  "@config/*": ["../../config/*"],
+      "@types/*": ["shared/types/*"],
+      "@hooks/*": ["shared/hooks/*"],
+      "@ui/*": ["shared/ui/*"],
+      "@api/*": ["shared/api/*"]
+    }
+  }
+}

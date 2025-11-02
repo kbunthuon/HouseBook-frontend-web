@@ -1,75 +1,8 @@
-import supabase from "../config/supabaseClient";
-import { getOwnerId } from "./FetchData";
+import {supabase} from "../config/supabaseClient";
 
 // Setting what OwnerData looks like
 import { Owner, FormData, SpaceInt } from "@housebookgroup/shared-types";
-import { apiClient } from "../frontend_web/src/api/wrappers";
-
-export async function ownerOnboardProperty(userId: string, formData: FormData, spaces: SpaceInt[]) {
-  const { data: { session } } = await supabase.auth.getSession();
-  // const userId = session?.user.id;
-  // if (!userId) throw Error("Session not found");
-  console.log('session in ownerOnboardProperty', session);
-  // console.log('userId in ownerOnboardProperty', userId);
-
-  const ownerId = await getOwnerId(userId);
-  if (!ownerId) {
-    throw new Error("Owner ID not found for user");
-  }
-
-  const propertyId = await saveProperty(formData, ownerId);
-  if (!propertyId) {
-    throw new Error("Failed to save property");
-  }
-
-  // Upload property images
-  for (const file of (formData.floorPlans)) {
-    await apiClient.uploadPropertyImage(propertyId, file);
-  }
-  for (const file of (formData.buildingPlans)) {
-    await apiClient.uploadPropertyImage(propertyId, file);
-  }
-
-  // Save spaces, assets, and changelog - throw error if it fails
-  const detailsSaved = await saveDetails(spaces, propertyId, userId, true);
-  if (!detailsSaved) {
-    throw new Error("Failed to save property details (spaces, assets, or changelog)");
-  }
-
-  return propertyId;
-}
-
-export async function adminOnboardProperty(ownerData: Owner, formData: FormData, spaces: SpaceInt[]) {
-
-  // Get the user id using the owner's email
-  const userId = await apiClient.getUserInfoByEmail(ownerData.email);
-  if (!userId) throw new Error("User ID not returned from signup");
-  console.log("userId:");
-  console.log(userId);
-
-  // Get the owner id
-  const ownerId = await apiClient.getOwnerId(userId.userId);
-  if (!ownerId) {
-    throw new Error("Owner ID not found for user");
-  }
-
-  // Insert to Property table and OwnerProperty Table
-  const propertyId = await saveProperty(formData, ownerId);
-  if (!propertyId) {
-    throw new Error("Failed to save property");
-  }
-
-  // Insert to Spaces table, Assets table, AssetTypes table and Changelog table
-  // Needs propertyId when inserting into Spaces table, userId when inserting into Changelog table
-  // For admin onboarding, changes are set to PENDING status (not auto-approved)
-  const detailsSaved = await saveDetails(spaces, propertyId, userId.userId, false);
-  if (!detailsSaved) {
-    throw new Error("Failed to save property details (spaces, assets, or changelog)");
-  }
-
-  return propertyId;
-
-}
+import { apiClient } from "../frontend_web/src/shared/api/wrappers";
 
 export async function checkOwnerExists(email: string): Promise<boolean> {
   try {

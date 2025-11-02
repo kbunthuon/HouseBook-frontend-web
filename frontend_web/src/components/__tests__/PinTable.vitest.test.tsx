@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { PinTable } from '../PinTable';
+import { PinTable } from '@features/property/components/PinTable';
 
 // Mock backend services
 vi.mock('../../../../backend/JobService', () => ({

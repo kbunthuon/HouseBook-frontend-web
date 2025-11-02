@@ -6,11 +6,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
+} from "@ui/dialog";
+import { Button } from "@ui/button";
 import { CheckCircle, ImageIcon, X } from "lucide-react";
-import { Property } from "../../types/serverTypes";
-import { apiClient } from "../../api/wrappers";
+import { Property } from "@shared/types/serverTypes";
+import { apiClient } from "@shared/api/wrappers";
 
 interface SplashImageDialogProps {
   open: boolean;
@@ -67,7 +67,7 @@ export default function SplashImageDialog({
         <div className="space-y-4">
           {property?.images && property.images.length > 0 ? (
             <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-              {property.images.map((url, idx) => (
+              {property.images.map((url: string, idx: number) => (
                 <div
                   key={idx}
                   className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${

@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 // userEvent import removed — not used in these tests to avoid resolver issues
 import { vi } from 'vitest';
-import { PropertyDetail } from '../PropertyDetail';
-import { apiClient } from '../../api/wrappers';
-import { getPropertyDetails, getPropertyOwners } from '../../../../backend/FetchData';
+import { PropertyDetail } from '../../features/property/pages/PropertyDetail';
+import { apiClient } from '@shared/api/wrappers';
+// import { getPropertyDetails, getPropertyOwners } from '../../../../backend/FetchData';
 import { fetchJobsInfo, deleteJob } from '../../../../backend/JobService';
 import { toast } from 'sonner';
 
@@ -38,8 +38,8 @@ vi.mock('../../../../backend/FetchAssetTypes', () => ({
 }));
 
 // Cast to any for ease inside tests
-const mockGetPropertyDetails = getPropertyDetails as any;
-const mockGetPropertyOwners = getPropertyOwners as any;
+const mockGetPropertyDetails = apiClient.getPropertyDetails as any;
+const mockGetPropertyOwners = apiClient.getPropertyOwners as any;
 const mockFetchJobsInfo = fetchJobsInfo as any;
 const mockDeleteJob = deleteJob as any;
 const mockToast = toast as any;

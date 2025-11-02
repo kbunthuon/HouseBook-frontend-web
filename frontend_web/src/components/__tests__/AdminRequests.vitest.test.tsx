@@ -1,13 +1,13 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { AdminRequests } from '../AdminRequests';
-import { apiClient } from '../../api/wrappers';
-import * as useQueries from '../../hooks/useQueries';
+import { AdminRequests } from '@features/admin/pages/AdminRequests';
+import { apiClient } from '@shared/api/wrappers';
+import * as useQueries from '@hooks/useQueries';
 
 // Mock API client and custom hooks
-vi.mock('../../api/wrappers');
-vi.mock('../../hooks/useQueries');
+vi.mock('@shared/api/wrappers');
+vi.mock('@hooks/useQueries');
 
 describe('AdminRequests Component', () => {
   // Mock properties data

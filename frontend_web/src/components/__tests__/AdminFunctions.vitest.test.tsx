@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '../../test-utils';
-import { AdminFunctions } from '../AdminFunctions';
+import { AdminFunctions } from '@features/admin/components/AdminFunctions';
 
 describe('AdminFunctions', () => {
   it('renders main sections and key controls', () => {

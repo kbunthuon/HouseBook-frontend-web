@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { vi } from 'vitest';
-import { UserManagementPage } from '../UserManagement';
-import * as FetchData from '../../../../backend/FetchData';
+import { UserManagementPage } from '@features/users/pages/UserManagement';
+import { apiClient } from '@shared/api/wrappers';
+// import * as FetchData from '../../../../backend/FetchData';
 
 // Mock the FetchData module to prevent real API calls
 vi.mock('../../../../backend/FetchData', () => ({
@@ -40,7 +41,7 @@ describe('UserManagement Component', () => {
     vi.clearAllMocks();
     
     // Default: Return mock owners successfully
-    (FetchData.getAllOwners as any).mockResolvedValue(mockOwners);
+    (apiClient.getAllOwners as any).mockResolvedValue(mockOwners);
   });
 
   afterEach(() => {
@@ -110,7 +111,7 @@ describe('UserManagement Component', () => {
 
       // Wait for API call
       await waitFor(() => {
-        expect(FetchData.getAllOwners).toHaveBeenCalledTimes(1);
+        expect(apiClient.getAllOwners).toHaveBeenCalledTimes(1);
       });
 
       // Verify owners are displayed (separate first and last names)
@@ -138,7 +139,7 @@ describe('UserManagement Component', () => {
     it('shows loading state initially', () => {
       // Test: Verify loading indicator during data fetch
       // Mock a delayed response
-      (FetchData.getAllOwners as any).mockImplementation(
+      (apiClient.getAllOwners as any).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve(mockOwners), 100))
       );
 
@@ -150,7 +151,7 @@ describe('UserManagement Component', () => {
 
     it('handles empty owner list gracefully', async () => {
       // Test: Verify empty state when no owners exist
-      (FetchData.getAllOwners as any).mockResolvedValue([]);
+      (apiClient.getAllOwners as any).mockResolvedValue([]);
 
       render(<UserManagementPage />);
 
@@ -166,7 +167,7 @@ describe('UserManagement Component', () => {
 
     it('displays error message when API fails', async () => {
       // Test: Verify error handling when fetch fails
-      (FetchData.getAllOwners as any).mockRejectedValue(
+      (apiClient.getAllOwners as any).mockRejectedValue(
         new Error('Failed to load owners')
       );
 
@@ -180,7 +181,7 @@ describe('UserManagement Component', () => {
 
     it('handles null response from API', async () => {
       // Test: Verify component handles null/undefined API responses
-      (FetchData.getAllOwners as any).mockResolvedValue(null);
+      (apiClient.getAllOwners as any).mockResolvedValue(null);
 
       render(<UserManagementPage />);
 
@@ -365,7 +366,7 @@ describe('UserManagement Component', () => {
         email: 'john.doe+test@example.com',
       };
 
-      (FetchData.getAllOwners as any).mockResolvedValue([ownerWithSpecialChars]);
+      (apiClient.getAllOwners as any).mockResolvedValue([ownerWithSpecialChars]);
 
       render(<UserManagementPage />);
 
@@ -503,7 +504,7 @@ describe('UserManagement Component', () => {
         },
       ];
 
-      (FetchData.getAllOwners as any).mockResolvedValue(incompleteOwners);
+      (apiClient.getAllOwners as any).mockResolvedValue(incompleteOwners);
 
       render(<UserManagementPage />);
 
@@ -528,7 +529,7 @@ describe('UserManagement Component', () => {
         },
       ];
 
-      (FetchData.getAllOwners as any).mockResolvedValue(ownersWithoutNames);
+      (apiClient.getAllOwners as any).mockResolvedValue(ownersWithoutNames);
 
       render(<UserManagementPage />);
 
@@ -552,7 +553,7 @@ describe('UserManagement Component', () => {
         },
       ];
 
-      (FetchData.getAllOwners as any).mockResolvedValue(longNameOwners);
+      (apiClient.getAllOwners as any).mockResolvedValue(longNameOwners);
 
       render(<UserManagementPage />);
 
@@ -574,7 +575,7 @@ describe('UserManagement Component', () => {
         phone: `555-000-${String(i).padStart(4, '0')}`,
       }));
 
-      (FetchData.getAllOwners as any).mockResolvedValue(manyOwners);
+      (apiClient.getAllOwners as any).mockResolvedValue(manyOwners);
 
       render(<UserManagementPage />);
 

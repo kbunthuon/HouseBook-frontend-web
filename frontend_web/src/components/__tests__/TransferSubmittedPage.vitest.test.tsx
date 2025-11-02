@@ -1,6 +1,6 @@
 import { render, screen } from '../../test-utils';
 import { vi } from 'vitest';
-import TransferSubmittedPage from '../TransferSubmittedPage';
+import TransferSubmittedPage from '@features/owner/pages/TransferSubmittedPage';
 import { BrowserRouter } from 'react-router-dom';
 
 describe('TransferSubmittedPage', () => {
