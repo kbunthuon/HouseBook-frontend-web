@@ -776,27 +776,48 @@ class ApiClient {
     return data;
   }
 
-  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
-    const { approveTransfer } = await import("@backend/TransferService");
-    try {
-      const result = await approveTransfer(transferId, ownerId.ownerId);
-      console.log("approveTransfer response data:", result);
-      return result;
-    } catch (error: any) {
-      console.error("Failed to approve transfer:", error);
-      throw new Error(error.message || "Failed to approve transfer");
+  async approveTransfer(transferId: string, owner: {ownerId: string}) {
+    console.log(owner);
+    const response = await this.authenticatedRequest(
+      API_ROUTES.TRANSFER.APPROVE(transferId, owner.ownerId),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transferId,
+          ownerId: owner.ownerId,
+        }),
+      }
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to approve transfer");
     }
+    const data = await response.json();
+    console.log("approveTransfer response data:", data);
+    return data;
   }
 
-  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
-    try {
-      const result = await rejectTransfer(transferId, ownerId.ownerId);
-      console.log("rejectTransfer response data:", result);
-      return result;
-    } catch (error: any) {
-      console.error("Failed to reject transfer:", error);
-      throw new Error(error.message || "Failed to reject transfer");
+  async rejectTransfer(transferId: string, owner: {ownerId: string}) {
+    console.log(owner);
+    const response = await this.authenticatedRequest(
+      API_ROUTES.TRANSFER.REJECT(transferId, owner.ownerId),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transferId,
+          ownerId: owner.ownerId,
+        }),
+      }
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reject transfer");
     }
+    const data = await response.json();
+    console.log("rejectTransfer response data:", data);
+    return data;
   }
 
   async getOwnerIdByUserId(userId: string) {

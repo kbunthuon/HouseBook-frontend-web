@@ -367,7 +367,7 @@ export const useApproveTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.approveTransfer(transferId, { ownerId });
+      return await apiClient.approveTransfer(transferId, ownerId );   // this somehow works?? should be a string, but somehow passed as {ownerId: string}
     },
     onSuccess: (_, variables) => {
       // Invalidate transfers to refetch updated data
@@ -386,7 +386,7 @@ export const useRejectTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.rejectTransfer(transferId, { ownerId });
+      return await apiClient.rejectTransfer(transferId, ownerId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });

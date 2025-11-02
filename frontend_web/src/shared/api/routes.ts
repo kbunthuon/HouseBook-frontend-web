@@ -8,7 +8,7 @@
 // ------- UPDATE ------- works now with short TTLs (300s) with refresh token in body
 // But this fixes the restrictive CORS policy on Vercel for all endpoints
 // Change to allow all origins, but refresh token verification done via req body instead of cookies (security risk..?)
-const BASE_URL = "https://housebook-backend-gqpqo1pz9-kenneth-lims-projects-dffe5cf5.vercel.app/api";
+const BASE_URL = "https://housebook-backend-ezwdxjtk7-kenneth-lims-projects-dffe5cf5.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -121,13 +121,17 @@ export const API_ROUTES = {
       `${BASE_URL}/transfer?action=${params.action}&${params.action === "byOwner" ? `userId=${params.id}` : `propertyId=${params.id}`}`,
 
     INITIATE: `${BASE_URL}/transfer`,
-    APPROVE: (transferId: string, ownerId: string) =>
-      `${BASE_URL}/transfer?action=approve&transferId=${transferId}&ownerId=${ownerId}`,
-    REJECT: (transferId: string, ownerId: string) =>
-      `${BASE_URL}/transfer?action=reject&transferId=${transferId}&ownerId=${ownerId}`,
     GET_BY_PROPERTY: (propertyId: string) => `${BASE_URL}/transfer?propertyId=${encodeURIComponent(propertyId)}`,
     GET_BY_USER: (userId: string) => `${BASE_URL}/transfer?userId=${encodeURIComponent(userId)}`,
+
+    // PATCH requests - action goes in query params, data in body
+    APPROVE: (transferId: string, ownerId: string) =>
+      `${BASE_URL}/transfer?action=approve`,
+    
+    REJECT: (transferId: string, ownerId: string) =>
+      `${BASE_URL}/transfer?action=reject`,
   },
+  
 
     // Jobs Routes
   JOBS: {

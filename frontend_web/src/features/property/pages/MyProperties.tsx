@@ -9,7 +9,6 @@ import { Search, ExternalLink, Edit, Key, BarChart3, Settings, ArrowRightLeft, E
 import OldOwnerTransferDialog from "@features/owner/components/OldOwnerTransferDialog";
 import { apiClient } from "@shared/api/wrappers";
 import { toast } from "sonner";
-import { approveTransfer, rejectTransfer } from "@backend/TransferService";
 import { useProperties, useOwnerTransfers, useApproveTransfer, useRejectTransfer, queryKeys } from "@hooks/useQueries";
 import { Property } from "@housebookgroup/shared-types";
 
