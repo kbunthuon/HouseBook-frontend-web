@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent, within } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
-import { OwnerDashboard } from '../OwnerDashboard';
+import { OwnerDashboard } from '@features/owner/pages/OwnerDashboard';
 import { apiClient } from '@shared/api/wrappers';
 
 // Mock backend modules and supabase

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
-import { MyProperties } from '../MyProperties';
+import { MyProperties } from '@features/property/pages/MyProperties';
 import { apiClient } from '@shared/api/wrappers';
 // import { getOwnerId } from '../../../../backend/FetchData';
 

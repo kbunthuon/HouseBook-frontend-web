@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { Auth } from '../Auth';
+import { Auth } from '@features/auth/pages/Auth';
 import { apiClient } from '@shared/api/wrappers';
 import * as AuthService from '../../../../backend/AuthService';
 

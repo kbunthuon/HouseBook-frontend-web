@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { AdminPropertyOnboarding } from '../AdminPropertyOnboarding';
+import { AdminPropertyOnboarding } from '@features/admin/pages/AdminPropertyOnboarding';
 import { AdminFormProvider } from '../FormContext';
 import { BrowserRouter } from 'react-router-dom';
 

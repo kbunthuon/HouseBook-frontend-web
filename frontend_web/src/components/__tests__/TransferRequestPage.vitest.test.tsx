@@ -1,6 +1,6 @@
 import { render, screen } from '../../test-utils';
 import { vi } from 'vitest';
-import TransferRequestPage from '../TransferRequestPage';
+import TransferRequestPage from '@features/owner/pages/TransferRequestPage';
 import { BrowserRouter } from 'react-router-dom';
 import { apiClient } from '@shared/api/wrappers';
 

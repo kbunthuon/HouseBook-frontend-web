@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { AdminRequests } from '../AdminRequests';
+import { AdminRequests } from '@features/admin/pages/AdminRequests';
 import { apiClient } from '@shared/api/wrappers';
 import * as useQueries from '@hooks/useQueries';
 

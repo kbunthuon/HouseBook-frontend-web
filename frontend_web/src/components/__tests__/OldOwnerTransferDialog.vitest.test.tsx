@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import OldOwnerTransferDialog from '../OldOwnerTransferDialog';
+import OldOwnerTransferDialog from '@features/owner/components/OldOwnerTransferDialog';
 import { apiClient } from '@shared/api/wrappers';
 
 // Mock API client

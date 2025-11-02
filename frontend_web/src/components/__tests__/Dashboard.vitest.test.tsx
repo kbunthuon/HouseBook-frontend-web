@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { Dashboard } from '../Dashboard';
+import { Dashboard } from '@features/admin/pages/Dashboard';
 import { apiClient } from '@shared/api/wrappers';
 
 // Ensure we can control apiClient calls used by the hooks

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { MyReports } from '../MyReports';
+import { MyReports } from '@features/reports/pages/MyReports';
 import { apiClient } from '@shared/api/wrappers';
 
 // Mock backend services

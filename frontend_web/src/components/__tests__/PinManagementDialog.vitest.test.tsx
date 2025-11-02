@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { PinManagementDialog } from '../PinManagementDialog';
+import { PinManagementDialog } from '@features/property/components/PinManagementDialog';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock backend services

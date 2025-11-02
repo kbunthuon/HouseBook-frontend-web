@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '../../test-utils';
+import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { vi } from 'vitest';
-import { PropertyManagement } from '../PropertyManagement';
+import { PropertyManagement } from '@features/property/pages/PropertyManagement';
 import { apiClient } from '@shared/api/wrappers';
 
 // Mock API client to prevent real network calls
