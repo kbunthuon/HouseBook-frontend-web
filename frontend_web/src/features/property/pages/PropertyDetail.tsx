@@ -14,10 +14,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { QRCodeCanvas } from "qrcode.react";
 import { PinManagementDialog } from "../components/PinManagementDialog";
 import { PinTable } from "../components/PinTable";
+import PropertyHeader from "../components/PropertyHeader";
+import ImageGallery from "../components/ImageGallery";
+import ImageViewer from "../components/ImageViewer";
+import useImageNavigation from "../hooks/useImageNavigation";
+import AssetCard from "../components/AssetCard";
+import PropertyDialogController from "../components/PropertyDialogController";
+import SpacesList from "../components/SpacesList";
+import JobsSection from "../components/JobsSection";
+import ChangeLogTimeline from "../components/ChangeLogTimeline";
+import ImageUploadDialog from "../components/ImageUploadDialog";
+import ImageActionConfirmDialog from "../components/ImageActionConfirmDialog";
+import SplashImageDialog from "../components/SplashImageDialog";
+import { FeatureCard } from "../components/FeatureCard";
 import { toast } from "sonner";
 import { Property, Asset, Space, Owner } from "@housebookgroup/shared-types";
 import { ChangeLog } from "@shared/types/serverTypes";
-import { useProperty, usePropertyImages, usePropertyOwners, useAssetTypes, useSpaceTypes, usePropertyJobs, useDeleteJob, queryKeys } from "@hooks/useQueries";
+import { useProperty, usePropertyImages, usePropertyOwners, useAssetTypes, useSpaceTypes, usePropertyJobs, useDeleteJob } from "@hooks/useQueries";
 
 import { fetchJobsInfo, Job, JobAsset, deleteJob } from "@backend/JobService";
 
@@ -36,6 +49,8 @@ import {
 } from "@backend/PropertyEditService";
 import { getPropertyHistory, getSpaceHistory } from "@backend/ChangeLogService";
 import { apiClient } from "@shared/api/wrappers";
+import { useMappedProperty } from "../hooks/useMappedProperty";
+import { useRefetchPropertyData } from "../hooks/useRefetchPropertyData";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -77,6 +92,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   // Merge images into property object
   const propertyWithImages = property ? { ...property, images: imagesResult?.images || [] } : null;
+  const mappedProperty = useMappedProperty(propertyWithImages);
 
   // React Query hook for jobs
   const { data: jobsData, isLoading: jobsLoading } = usePropertyJobs(propertyId);
@@ -124,113 +140,22 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   const [showFeatureFormCreateAsset, setShowFeatureFormCreateAsset] = useState(false);
   const [featureFormCreateSpaceIndex, setFeatureFormCreateSpaceIndex] = useState<number | null>(null);
 
-  // Small reusable in-place feature editor card (name + value)
-  function FeatureCard({
-    initialName = "",
-    initialValue = "",
-    onAdd,
-    onCancel,
-    className = "",
-  }: {
-    initialName?: string;
-    initialValue?: string;
-    onAdd: (name: string, value: string) => void;
-    onCancel: () => void;
-    className?: string;
-  }) {
-    const [name, setName] = useState(initialName);
-    const [value, setValue] = useState(initialValue);
-
-    return (
-      <div className={`pt-3 ${className}`}>
-        <Card className="w-full">
-          <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto pt-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label className="block">Feature name</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="flex-1">
-                <Label className="block">Feature value</Label>
-                <Input value={value} onChange={(e) => setValue(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2 pt-2">
-              <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-              <Button size="sm" onClick={() => { if (name.trim()) { onAdd(name.trim(), value); } }}>
-                OK
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // FeatureCard extracted to components/FeatureCard.tsx
 
   // Jobs are now loaded via React Query (usePropertyJobs hook above)
 
-  // Keyboard navigation for image viewer
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedImage || !propertyWithImages?.images) return;
+  // Image keyboard navigation hook
+  useImageNavigation(
+    propertyWithImages?.images,
+    selectedImage,
+    selectedImageIndex,
+    setSelectedImage,
+    setSelectedImageIndex
+  );
 
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        navigateToPreviousImage();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        navigateToNextImage();
-      } else if (e.key === 'Escape') {
-        closeImageViewer();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImage, selectedImageIndex, propertyWithImages?.images]);
-
-  // Map backend-shaped property to the shared Property shape expected by some child components
-  const mapToSharedProperty = (bp: Property | null): Property | null => {
-    if (!bp) return null;
-    console.log("Mapping backend property to shared shape, images are", bp.images);
-    return {
-      propertyId: bp.propertyId,
-      address: bp.address || "",
-      description: bp.description || "",
-      pin: bp.pin || "",
-      name: bp.name,
-      type: bp.type || "",
-      status: bp.status || "",
-      lastUpdated: bp.lastUpdated || "",
-      completionStatus: bp.completionStatus || 0,
-      totalFloorArea: bp.totalFloorArea,
-      spaces: bp.spaces?.map((s: Space) => ({
-        id: s.id,
-        name: s.name,
-        type: s.type || "",
-        deleted: s.deleted || false,
-        assets: s.assets?.map((a: Asset) => ({
-          id: a.id,
-          description: a.description || "",
-          type: a.type,
-          currentSpecifications: a.currentSpecifications || {},
-          deleted: a.deleted || false,
-          assetTypes: a.assetTypes,
-        })) || [],
-      })) || [],
-      images: bp.images || [],
-      createdAt: bp.createdAt || "",
-      splashImage: bp.splashImage,
-    };
-  };
 
   // Refetch all property data after mutations
-  const refetchPropertyData = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.property(propertyId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(propertyId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.propertyOwners(propertyId) });
-    queryClient.invalidateQueries({ queryKey: ['jobs', propertyId] }); // Reload jobs via React Query
-  };
+  const refetchPropertyData = useRefetchPropertyData(propertyId);
 
   // PROPERTY EDIT
   const handleEditProperty = () => {
@@ -536,9 +461,9 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   };
 
   // Image management handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
+  const handleFileSelect = (files: FileList | null) => {
+    if (files) {
+      const filesArray = Array.from(files);
       setSelectedFiles(filesArray);
     }
   };
@@ -625,92 +550,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
     ));
   };
 
-  const SpecificationSection = ({ 
-    title, 
-    spaceId, 
-    spaceName,
-    assets 
-  }: { 
-    title: string; 
-    spaceId: string;
-    spaceName: string;
-    assets: Asset[];
-  }) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="font-semibold">{title}</CardTitle>
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={() => handleShowTimeline(title, spaceId)}>
-            <History className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleCreateAsset(spaceId, spaceName)}>
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleEditSpace(spaceId, spaceName)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleDeleteSpace(spaceId, spaceName)}>
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 max-h-[50vh] overflow-auto">
-        {assets.map((asset) => (
-          <div key={asset.id} className="border rounded-lg p-3">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold">{asset.assetTypes.name}</span>
-                  <div className="flex items-center space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleEditAsset(spaceId, spaceName, asset.id, asset.assetTypes.name)}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeleteAsset(asset.id, asset.assetTypes.name)}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                {asset.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{asset.description}</p>
-                )}
-              </div>
-            </div>
-            
-            {asset.currentSpecifications && Object.keys(asset.currentSpecifications).length > 0 ? (
-              <div className="space-y-1 bg-muted/30 p-2 rounded">
-                {Object.entries(asset.currentSpecifications).map(([key, value]) => (
-                  <div key={key} className="text-sm flex justify-between items-center group">
-                    <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-muted-foreground">{String(value)}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
-                        onClick={() => handleDeleteFeature(asset.id, key)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground italic">No specifications</p>
-            )}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
+  
 
   const renderDialog = () => {
     if (dialogContext.mode === 'property') {
@@ -1143,19 +983,7 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-hidden">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />Back to Properties
-          </Button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="default">{(propertyWithImages && (propertyWithImages as any).status) ?? "Active"}</Badge>
-          <Button variant="outline" size="sm" onClick={handleEditProperty}>
-            <Edit className="h-4 w-4 mr-2" />Edit Property
-          </Button>
-        </div>
-      </div>
+      <PropertyHeader property={propertyWithImages} onBack={onBack} onEditProperty={handleEditProperty} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 min-w-0">
@@ -1191,159 +1019,38 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           <div className="aspect-square bg-muted rounded-lg flex items-center justify-center w-64">
             <QRCodeCanvas ref={qrCodeRef} value={propertyId} size={200} level="H" />
           </div>
-          <Button onClick={() => setIsPinDialogOpen(true)} className="w-64" size="sm">
-            Create New Job
-          </Button>
         </div>
       </div>
 
       <Separator />
 
-      {/* Property Images */}
-      <Card className="w-full max-w-full overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
-          <CardTitle className="flex items-center">
-            <Image className="h-5 w-5 mr-2" />
-            Property Images
-          </CardTitle>
-          <div className="flex items-center space-x-2 flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleOpenUploadDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Images
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleOpenDeleteDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Images
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleOpenSplashDialog} disabled={!propertyWithImages?.images || propertyWithImages.images.length === 0}>
-              <Plus className="h-4 w-4 mr-2" />
-              Select splash image
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-            <div className="overflow-x-auto py-4">
-              <div className="flex gap-6 w-max">
-                {propertyWithImages.images.map((url: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                    style={{ width: '320px', height: '320px' }}
-                    onClick={() => openImageViewer(url, idx)}
-                  >
-                    {/* property image - fixed 320px height (full card) */}
-                    <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
-                      <img
-                        src={url}
-                        alt={`Property Image ${idx + 1}`}
-                        className="w-full h-full"
-                        style={{ objectFit: 'contain' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No images available
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Property Images (extracted) */}
+      <ImageGallery
+        images={propertyWithImages?.images || []}
+        onOpenViewer={(url, idx) => { setSelectedImage(url); setSelectedImageIndex(idx); }}
+        onOpenUpload={handleOpenUploadDialog}
+        onOpenDelete={handleOpenDeleteDialog}
+        onOpenSplash={handleOpenSplashDialog}
+      />
 
-      {/* Image Viewer Overlay */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            animation: 'fadeIn 0.2s ease-in-out',
-          }}
-          onClick={closeImageViewer}
-        >
-          <style>{`
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            @keyframes imageZoom {
-              from { transform: scale(0.95); opacity: 0; }
-              to { transform: scale(1); opacity: 1; }
-            }
-          `}</style>
-
-          {/* Navigation Button - Previous */}
-          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigateToPreviousImage();
-              }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <ChevronLeft className="h-8 w-8" />
-            </button>
-          )}
-
-          {/* Image Container */}
-          <div
-            className="relative flex items-center justify-center p-4"
-            style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              animation: 'imageZoom 0.3s ease-out',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={selectedImage}
-              alt="Property Image"
-              className="max-w-full max-h-full object-contain shadow-2xl"
-              style={{
-                borderRadius: '16px',
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-              }}
-            />
-          </div>
-
-          {/* Navigation Button - Next */}
-          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigateToNextImage();
-              }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-all z-10"
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <ChevronRight className="h-8 w-8" />
-            </button>
-          )}
-
-          {/* Close Button */}
-          <button
-            onClick={closeImageViewer}
-            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all z-10"
-            style={{ backdropFilter: 'blur(10px)' }}
-          >
-            <X className="h-6 w-6" />
-          </button>
-
-          {/* Image Counter */}
-          {propertyWithImages?.images && propertyWithImages.images.length > 1 && (
-            <div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 text-white px-4 py-2 rounded-full text-sm z-10"
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              {selectedImageIndex + 1} / {propertyWithImages.images.length}
-            </div>
-          )}
-        </div>
-      )}
+      <ImageViewer
+        images={propertyWithImages?.images || []}
+        selectedImage={selectedImage}
+        selectedImageIndex={selectedImageIndex}
+        onClose={() => { setSelectedImage(null); setSelectedImageIndex(-1); }}
+        onNext={() => {
+          if (!propertyWithImages?.images || selectedImageIndex === -1) return;
+          const nextIndex = (selectedImageIndex + 1) % propertyWithImages.images.length;
+          setSelectedImageIndex(nextIndex);
+          setSelectedImage(propertyWithImages.images[nextIndex]);
+        }}
+        onPrev={() => {
+          if (!propertyWithImages?.images || selectedImageIndex === -1) return;
+          const prevIndex = selectedImageIndex === 0 ? propertyWithImages.images.length - 1 : selectedImageIndex - 1;
+          setSelectedImageIndex(prevIndex);
+          setSelectedImage(propertyWithImages.images[prevIndex]);
+        }}
+      />
 
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Spaces & Assets</h2>
@@ -1353,49 +1060,50 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {propertyWithImages?.spaces?.filter((space: Space) => !space.deleted).map((space: Space) => (
-          <SpecificationSection
-            key={space.id}
-            title={space.name}
-            spaceId={space.id}
-            spaceName={space.name}
-            assets={(space.assets ?? []).filter((asset: Asset) => !asset.deleted).map((asset: Asset) => ({
-              id: asset.id,
-              description: asset.description,
-              discipline: asset.assetTypes?.discipline ?? "",
-              currentSpecifications: asset.currentSpecifications ?? {},
-              assetTypes: {
-                id: asset.assetTypes?.id ?? "",
-                name: asset.assetTypes?.name ?? "",
-                discipline: asset.assetTypes?.discipline ?? "",
-              },
-              deleted: asset.deleted ?? false,
-            }))}
-          />
-        ))}
+        <SpacesList
+          spaces={propertyWithImages?.spaces || []}
+          onShowTimeline={handleShowTimeline}
+          onCreateAsset={handleCreateAsset}
+          onEditSpace={handleEditSpace}
+          onDeleteSpace={handleDeleteSpace}
+          onEditAsset={handleEditAsset}
+          onDeleteAsset={handleDeleteAsset}
+          onDeleteFeature={handleDeleteFeature}
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Key className="h-5 w-5 mr-2" />Jobs & Access Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PinTable
-            propertyId={propertyId}
-            property={propertyWithImages}
-            jobs={allJobs}
-            jobAssets={allJobAssets}
-            onDeleteJob={handleDeleteJob}
-            onSaveJobEdits={handleSaveJobEdits}
-          />
-        </CardContent>
-      </Card>
+      <JobsSection
+        propertyId={propertyId}
+        property={propertyWithImages}
+        jobs={allJobs}
+        jobAssets={allJobAssets}
+        onDeleteJob={handleDeleteJob}
+        onSaveJobEdits={handleSaveJobEdits}
+        onOpenPinDialog={() => setIsPinDialogOpen(true)}
+      />
 
-      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mapToSharedProperty(propertyWithImages)} onSave={handleSavePin} />
+      <PinManagementDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} propertyId={propertyId} property={mappedProperty} onSave={handleSavePin} />
 
-      {renderDialog()}
+      <PropertyDialogController
+        mode={dialogContext.mode}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        dialogContext={dialogContext}
+        formData={formData}
+        setFormData={setFormData}
+        saving={saving}
+        showFeatureFormAssetEdit={showFeatureFormAssetEdit}
+        setShowFeatureFormAssetEdit={setShowFeatureFormAssetEdit}
+        showFeatureFormCreateAsset={showFeatureFormCreateAsset}
+        setShowFeatureFormCreateAsset={setShowFeatureFormCreateAsset}
+        featureFormCreateSpaceIndex={featureFormCreateSpaceIndex}
+        setFeatureFormCreateSpaceIndex={setFeatureFormCreateSpaceIndex}
+        newSpaceAssets={newSpaceAssets}
+        setNewSpaceAssets={setNewSpaceAssets}
+        assetTypes={assetTypes}
+        spaceTypes={spaceTypes}
+        onSave={handleSave}
+      />
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
@@ -1432,315 +1140,37 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
-        <DialogContent className="w-[96vw] max-w-[1100px] max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center mb-4">
-              <History className="h-5 w-5 mr-2" />Space Edit History
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {spaceChangelogHistory.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No history available</p>
-            ) : (
-              spaceChangelogHistory.map((item) => (
-                <Card key={item.id} className={`border-l-4 ${item.actions === 'DELETED' ? 'border-l-destructive' : 'border-l-blue-500'}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={item.actions === 'DELETED' ? 'destructive' : item.actions === 'CREATED' ? 'default' : 'secondary'}>
-                          {item.actions}
-                        </Badge>
-                        <Badge variant="outline">{(item as any).Assets?.AssetTypes?.name}</Badge>
-                      </div>
-                      <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm mb-2">{item.changeDescription}</p>
-                    {item.specifications && Object.keys(item.specifications).length > 0 && (
-                      <div className="mt-2 p-2 bg-muted/50 rounded space-y-1">
-                        {formatSpecifications(item.specifications)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTimelineDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ChangeLogTimeline open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen} title="Space Edit History" history={spaceChangelogHistory} />
 
-      <Dialog open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen}>
-        <DialogContent className="w-[96vw] max-w-[1200px] max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center mb-4">
-              <History className="h-5 w-5 mr-2" />Complete Property History
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {changelogHistory.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No history available</p>
-            ) : (
-              changelogHistory.map((item) => (
-                <Card key={item.id} className={`border-l-4 ${item.actions === 'DELETED' ? 'border-l-destructive' : 'border-l-primary/50'}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={item.actions === 'DELETED' ? 'destructive' : item.actions === 'CREATED' ? 'default' : 'secondary'}>
-                          {item.actions}
-                        </Badge>
-                        <Badge variant="outline">{(item as any).Assets?.Spaces?.name}</Badge>
-                        <Badge variant="secondary">{(item as any).Assets?.AssetTypes?.name}</Badge>
-                      </div>
-                      <span className="text-sm text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm mb-2">{item.changeDescription}</p>
-                    {item.specifications && Object.keys(item.specifications).length > 0 && (
-                      <div className="mt-2 p-3 bg-muted/50 rounded space-y-1">
-                        {formatSpecifications(item.specifications)}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAllHistoryDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ChangeLogTimeline open={isAllHistoryDialogOpen} onOpenChange={setIsAllHistoryDialogOpen} title="Complete Property History" history={changelogHistory} showSpacesAndAssetBadges />
 
-      {/* Image Upload Dialog */}
-      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
-        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Upload Images</DialogTitle>
-            <DialogDescription>Select images to upload to this property</DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            
-            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Choose Images
-            </Button>
-            
-            {selectedFiles.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {selectedFiles.map((file, idx) => (
-                  <div key={idx} className="relative border rounded-lg overflow-hidden">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => handleRemoveSelectedFile(idx)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <div className="p-2 bg-muted">
-                      <p className="text-xs truncate">{file.name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-                No images selected
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
-              <X className="h-4 w-4 mr-2" />Cancel
-            </Button>
-            <Button 
-              onClick={() => { setImageAction('upload'); handleConfirmImageAction('upload'); }} 
-              disabled={selectedFiles.length === 0}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImageUploadDialog
+        open={isImageUploadDialogOpen}
+        onOpenChange={setIsImageUploadDialogOpen}
+        selectedFiles={selectedFiles}
+        onFilesSelected={(files) => handleFileSelect(files)}
+        onRemoveFile={handleRemoveSelectedFile}
+        onConfirm={() => { setImageAction('upload'); handleConfirmImageAction('upload'); }}
+      />
 
-      {/* Image Delete Dialog */}
-      <Dialog open={isImageDeleteDialogOpen} onOpenChange={setIsImageDeleteDialogOpen}>
-        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Delete Images</DialogTitle>
-            <DialogDescription>Select images to delete from this property</DialogDescription>
-          </DialogHeader>
+      <SplashImageDialog
+        open={isSplashDialogOpen}
+        onOpenChange={setIsSplashDialogOpen}
+        images={propertyWithImages?.images || []}
+        selectedSplashImage={selectedSplashImage}
+        onSelectImage={setSelectedSplashImage}
+        onConfirm={() => handleConfirmImageAction('setSplash')}
+      />
 
-
-          <div className="space-y-4">
-            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {propertyWithImages.images.map((url: string, idx: number) => (
-                  <div 
-                    key={idx} 
-                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      selectedImagesToDelete.includes(url) 
-                        ? 'border-destructive ring-2 ring-destructive' 
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => handleToggleImageForDeletion(url)}
-                  >
-                    <img
-                      src={url}
-                      alt={`Image ${idx + 1}`}
-                      className="w-full h-48 object-cover"
-                    />
-                    {selectedImagesToDelete.includes(url) && (
-                      <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
-                        <div className="bg-destructive text-white rounded-full p-2">
-                          <Trash2 className="h-6 w-6" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No images available
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImageDeleteDialogOpen(false)}>
-              <X className="h-4 w-4 mr-2" />Cancel
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={() => { setImageAction('delete'); handleConfirmImageAction('delete'); }} 
-              disabled={selectedImagesToDelete.length === 0}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete {selectedImagesToDelete.length > 0 && `(${selectedImagesToDelete.length})`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Splash image selection*/}
-      <Dialog open={isSplashDialogOpen} onOpenChange={setIsSplashDialogOpen}>
-        <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select Splash Image</DialogTitle>
-            <DialogDescription>Choose an image to use as the main property splash image</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {propertyWithImages?.images && propertyWithImages.images.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-                {propertyWithImages.images.map((imgUrl: string, idx: number) => (
-                  <div
-                    key={imgUrl} // use url as key for uniqueness
-                    className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      selectedSplashImage === imgUrl
-                        ? 'border-primary ring-2 ring-primary'
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => setSelectedSplashImage(imgUrl)}
-                  >
-                    <img
-                      src={imgUrl}
-                      alt={`Property Image ${idx + 1}`}
-                      className="w-full h-48 object-cover"
-                    />
-                    {selectedSplashImage === imgUrl && (
-                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                        <div className="bg-primary text-white rounded-full p-2">
-                          <CheckCircle className="h-6 w-6" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No images available
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSplashDialogOpen(false)}>
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              // Calls the handler, explicitly passing the 'setSplash' action.
-              onClick={() => handleConfirmImageAction('setSplash')} 
-              disabled={!selectedSplashImage}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Set as Splash Image
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Image Action Confirmation Dialog */}
-      <AlertDialog open={isImageConfirmOpen} onOpenChange={setIsImageConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {/* CORRECTED TITLE LOGIC */}
-              {imageAction === 'upload'
-                ? 'Confirm Image Upload'
-                : imageAction === 'delete'
-                ? 'Confirm Image Deletion'
-                : 'Confirm Splash Image Change'}
-            </AlertDialogTitle>
-            
-            <AlertDialogDescription>
-              {/* CORRECTED DESCRIPTION LOGIC */}
-              {imageAction === 'upload'
-                ? `Are you sure you want to upload ${selectedFiles.length} image(s)?`
-                : imageAction === 'delete'
-                ? `Are you sure you want to delete ${selectedImagesToDelete.length} image(s)? This action cannot be undone.`
-                : 'Are you sure you want to set the selected image as the new property splash image?'} 
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <AlertDialogFooter>
-            {/* Retain the setImageAction(null) on Cancel to clear the state */}
-            <AlertDialogCancel onClick={() => setImageAction(null)}>Cancel</AlertDialogCancel>
-            
-            <AlertDialogAction onClick={handleFinalImageAction}>
-              {/* CORRECTED ACTION BUTTON TEXT */}
-              {imageAction === 'upload'
-                ? 'Upload'
-                : imageAction === 'delete'
-                ? 'Delete'
-                : imageAction === 'setSplash'
-                ? 'Set Splash Image' // User-friendly text
-                : 'Confirm'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ImageActionConfirmDialog
+        open={isImageConfirmOpen}
+        onOpenChange={setIsImageConfirmOpen}
+        action={imageAction}
+        selectedFilesCount={selectedFiles.length}
+        selectedImagesToDeleteCount={selectedImagesToDelete.length}
+        onConfirm={handleFinalImageAction}
+        onCancel={() => setImageAction(null)}
+      />
     </div>
   );
 }

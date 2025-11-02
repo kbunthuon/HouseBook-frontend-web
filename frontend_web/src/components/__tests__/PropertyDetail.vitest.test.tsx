@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '../../test-utils';
 import { MemoryRouter } from 'react-router-dom';
 // userEvent import removed — not used in these tests to avoid resolver issues
 import { vi } from 'vitest';
-import { PropertyDetail } from '../PropertyDetail';
+import { PropertyDetail } from '../../features/property/pages/PropertyDetail';
 import { apiClient } from '@shared/api/wrappers';
 // import { getPropertyDetails, getPropertyOwners } from '../../../../backend/FetchData';
 import { fetchJobsInfo, deleteJob } from '../../../../backend/JobService';
