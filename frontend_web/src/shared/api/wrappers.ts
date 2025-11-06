@@ -11,6 +11,8 @@ import { checkOwnerExists } from "@backend/OnboardPropertyService";
 import { PropertyUpdate, SpaceUpdate, AssetUpdate } from "@backend/PropertyEditService";
 
 // TODO: Move these types to shared package
+
+// TODO: break these funcs down into specialized classes to be composed in ApiClientComposed.ts
 export interface CreateSpaceParams {
   propertyId: string;
   spaceName: string;
@@ -116,7 +118,7 @@ class ApiClient {
     url: string,
     options: RequestInit = {}
   ): Promise<Response> {
-    // 1️⃣ Refresh if expired
+    // Refresh if expired
     if (TokenManager.isTokenExpired()) {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
@@ -125,7 +127,7 @@ class ApiClient {
       }
     }
 
-    // 2️⃣ Add access token to headers
+    // Add access token to headers
     let accessToken = TokenManager.getAccessToken();
     if (!accessToken) throw new Error("No access token found. Please login.");
 
@@ -139,7 +141,7 @@ class ApiClient {
       throw err;
     }
 
-    // 3️⃣ Retry once if 401
+    // Retry once if 401
     if (response.status === 401) {
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
@@ -176,7 +178,6 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -186,7 +187,7 @@ class ApiClient {
 
     const data = await response.json();
 
-    // Store new tokens in our custom TokenManager
+    // Store new tokens in TokenManager
     TokenManager.setTokens(
       data.user.accessToken,
       data.user.refreshToken,
@@ -226,8 +227,6 @@ class ApiClient {
     return response.json();
   }
 
-  // In your ApiClient class, update the logout method:
-
   async logout() {
     try {
       // 1. Sign out from Supabase first
@@ -251,14 +250,10 @@ class ApiClient {
     }
   }
 
-  // Also update the login method to ensure clean state:
 
   async login(params: LoginParams) {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
-      // Clear Supabase session
-      //await supabase.auth.signOut({ scope: "local" });
-
       // Nuclear option: Clear ALL sessionStorage
       sessionStorage.clear();
 
@@ -287,26 +282,6 @@ class ApiClient {
       data.user.refreshToken,
       data.user.expiresAt
     );
-
-    // Restore Supabase session
-    /*
-    try {
-      const { error: setSessionError } = await supabase.auth.setSession({
-        access_token: data.user.accessToken,
-        refresh_token: data.user.refreshToken,
-      });
-
-      if (setSessionError) {
-        console.error("Error setting Supabase session:", setSessionError);
-        throw new Error("Failed to restore Supabase session");
-      }
-
-      console.log("New session created for:", data.user.email);
-    } catch (error) {
-      console.error("Failed to set Supabase session:", error);
-      throw error;
-    }
-    */
 
     return data.user;
   }
@@ -548,25 +523,72 @@ class ApiClient {
     file: File,
     description?: string
   ) {
-    const formData = new FormData();
-    formData.append("propertyId", propertyId);
-    formData.append("file", file);
-    if (description) {
-      formData.append("description", description);
+    const isVideo = file.type.startsWith("video/");
+
+    if (!isVideo) {
+      // Image upload
+      const formData = new FormData();
+      formData.append("propertyId", propertyId);
+      formData.append("file", file);
+      if (description) formData.append("description", description);
+
+      const response = await this.authenticatedRequest(API_ROUTES.IMAGES.UPLOAD, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to upload image");
+      }
+
+      return response.json();
+    } else {
+      // Video upload
+
+      // Get signed upload url from backend api
+      const signedUrlResponse = await this.authenticatedRequest(
+        API_ROUTES.VIDEOS.GET_UPLOAD_URL(propertyId, file.name),
+        { method: "GET" }
+      );
+
+      if (!signedUrlResponse.ok) {
+        const err = await signedUrlResponse.json();
+        throw new Error(err.error || "Failed to get signed video upload URL");
+      }
+
+      const { signedUrl, filePath } = await signedUrlResponse.json();
+
+      // Upload video file using signed url, goes directly to Supabase storage bucket
+      const uploadRes = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Failed to upload video: ${uploadRes.statusText}`);
+      }
+
+      // Request backend api to update appropriate tables for the upload
+      const recordRes = await this.authenticatedRequest(API_ROUTES.VIDEOS.RECORD_UPLOAD, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId,
+          filePath,
+          fileName: file.name,
+          description,
+        }),
+      });
+
+      if (!recordRes.ok) {
+        const err = await recordRes.json();
+        throw new Error(err.error || "Failed to record video upload");
+      }
+
+      return recordRes.json();
     }
-
-    const response = await this.authenticatedRequest(API_ROUTES.IMAGES.UPLOAD, {
-      method: "POST",
-      body: formData,
-      // Don't set Content-Type header, let browser set it with boundary
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to upload image");
-    }
-
-    return response.json();
   }
 
   // deletes image(s) based on signed URL(s)
@@ -1148,8 +1170,6 @@ class ApiClient {
     const data = await response.json();
     return data;
   }
-
-
 }
 
 // Export singleton instance

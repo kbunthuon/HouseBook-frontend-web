@@ -20,6 +20,8 @@ export default function SplashImageDialog({
   onSelectImage,
   onConfirm,
 }: SplashImageDialogProps) {
+  const imageUrls = images.filter((url) => /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url.split("?")[0]));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -29,9 +31,9 @@ export default function SplashImageDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {images && images.length > 0 ? (
+          {imageUrls.length > 0 ? (
             <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
-              {images.map((imgUrl: string, idx: number) => (
+              {imageUrls.map((imgUrl, idx) => (
                 <div
                   key={imgUrl}
                   className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
@@ -62,6 +64,7 @@ export default function SplashImageDialog({
             </div>
           )}
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4 mr-2" />
