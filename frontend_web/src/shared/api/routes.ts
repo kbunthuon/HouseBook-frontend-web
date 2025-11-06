@@ -1,7 +1,7 @@
 // routes.ts
 // API Routes Configuration for Housebook Backend
 
-const BASE_URL = "https://housebook-backend-ehwcbj9oo-group-11s-projects.vercel.app/api";
+const BASE_URL = "https://housebook-backend-alpha.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
