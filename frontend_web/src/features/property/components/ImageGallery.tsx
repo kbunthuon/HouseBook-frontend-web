@@ -23,7 +23,7 @@ export default function ImageGallery({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
         <CardTitle className="flex items-center">
           <Image className="h-5 w-5 mr-2" />
-          Property Media
+          Property Images
         </CardTitle>
         <div className="flex items-center space-x-2 flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onOpenUpload}>
