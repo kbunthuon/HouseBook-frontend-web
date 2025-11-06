@@ -9,6 +9,9 @@ import { JobApiClient } from "./services/JobApiClient";
 import { ChangelogApiClient } from "./services/ChangelogApiClient";
 import { TransferApiClient } from "./services/TransferApiClient";
 
+
+// This is a composite class that uses api clients delegated to different tasks (in services)
+// Currently low priority
 export class ApiClientComposed  extends BaseApiClient {
     public auth: AuthApiClient;
     public user: UserApiClient;

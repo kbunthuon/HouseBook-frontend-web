@@ -11,6 +11,8 @@ import { checkOwnerExists } from "@backend/OnboardPropertyService";
 import { PropertyUpdate, SpaceUpdate, AssetUpdate } from "@backend/PropertyEditService";
 
 // TODO: Move these types to shared package
+
+// TODO: break these funcs down into specialized classes to be composed in ApiClientComposed.ts
 export interface CreateSpaceParams {
   propertyId: string;
   spaceName: string;
@@ -176,7 +178,6 @@ class ApiClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      //credentials: "include",
     });
 
     if (!response.ok) {
@@ -186,7 +187,7 @@ class ApiClient {
 
     const data = await response.json();
 
-    // Store new tokens in our custom TokenManager
+    // Store new tokens in TokenManager
     TokenManager.setTokens(
       data.user.accessToken,
       data.user.refreshToken,
@@ -249,14 +250,10 @@ class ApiClient {
     }
   }
 
-  // Also update the login method to ensure clean state:
 
   async login(params: LoginParams) {
     // Clear any existing sessions/tokens first to ensure fresh login
     try {
-      // Clear Supabase session
-      //await supabase.auth.signOut({ scope: "local" });
-
       // Nuclear option: Clear ALL sessionStorage
       sessionStorage.clear();
 
@@ -548,6 +545,8 @@ class ApiClient {
       return response.json();
     } else {
       // Video upload
+
+      // Get signed upload url from backend api
       const signedUrlResponse = await this.authenticatedRequest(
         API_ROUTES.VIDEOS.GET_UPLOAD_URL(propertyId, file.name),
         { method: "GET" }
@@ -560,6 +559,7 @@ class ApiClient {
 
       const { signedUrl, filePath } = await signedUrlResponse.json();
 
+      // Upload video file using signed url, goes directly to Supabase storage bucket
       const uploadRes = await fetch(signedUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
@@ -570,6 +570,7 @@ class ApiClient {
         throw new Error(`Failed to upload video: ${uploadRes.statusText}`);
       }
 
+      // Request backend api to update appropriate tables for the upload
       const recordRes = await this.authenticatedRequest(API_ROUTES.VIDEOS.RECORD_UPLOAD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -589,8 +590,6 @@ class ApiClient {
       return recordRes.json();
     }
   }
-
-
 
   // deletes image(s) based on signed URL(s)
   async deletePropertyImages(signedUrls: string | string[]) {
@@ -1171,8 +1170,6 @@ class ApiClient {
     const data = await response.json();
     return data;
   }
-
-
 }
 
 // Export singleton instance

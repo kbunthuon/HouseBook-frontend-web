@@ -28,15 +28,15 @@ export default function ImageGallery({
         <div className="flex items-center space-x-2 flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onOpenUpload}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Images
+            Add Image/Video
           </Button>
           <Button variant="outline" size="sm" onClick={onOpenDelete} disabled={!images || images.length === 0}>
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete Images
+            Delete Image
           </Button>
           <Button variant="outline" size="sm" onClick={onOpenSplash} disabled={!images || images.length === 0}>
             <Plus className="h-4 w-4 mr-2" />
-            Select splash image
+            Select Splash Image
           </Button>
         </div>
       </CardHeader>
