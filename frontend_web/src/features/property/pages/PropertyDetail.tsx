@@ -51,6 +51,7 @@ import { getPropertyHistory, getSpaceHistory } from "@backend/ChangeLogService";
 import { apiClient } from "@shared/api/wrappers";
 import { useMappedProperty } from "../hooks/useMappedProperty";
 import { useRefetchPropertyData } from "../hooks/useRefetchPropertyData";
+import ImageDeleteDialog from "../components/ImageDeleteDialog";
 
 interface PropertyDetailProps {
   propertyId: string;
@@ -1151,6 +1152,15 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
         onFilesSelected={(files) => handleFileSelect(files)}
         onRemoveFile={handleRemoveSelectedFile}
         onConfirm={() => { setImageAction('upload'); handleConfirmImageAction('upload'); }}
+      />
+
+      <ImageDeleteDialog
+        open={isImageDeleteDialogOpen}
+        onOpenChange={setIsImageDeleteDialogOpen}
+        images={propertyWithImages?.images || []}
+        selectedImagesToDelete={selectedImagesToDelete}
+        onToggleImage={handleToggleImageForDeletion}
+        onConfirm={() => handleConfirmImageAction('delete')}
       />
 
       <SplashImageDialog

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@ui/card';
 import { Button } from '@ui/button';
-import { Plus, Trash2, Image } from 'lucide-react';
+import { Plus, Trash2, Image, Film } from 'lucide-react';
 
 export default function ImageGallery({
   images,
@@ -16,12 +16,14 @@ export default function ImageGallery({
   onOpenDelete: () => void;
   onOpenSplash: () => void;
 }) {
+  const isVideo = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+
   return (
     <Card className="w-full max-w-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 flex-wrap gap-4">
         <CardTitle className="flex items-center">
           <Image className="h-5 w-5 mr-2" />
-          Property Images
+          Property Media
         </CardTitle>
         <div className="flex items-center space-x-2 flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onOpenUpload}>
@@ -50,7 +52,11 @@ export default function ImageGallery({
                   onClick={() => onOpenViewer(url, idx)}
                 >
                   <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
-                    <img src={url} alt={`Property Image ${idx + 1}`} className="w-full h-full" style={{ objectFit: 'contain' }} />
+                    {isVideo(url) ? (
+                      <video src={url} className="w-full h-full" style={{ objectFit: 'contain' }} controls />
+                    ) : (
+                      <img src={url} alt={`Property Image ${idx + 1}`} className="w-full h-full" style={{ objectFit: 'contain' }} />
+                    )}
                   </div>
                 </div>
               ))}

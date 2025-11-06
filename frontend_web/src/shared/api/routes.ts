@@ -1,7 +1,7 @@
 // routes.ts
 // API Routes Configuration for Housebook Backend
 
-const BASE_URL = "https://housebook-backend-alpha.vercel.app/api";
+const BASE_URL = "https://housebook-backend-ehwcbj9oo-group-11s-projects.vercel.app/api";
 
 export const API_ROUTES = {
   // Base URL
@@ -84,6 +84,16 @@ export const API_ROUTES = {
     UPLOAD: `${BASE_URL}/images`,
     DELETE: `${BASE_URL}/images`,
     PATCH: `${BASE_URL}/images`,
+  },
+
+  // Videos Routes
+  VIDEOS: {
+    GET_UPLOAD_URL: (propertyId: string, fileName: string) => {
+      return `${BASE_URL}/images?propertyId=${propertyId}&action=getVideoUploadUrl&fileName=${encodeURIComponent(
+        fileName
+      )}`;
+    },
+    RECORD_UPLOAD: `${BASE_URL}/images?action=recordVideoUpload`, // POST to record in db
   },
 
   // Changelog Routes

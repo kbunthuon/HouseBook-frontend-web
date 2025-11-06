@@ -21,13 +21,15 @@ export default function ImageUploadDialog({
   onConfirm,
 }: ImageUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const maxVideoSizeMB = 25; // Supabase upload max is 50, but restrict to half
+  const isVideo = (file: File) => file.type.startsWith("video/");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Upload Images</DialogTitle>
-          <DialogDescription>Select images to upload to this property</DialogDescription>
+          <DialogTitle>Upload Image/Video</DialogTitle>
+          <DialogDescription>Select files to upload to this property</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -35,25 +37,46 @@ export default function ImageUploadDialog({
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*"
-            onChange={(e) => onFilesSelected(e.target.files)}
+            accept="image/*,video/*"
+            onChange={(e) => {
+              if (!e.target.files) return;
+              const valid = Array.from(e.target.files).filter(file => {
+                if (isVideo(file) && file.size > maxVideoSizeMB * 1024 * 1024) {
+                  alert(`${file.name} exceeds ${maxVideoSizeMB}MB and will be skipped`);
+                  return false;
+                }
+                return true;
+              });
+              const dataTransfer = new DataTransfer();
+              valid.forEach(f => dataTransfer.items.add(f));
+              onFilesSelected(dataTransfer.files);
+            }}
             className="hidden"
           />
           
           <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
-            Choose Images
+            Choose Images or Videos
           </Button>
           
           {selectedFiles.length > 0 ? (
             <div className="grid grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto p-2">
               {selectedFiles.map((file, idx) => (
                 <div key={idx} className="relative border rounded-lg overflow-hidden">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-full h-48 object-cover"
-                  />
+                  {isVideo(file) ? (
+                    // show video thumbnail 
+                    <video
+                      src={URL.createObjectURL(file)}
+                      controls
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
                   <Button
                     variant="destructive"
                     size="sm"
@@ -62,15 +85,12 @@ export default function ImageUploadDialog({
                   >
                     <X className="h-4 w-4" />
                   </Button>
-                  <div className="p-2 bg-muted">
-                    <p className="text-xs truncate">{file.name}</p>
-                  </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-              No images selected
+              No files selected
             </div>
           )}
         </div>
