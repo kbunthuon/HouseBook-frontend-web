@@ -40,15 +40,15 @@ export default function ImageGallery({
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-w-full overflow-x-auto">
         {images && images.length > 0 ? (
-          <div className="overflow-x-auto py-4">
-            <div className="flex gap-6 w-max">
+          <div className="w-full max-w-full overflow-x-auto py-4">
+            <div className="flex gap-6 overflow-y-hidden">
               {images.map((url: string, idx: number) => (
                 <div
                   key={idx}
                   className="shrink-0 bg-gray-50 rounded-2xl shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col cursor-pointer"
-                  style={{ width: '320px', height: '320px' }}
+                  style={{ height: '320px' }}
                   onClick={() => onOpenViewer(url, idx)}
                 >
                   <div className="w-full bg-muted flex items-center justify-center overflow-hidden" style={{ height: '320px' }}>
