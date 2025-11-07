@@ -6,6 +6,7 @@ import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui/select";
 import { Separator } from "@ui/separator";
+import { Checkbox } from "@ui/checkbox";
 import { toast } from "sonner";
 import { X, Loader2, Send } from "lucide-react";
 import { ROUTES } from "Routes";
@@ -51,6 +52,7 @@ export default function OldOwnerTransferDialog({
   const [invitedOwners, setInvitedOwners] = React.useState<InvitedOwner[]>([]);
   const [currentOwners, setCurrentOwners] = React.useState<InvitedOwner[]>([]);
   const [loadingOwners, setLoadingOwners] = React.useState(false);
+  const [ownersToRemove, setOwnersToRemove] = React.useState<string[]>([]);
 
   const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
@@ -84,11 +86,13 @@ export default function OldOwnerTransferDialog({
     const fetchCurrentOwners = async () => {
       if (!propertyId) {
         setCurrentOwners([]);
+        setOwnersToRemove([]);
         return;
       }
 
       setLoadingOwners(true);
       setCurrentOwners([]); // Reset the list
+      setOwnersToRemove([]);
 
       try {
         const owners: Owner[] = await apiClient.getPropertyOwners(propertyId);
@@ -239,6 +243,14 @@ export default function OldOwnerTransferDialog({
     }
   };
 
+  const toggleOwnerRemoval = (userId: string) => {
+    setOwnersToRemove(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:w-[500px] max-h-[90vh] overflow-y-auto">
@@ -271,7 +283,7 @@ export default function OldOwnerTransferDialog({
           {/* Current Owners */}
           {propertyId && (
             <div>
-              <Label>Current Owners</Label>
+              <Label>Current Owners (Check to remove)</Label>
               {loadingOwners ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -282,9 +294,17 @@ export default function OldOwnerTransferDialog({
                   {currentOwners.map((owner, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center justify-between bg-background p-2 rounded"
+                      className="flex items-center gap-3 bg-background p-2 rounded"
                     >
-                      <div className="flex flex-col">
+                      <Checkbox
+                        id={`owner-${owner.userId}`}
+                        checked={ownersToRemove.includes(owner.userId || '')}
+                        onCheckedChange={() => toggleOwnerRemoval(owner.userId || '')}
+                      />
+                      <label 
+                        htmlFor={`owner-${owner.userId}`}
+                        className="flex flex-col cursor-pointer flex-1"
+                      >
                         <span className="text-sm font-medium">
                           {owner.firstName && owner.lastName 
                             ? `${owner.firstName} ${owner.lastName}`
@@ -293,12 +313,17 @@ export default function OldOwnerTransferDialog({
                         {owner.firstName && owner.lastName && (
                           <span className="text-xs text-muted-foreground">{owner.email}</span>
                         )}
-                      </div>
+                      </label>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground mt-2">No current owners found.</p>
+              )}
+              {ownersToRemove.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {ownersToRemove.length} owner(s) selected to remove
+                </p>
               )}
             </div>
           )}
@@ -398,7 +423,7 @@ export default function OldOwnerTransferDialog({
               }
 
               // Check that at least one change is being made
-              if (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0) {
+              if (invitedOwners.length === 0 && ownersToRemove.length === 0) {
                 toast.error("Please either add new owners or select owners to move out");
                 return;
               }
@@ -411,7 +436,7 @@ export default function OldOwnerTransferDialog({
               // Calculate newOwnerStateIds: remaining owners + new owners
               // Remaining = current owners NOT selected to move out
               const remainingOwnerIds = currentOwners
-                .filter(o => !selectedOwnersMovingOut.includes(o.userId || ''))
+                .filter(o => !ownersToRemove.includes(o.userId || ''))
                 .map(o => o.userId)
                 .filter((id): id is string => !!id);
 
@@ -425,7 +450,7 @@ export default function OldOwnerTransferDialog({
               toast.success("Transfer initiated");
               onOpenChange(false);
             }}
-            disabled={!propertyId || (invitedOwners.length === 0 && selectedOwnersMovingOut.length === 0)}
+            disabled={!propertyId || (invitedOwners.length === 0 && ownersToRemove.length === 0)}
           >
             <Send className="mr-2 h-4 w-4" />
             Initiate Transfer
