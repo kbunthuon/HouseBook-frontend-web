@@ -6,8 +6,6 @@ import {
 } from "./routes";
 import { SignupData } from "@housebookgroup/shared-types";
 import { supabase } from "@config/supabaseClient";
-import { rejectTransfer } from "@backend/TransferService";
-import { checkOwnerExists } from "@backend/OnboardPropertyService";
 import { PropertyUpdate, SpaceUpdate, AssetUpdate } from "@backend/PropertyEditService";
 import { Job } from "@backend/JobService";
 
@@ -345,7 +343,7 @@ class ApiClient {
 
   async checkOwnerExists(email: string): Promise<boolean> {
     try {
-      const exists = await checkOwnerExists(email);
+      const exists = await this.checkOwnerExists(email);
       return exists;
     } catch (error) {
       console.error("Error checking owner exists:", error);
