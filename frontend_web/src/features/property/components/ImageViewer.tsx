@@ -17,7 +17,7 @@ export default function ImageViewer({
   onPrev: () => void;
 }) {
   if (!selectedImage) return null;
-
+  const isVideo = (url: string) => /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -53,8 +53,24 @@ export default function ImageViewer({
         style={{ maxWidth: '90vw', maxHeight: '90vh', animation: 'imageZoom 0.3s ease-out' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <img src={selectedImage} alt="Property Image" className="max-w-full max-h-full object-contain shadow-2xl" style={{ borderRadius: '16px', maxWidth: '90vw', maxHeight: '90vh' }} />
+        {isVideo(selectedImage) ? (
+          <video
+            src={selectedImage}
+            controls
+            autoPlay
+            className="max-w-full max-h-full shadow-2xl rounded-2xl"
+            style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+          />
+        ) : (
+          <img
+            src={selectedImage}
+            alt="Property Image"
+            className="max-w-full max-h-full object-contain shadow-2xl rounded-2xl"
+            style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+          />
+        )}
       </div>
+
 
       {images && images.length > 1 && (
         <button
