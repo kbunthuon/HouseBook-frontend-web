@@ -9,6 +9,7 @@ import { supabase } from "@config/supabaseClient";
 import { rejectTransfer } from "@backend/TransferService";
 import { checkOwnerExists } from "@backend/OnboardPropertyService";
 import { PropertyUpdate, SpaceUpdate, AssetUpdate } from "@backend/PropertyEditService";
+import { Job } from "@backend/JobService";
 
 // TODO: Move these types to shared package
 
@@ -1120,7 +1121,7 @@ class ApiClient {
   /**
    * Update an existing job and its assets
    */
-  async updateJob(job: { id: string; title: string; endTime?: string | null; pin?: string }, assetIds: string[]) {
+  async updateJob(job: Job, assetIds: string[]) {
     const response = await this.authenticatedRequest(
       API_ROUTES.JOBS.UPDATE_JOB,
       {
