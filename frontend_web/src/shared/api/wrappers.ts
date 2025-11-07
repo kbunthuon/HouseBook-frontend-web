@@ -41,10 +41,7 @@ class TokenManager {
     refreshToken: string,
     expiresAt?: number
   ) {
-    console.log("Setting tokens in TokenManager");
-    console.log("Access Token:", accessToken ? accessToken : "null");
-    console.log("Refresh Token:", refreshToken ? refreshToken : "null");
-    console.log("Expires At:", expiresAt);  
+
 
     sessionStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
     sessionStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
@@ -85,7 +82,6 @@ class ApiClient {
   private refreshPromise: Promise<boolean> | null = null;
 
   private async refreshAccessToken(): Promise<boolean> {
-    console.log("Refreshing access token...");
     if (this.refreshPromise) return this.refreshPromise;
 
     this.refreshPromise = (async () => {
@@ -109,7 +105,6 @@ class ApiClient {
       return await this.refreshPromise;
     } finally {
       this.refreshPromise = null;
-      console.log("Token refresh process completed.");
     }
   }
 
@@ -207,8 +202,6 @@ class ApiClient {
         throw new Error("Failed to restore Supabase session");
       }
 
-      console.log("New session created for:", data.user.email);
-      console.log("Supabase session restored");
     } catch (error) {
       console.error("Failed to set Supabase session:", error);
       throw error;
@@ -232,7 +225,6 @@ class ApiClient {
       // 1. Sign out from Supabase first
       try {
         await supabase.auth.signOut({ scope: "local" });
-        console.log("Supabase session cleared");
       } catch (supabaseError) {
         console.warn("Supabase signOut warning (non-critical):", supabaseError);
       }
@@ -256,8 +248,6 @@ class ApiClient {
     try {
       // Nuclear option: Clear ALL sessionStorage
       sessionStorage.clear();
-
-      console.log("Previous session cleared completely");
     } catch (error) {
       console.warn("Error clearing previous session:", error);
     }
