@@ -272,6 +272,28 @@ class ApiClient {
       data.user.expiresAt
     );
 
+    // IMPORTANT: Restore Supabase session with the tokens we received
+    // This is necessary for Supabase RLS policies to work correctly
+    try {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: data.user.accessToken,
+        refresh_token: data.user.refreshToken,
+      });
+
+      if (setSessionError) {
+        console.error("Error setting Supabase session:", setSessionError);
+        throw new Error("Failed to restore Supabase session");
+      }
+
+      // Debug: Verify session was set
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Supabase session restored for user:", user?.id);
+
+    } catch (error) {
+      console.error("Failed to set Supabase session:", error);
+      throw error;
+    }
+
     return data.user;
   }
 

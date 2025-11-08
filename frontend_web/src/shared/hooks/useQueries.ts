@@ -298,6 +298,14 @@ export const useApproveEdit = () => {
     mutationFn: async (changelogId: string) => {
       const { supabase } = await import('@config/supabaseClient');
 
+      // Debug: Verify Supabase session exists
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("useApproveEdit - Current Supabase user:", user?.id);
+
+      if (!user) {
+        throw new Error("No authenticated Supabase session found. Please log in again.");
+      }
+
       // First, get the changelog to retrieve asset_id and specifications
       const { data: changelog, error: fetchError } = await supabase
         .from("ChangeLog")
@@ -367,7 +375,7 @@ export const useApproveTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.approveTransfer(transferId, ownerId );
+      return await apiClient.approveTransfer(transferId, {ownerId} );
     },
     onSuccess: (_, variables) => {
       // Invalidate transfers to refetch updated data
@@ -386,7 +394,7 @@ export const useRejectTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.rejectTransfer(transferId, ownerId );
+      return await apiClient.rejectTransfer(transferId, {ownerId} );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
