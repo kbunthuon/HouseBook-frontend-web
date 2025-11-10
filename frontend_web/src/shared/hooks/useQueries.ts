@@ -663,3 +663,234 @@ export const useSaveJob = () => {
     },
   });
 };
+
+// ==================== PROPERTY MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for updating property details
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateProperty = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, updates }: { propertyId: string; updates: any }) => {
+      const { updateProperty } = await import('@backend/PropertyEditService');
+      return await updateProperty(propertyId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to trigger refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== SPACE MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for creating a new space
+ * Automatically invalidates property cache on success
+ */
+export const useCreateSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, spaceName, spaceType, assets }: {
+      propertyId: string;
+      spaceName: string;
+      spaceType: string;
+      assets?: Array<{ assetTypeId: number; description: string; specifications: Record<string, any> }>
+    }) => {
+      const { createSpace } = await import('@backend/PropertyEditService');
+      return await createSpace(propertyId, spaceName, spaceType, assets || []);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show new space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating a space
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId, updates }: { spaceId: string; propertyId: string; updates: any }) => {
+      const { updateSpace } = await import('@backend/PropertyEditService');
+      return await updateSpace(spaceId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show updated space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting a space
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId }: { spaceId: string; propertyId: string }) => {
+      const { deleteSpace } = await import('@backend/PropertyEditService');
+      return await deleteSpace(spaceId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== ASSET MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for creating a new asset
+ * Automatically invalidates property cache on success
+ */
+export const useCreateAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId, assetTypeId, description, specifications }: {
+      spaceId: string;
+      propertyId: string;
+      assetTypeId: number;
+      description: string;
+      specifications: Record<string, any>
+    }) => {
+      const { createAsset } = await import('@backend/PropertyEditService');
+      return await createAsset(spaceId, assetTypeId, description, specifications);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show new asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating an asset
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId, updates }: { assetId: string; propertyId: string; updates: any }) => {
+      const { updateAsset } = await import('@backend/PropertyEditService');
+      return await updateAsset(assetId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show updated asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting an asset
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId }: { assetId: string; propertyId: string }) => {
+      const { deleteAsset } = await import('@backend/PropertyEditService');
+      return await deleteAsset(assetId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting a feature from an asset
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteFeature = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId, featureName }: { assetId: string; propertyId: string; featureName: string }) => {
+      const { deleteFeature } = await import('@backend/PropertyEditService');
+      return await deleteFeature(assetId, featureName);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted feature
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== IMAGE MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for uploading property images
+ * Automatically invalidates property images cache on success
+ */
+export const useUploadPropertyImages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, files }: { propertyId: string; files: File[] }) => {
+      const results = [];
+      for (const file of files) {
+        const result = await apiClient.uploadPropertyImage(propertyId, file);
+        results.push(result);
+      }
+      return results;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property images cache to show new images
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting property images
+ * Automatically invalidates property images cache on success
+ */
+export const useDeletePropertyImages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, imageNames }: { propertyId: string; imageNames: string[] }) => {
+      return await apiClient.deletePropertyImages(imageNames);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property images cache to remove deleted images
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating property splash image
+ * Automatically invalidates property and images cache on success
+ */
+export const useUpdatePropertySplashImage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, imageName }: { propertyId: string; imageName: string }) => {
+      return await apiClient.updatePropertySplashImage(imageName);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate both property and images cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
+    },
+  });
+};

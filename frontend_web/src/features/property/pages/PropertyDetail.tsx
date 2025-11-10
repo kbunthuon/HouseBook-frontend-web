@@ -30,19 +30,30 @@ import { FeatureCard } from "../components/FeatureCard";
 import { toast } from "sonner";
 import { Property, Asset, Space, Owner } from "@housebookgroup/shared-types";
 import { ChangeLog } from "@shared/types/serverTypes";
-import { useProperty, usePropertyImages, usePropertyOwners, useAssetTypes, useSpaceTypes, usePropertyJobs, useDeleteJob } from "@hooks/useQueries";
+import {
+  useProperty,
+  usePropertyImages,
+  usePropertyOwners,
+  useAssetTypes,
+  useSpaceTypes,
+  usePropertyJobs,
+  useDeleteJob,
+  useUpdateProperty,
+  useCreateSpace,
+  useUpdateSpace,
+  useDeleteSpace,
+  useCreateAsset,
+  useUpdateAsset,
+  useDeleteAsset,
+  useDeleteFeature,
+  useUploadPropertyImages,
+  useDeletePropertyImages,
+  useUpdatePropertySplashImage
+} from "@hooks/useQueries";
 
 import { fetchJobsInfo, Job, JobAsset, deleteJob } from "@backend/JobService";
 
 import {
-  updateProperty,
-  updateSpace,
-  updateAsset,
-  deleteSpace,
-  deleteAsset,
-  createSpace,
-  createAsset,
-  deleteFeature,
   PropertyUpdate,
   SpaceUpdate,
   AssetUpdate
@@ -97,6 +108,19 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
   // React Query hook for jobs
   const { data: jobsData, isLoading: jobsLoading } = usePropertyJobs(propertyId);
   const deleteJobMutation = useDeleteJob();
+
+  // React Query mutation hooks for property operations
+  const updatePropertyMutation = useUpdateProperty();
+  const createSpaceMutation = useCreateSpace();
+  const updateSpaceMutation = useUpdateSpace();
+  const deleteSpaceMutation = useDeleteSpace();
+  const createAssetMutation = useCreateAsset();
+  const updateAssetMutation = useUpdateAsset();
+  const deleteAssetMutation = useDeleteAsset();
+  const deleteFeatureMutation = useDeleteFeature();
+  const uploadImagesMutation = useUploadPropertyImages();
+  const deleteImagesMutation = useDeletePropertyImages();
+  const updateSplashMutation = useUpdatePropertySplashImage();
 
   const allJobs = jobsData?.jobs || [];
   const allJobAssets = jobsData?.jobAssets || [];
@@ -253,51 +277,63 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
           type: formData.type,
           total_floor_area: formData.total_floor_area
         };
-        await updateProperty(propertyId, updates);
+        await updatePropertyMutation.mutateAsync({
+          propertyId,
+          updates
+        });
         toast.success("Property updated successfully");
-        
+
       } else if (dialogContext.mode === 'space') {
         const updates: SpaceUpdate = {
           name: formData.name,
           type: formData.type
         };
-        await updateSpace(dialogContext.spaceId!, updates);
+        await updateSpaceMutation.mutateAsync({
+          spaceId: dialogContext.spaceId!,
+          propertyId,
+          updates
+        });
         toast.success(`${dialogContext.spaceName} updated successfully`);
-        
+
       } else if (dialogContext.mode === 'asset') {
         const updates: AssetUpdate = {
           description: formData.description,
           current_specifications: formData.current_specifications
         };
-        await updateAsset(dialogContext.assetId!, updates);
+        await updateAssetMutation.mutateAsync({
+          assetId: dialogContext.assetId!,
+          propertyId,
+          updates
+        });
         toast.success(`${dialogContext.assetType} updated successfully`);
 
         console.log("Asset dialog context: ", dialogContext);
-        
+
       } else if (dialogContext.mode === 'createSpace') {
-        await createSpace(
+        await createSpaceMutation.mutateAsync({
           propertyId,
-          formData.name,
-          formData.type,
-          newSpaceAssets.map(a => ({
+          spaceName: formData.name,
+          spaceType: formData.type,
+          assets: newSpaceAssets.map(a => ({
             assetTypeId: a.assetTypeId,
             description: a.description,
             specifications: a.specifications
           }))
-        );
+        });
         toast.success("Space created successfully");
-        
+
       } else if (dialogContext.mode === 'createAsset') {
-        await createAsset(
-          dialogContext.spaceId!,
-          parseInt(formData.assetTypeId),
-          formData.description,
-          formData.specifications
-        );
+        await createAssetMutation.mutateAsync({
+          spaceId: dialogContext.spaceId!,
+          propertyId,
+          assetTypeId: parseInt(formData.assetTypeId),
+          description: formData.description,
+          specifications: formData.specifications
+        });
         toast.success("Asset created successfully");
       }
       console.log("Dialog context: ", dialogContext);
-      refetchPropertyData();
+      // NO NEED TO CALL refetchPropertyData() - automatic cache invalidation!
       setIsDialogOpen(false);
       setDialogContext({ mode: null });
     } catch (error) {
@@ -316,17 +352,27 @@ export function PropertyDetail({ propertyId, onBack }: PropertyDetailProps) {
 
     try {
       if (deleteTarget.type === 'space') {
-        await deleteSpace(deleteTarget.id!);
+        await deleteSpaceMutation.mutateAsync({
+          spaceId: deleteTarget.id!,
+          propertyId
+        });
         toast.success("Space deleted successfully");
       } else if (deleteTarget.type === 'asset') {
-        await deleteAsset(deleteTarget.id!);
+        await deleteAssetMutation.mutateAsync({
+          assetId: deleteTarget.id!,
+          propertyId
+        });
         toast.success("Asset deleted successfully");
       } else if (deleteTarget.type === 'feature') {
-        await deleteFeature(deleteTarget.id!, deleteTarget.name!);
+        await deleteFeatureMutation.mutateAsync({
+          assetId: deleteTarget.id!,
+          propertyId,
+          featureName: deleteTarget.name!
+        });
         toast.success("Feature deleted successfully");
       }
 
-      refetchPropertyData();
+      // NO NEED TO CALL refetchPropertyData() - automatic cache invalidation!
     } catch (error) {
       const err = error as Error;
       console.error("Error deleting:", err);
