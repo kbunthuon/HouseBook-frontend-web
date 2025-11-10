@@ -64,10 +64,6 @@ export class ApiClientComposed  extends BaseApiClient {
     return this.owner.getOwnerId(userId);
   }
 
-  async checkOwnerExists(email: string) {
-    return this.owner.checkOwnerExists(email);
-  }
-
   async ownerOnboardProperty(params: any) {
     return this.owner.ownerOnboardProperty(params);
   }
@@ -189,13 +185,6 @@ export class ApiClientComposed  extends BaseApiClient {
     return this.transfer.initiateTransfer(propertyId, oldOwnerUserIds, newOwnerUserIds);
   }
 
-  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
-    return this.transfer.approveTransfer(transferId, ownerId);
-  }
-
-  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
-    return this.transfer.rejectTransfer(transferId, ownerId);
-  }
 
   async getOwnerIdByUserId(userId: string) {
     return this.owner.getOwnerIdByUserId(userId);

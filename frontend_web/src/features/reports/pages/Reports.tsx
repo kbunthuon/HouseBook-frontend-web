@@ -14,7 +14,6 @@ import { Checkbox } from "@ui/checkbox";
 import { Badge } from "@ui/badge";
 import { Progress } from "@ui/progress";
 import { FileText, Download, BarChart3 } from "lucide-react";
-import { getPropertyImages } from "@backend/ImageUpload";
 import { apiClient } from "@shared/api/wrappers";
 
 // Reference to hold the html2pdf library once loaded dynamically
@@ -244,7 +243,7 @@ export function Reports({ userId, userType }: ReportsProps) {
       return;
     }
     (async () => {
-      const imgs = await getPropertyImages(reportConfig.propertyId);
+      const imgs = await apiClient.getPropertyImages(reportConfig.propertyId);
       // Normalize to {name, url} format regardless of backend response
       let imgObjs: { name: string; url: string }[] = [];
       if (imgs.length > 0 && typeof imgs[0] === "string") {

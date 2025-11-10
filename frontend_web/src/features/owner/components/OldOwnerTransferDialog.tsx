@@ -12,6 +12,7 @@ import { X, Loader2, Send } from "lucide-react";
 import { ROUTES } from "Routes";
 import { apiClient } from "@shared/api/wrappers";
 import { Owner } from "@shared/types/serverTypes";
+import { useProperties } from "@hooks/useQueries";
 
 interface OldOwnerTransferDialogProps {
   open: boolean;
@@ -54,32 +55,11 @@ export default function OldOwnerTransferDialog({
   const [loadingOwners, setLoadingOwners] = React.useState(false);
   const [ownersToRemove, setOwnersToRemove] = React.useState<string[]>([]);
 
-  const [myProperties, setMyProperties] = useState<{ id: string; name: string }[]>([]);
-  const [loadingProperties, setLoadingProperties] = useState(false);
+  // Use real-time properties hook instead of manual fetching
+  const { data: properties = [], isLoading: loadingProperties } = useProperties(userID);
 
-  // Fetch user's properties
-  useEffect(() => {
-    const fetchProperties = async () => {
-      setLoadingProperties(true);
-      try {
-        if (!userID) {
-          setMyProperties([]);
-          setLoadingProperties(false);
-          return;
-        }
-        const props = await apiClient.getPropertyList(userID);
-        if (props && Array.isArray(props)) {
-          setMyProperties(props.map((p) => ({ id: p.propertyId, name: p.name })));
-        } else {
-          setMyProperties([]);
-        }
-      } catch (e) {
-        setMyProperties([]);
-      }
-      setLoadingProperties(false);
-    };
-    fetchProperties();
-  }, [userID]);
+  // Map properties to the format needed for the select dropdown
+  const myProperties = properties.map((p) => ({ id: p.propertyId, name: p.name }));
 
   // Fetch current owners whenever propertyId changes
   useEffect(() => {

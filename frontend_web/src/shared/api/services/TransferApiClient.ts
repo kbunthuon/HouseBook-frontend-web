@@ -1,4 +1,3 @@
-import { rejectTransfer } from "@backend/TransferService";
 import { BaseApiClient } from "./ApiClient";
 import { API_ROUTES } from "../routes";
 
@@ -61,28 +60,5 @@ export class TransferApiClient extends BaseApiClient {
     const data = await response.json();
     console.log("initiateTransfer response data:", data);
     return data;
-  }
-
-  async approveTransfer(transferId: string, ownerId: { ownerId: string }) {
-    const { approveTransfer } = await import("@backend/TransferService");
-    try {
-      const result = await approveTransfer(transferId, ownerId.ownerId);
-      console.log("approveTransfer response data:", result);
-      return result;
-    } catch (error: any) {
-      console.error("Failed to approve transfer:", error);
-      throw new Error(error.message || "Failed to approve transfer");
-    }
-  }
-
-  async rejectTransfer(transferId: string, ownerId: { ownerId: string }) {
-    try {
-      const result = await rejectTransfer(transferId, ownerId.ownerId);
-      console.log("rejectTransfer response data:", result);
-      return result;
-    } catch (error: any) {
-      console.error("Failed to reject transfer:", error);
-      throw new Error(error.message || "Failed to reject transfer");
-    }
   }
 }

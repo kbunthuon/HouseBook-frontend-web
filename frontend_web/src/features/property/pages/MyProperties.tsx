@@ -152,13 +152,13 @@ export function MyProperties({ ownerId: userID, onViewProperty, onAddProperty }:
 
     try {
       // Get owner ID from user ID
-      const ownerId = await apiClient.getOwnerId(userID);
+      const ownerData = await apiClient.getOwnerId(userID);
 
       if (confirmAction.type === 'approve') {
-        await approveTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId });
+        await approveTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId: ownerData.ownerId });
         toast.success("Transfer approved successfully");
       } else {
-        await rejectTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId });
+        await rejectTransferMutation.mutateAsync({ transferId: confirmAction.transferId, ownerId: ownerData.ownerId });
         toast.success("Transfer rejected");
       }
 

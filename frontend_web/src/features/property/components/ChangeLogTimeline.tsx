@@ -39,12 +39,29 @@ export default function ChangeLogTimeline({ open, onOpenChange, title = 'History
             <p className="text-center text-muted-foreground py-8">No history available</p>
           ) : (
             history.map((item) => (
-              <Card key={item.id} className={`border-l-4 ${item.actions === 'DELETED' ? 'border-l-destructive' : 'border-l-primary/50'}`}>
+              <Card
+                key={item.id}
+                className={`border-l-4 ${
+                  item.actions === 'DELETED' || (item.specifications && Object.keys(item.specifications).length === 0)
+                    ? 'border-l-destructive'
+                    : 'border-l-primary/50'
+                }`}
+              >
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <Badge variant={item.actions === 'DELETED' ? 'destructive' : item.actions === 'CREATED' ? 'default' : 'secondary'}>
-                        {item.actions}
+                      <Badge
+                        variant={
+                          item.actions === 'DELETED' || (item.specifications && Object.keys(item.specifications).length === 0)
+                            ? 'destructive'
+                            : item.actions === 'CREATED'
+                            ? 'default'
+                            : 'secondary'
+                        }
+                      >
+                        {item.actions === 'DELETED' || (item.specifications && Object.keys(item.specifications).length === 0)
+                          ? 'DELETED'
+                          : item.actions}
                       </Badge>
                       {showSpacesAndAssetBadges && (
                         <>

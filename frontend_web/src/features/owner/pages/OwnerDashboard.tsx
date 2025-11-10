@@ -1,18 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card.tsx";
 import { Badge } from "@ui/badge.tsx";
-import { Progress } from "@ui/progress.tsx";
 import { Input } from "@ui/input.tsx";
-import { Textarea } from "@ui/textarea.tsx";
 import { Label } from "@ui/label.tsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogDescription } from "@ui/dialog.tsx";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table.tsx";
 import { Button } from "@ui/button.tsx";
 import { Building, FileText, Key, Plus, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { UserCog, ArrowRightLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
-import { useState, useEffect} from "react";
 import { ChangeLogWithUser } from "@hooks/useQueries";
 import { Property } from "@housebookgroup/shared-types";
-import { apiClient } from "@shared/api/wrappers";
 import { useProperties, useChangeLogs, useApproveEdit, useRejectEdit } from "@hooks/useQueries";
 
 interface OwnerDashboardProps {

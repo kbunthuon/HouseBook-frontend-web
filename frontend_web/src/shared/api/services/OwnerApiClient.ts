@@ -1,4 +1,3 @@
-import { checkOwnerExists } from "@backend/OnboardPropertyService";
 import { ImageApiClient } from "./ImageApiClient";
 import { API_ROUTES, OwnerOnboardParams } from "../routes";
 
@@ -15,16 +14,6 @@ export class OwnerApiClient extends ImageApiClient {
     }
 
     return response.json();
-  }
-
-  async checkOwnerExists(email: string): Promise<boolean> {
-    try {
-      const exists = await checkOwnerExists(email);
-      return exists;
-    } catch (error) {
-      console.error("Error checking owner exists:", error);
-      throw new Error("Failed to verify owner");
-    }
   }
 
   async ownerOnboardProperty(params: OwnerOnboardParams) {

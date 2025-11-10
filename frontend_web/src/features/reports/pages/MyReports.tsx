@@ -24,7 +24,6 @@ import {
   JobAsset,
   fetchJobAssetsWithDetails,
   fetchJobAssets,
-  upsertJobAssets,
 } from "@backend/JobService";
 
 import { apiClient } from "@shared/api/wrappers";

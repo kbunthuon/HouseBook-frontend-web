@@ -5,6 +5,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { apiClient } from '../api/wrappers';
 import { ChangeLog, Property } from '@housebookgroup/shared-types';
 
@@ -56,11 +57,75 @@ export const queryKeys = {
 // ==================== PROPERTY QUERIES ====================
 
 /**
- * Fetch list of all properties
+ * Fetch list of all properties with real-time updates
  * Used in: Dashboard, PropertyManagement, MyProperties
  * Note: This fetches ALL properties - backend should filter by user role/permissions
+ * Real-time: Automatically refetches when OwnerProperty table changes
  */
 export const useProperties = (userId?: string) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to real-time updates for property ownership changes
+  useEffect(() => {
+    if (!userId) return;
+
+    let subscription: any;
+
+    const setupSubscription = async () => {
+      try {
+        const { supabase } = await import('@config/supabaseClient');
+
+        // Verify Supabase authentication before subscribing
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('[property-ownership-changes] No authenticated user found. RLS will block events.');
+          return;
+        }
+        console.log('[property-ownership-changes] Authenticated as user:', user.id);
+
+        // Subscribe to OwnerProperty table changes
+        subscription = supabase
+          .channel('property-ownership-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to INSERT, UPDATE, DELETE
+              schema: 'public',
+              table: 'OwnerProperty',
+            },
+            (payload) => {
+              console.log('[property-ownership-changes] Property ownership changed:', payload);
+              // Invalidate properties cache to trigger refetch
+              queryClient.invalidateQueries({ queryKey: queryKeys.properties });
+            }
+          )
+          .subscribe((status) => {
+            console.log('[property-ownership-changes] Subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('[property-ownership-changes] ✓ Successfully subscribed to OwnerProperty changes');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[property-ownership-changes] ✗ Subscription failed with CHANNEL_ERROR');
+            } else if (status === 'TIMED_OUT') {
+              console.error('[property-ownership-changes] ✗ Subscription timed out');
+            } else if (status === 'CLOSED') {
+              console.warn('[property-ownership-changes] Subscription closed');
+            }
+          });
+      } catch (error) {
+        console.error('[property-ownership-changes] Error setting up subscription:', error);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (subscription) {
+        console.log('[property-ownership-changes] Unsubscribing...');
+        subscription.unsubscribe();
+      }
+    };
+  }, [userId, queryClient]);
+
   return useQuery({
     queryKey: queryKeys.properties,
     queryFn: async () => {
@@ -70,7 +135,7 @@ export const useProperties = (userId?: string) => {
       return response;
     },
     enabled: !!userId, // Only run if userId is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - realtime handles instant updates
   });
 };
 
@@ -128,10 +193,100 @@ export const usePropertyOwners = (propertyId: string | undefined) => {
 // ==================== TRANSFER QUERIES ====================
 
 /**
- * Fetch all transfers for an owner/user
+ * Fetch all transfers for an owner/user with real-time updates
  * Used in: MyProperties, OwnerRequests
+ * Real-time: Automatically refetches when transfer-related tables change
  */
 export const useOwnerTransfers = (userId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to real-time updates for transfer status changes
+  useEffect(() => {
+    if (!userId) return;
+
+    let subscription: any;
+
+    const setupSubscription = async () => {
+      try {
+        const { supabase } = await import('@config/supabaseClient');
+
+        // Verify Supabase authentication before subscribing
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('[transfer-changes] No authenticated user found. RLS will block events.');
+          return;
+        }
+        console.log('[transfer-changes] Authenticated as user:', user.id);
+
+        // Subscribe to all transfer-related table changes
+        subscription = supabase
+          .channel('transfer-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to INSERT, UPDATE, DELETE
+              schema: 'public',
+              table: 'TransferNewOwners',
+            },
+            (payload) => {
+              console.log('[transfer-changes] TransferNewOwners changed:', payload);
+              // FIXED: Invalidate the specific user's transfer cache
+              queryClient.invalidateQueries({ queryKey: queryKeys.ownerTransfers(userId) });
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to INSERT, UPDATE, DELETE
+              schema: 'public',
+              table: 'TransferOldOwners',
+            },
+            (payload) => {
+              console.log('[transfer-changes] TransferOldOwners changed:', payload);
+              // FIXED: Invalidate the specific user's transfer cache
+              queryClient.invalidateQueries({ queryKey: queryKeys.ownerTransfers(userId) });
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to INSERT, UPDATE, DELETE
+              schema: 'public',
+              table: 'Transfers',
+            },
+            (payload) => {
+              console.log('[transfer-changes] Transfers status changed:', payload);
+              // FIXED: Invalidate the specific user's transfer cache
+              queryClient.invalidateQueries({ queryKey: queryKeys.ownerTransfers(userId) });
+            }
+          )
+          .subscribe((status) => {
+            console.log('[transfer-changes] Subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('[transfer-changes] ✓ Successfully subscribed to all transfer tables');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[transfer-changes] ✗ Subscription failed with CHANNEL_ERROR');
+            } else if (status === 'TIMED_OUT') {
+              console.error('[transfer-changes] ✗ Subscription timed out');
+            } else if (status === 'CLOSED') {
+              console.warn('[transfer-changes] Subscription closed');
+            }
+          });
+      } catch (error) {
+        console.error('[transfer-changes] Error setting up subscription:', error);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (subscription) {
+        console.log('[transfer-changes] Unsubscribing...');
+        subscription.unsubscribe();
+      }
+    };
+  }, [userId, queryClient]);
+
   return useQuery({
     queryKey: queryKeys.ownerTransfers(userId || ''),
     queryFn: async () => {
@@ -150,11 +305,75 @@ export const useOwnerTransfers = (userId: string | undefined) => {
 // ==================== CHANGE LOG QUERIES ====================
 
 /**
- * Fetch all change logs (for admin dashboard and owner dashboard)
+ * Fetch all change logs (for admin dashboard and owner dashboard) with real-time updates
  * Used in: Dashboard, OwnerDashboard
  * Normalizes snake_case API response to camelCase for consistency
+ * Real-time: Automatically refetches when ChangeLog table changes
  */
 export const useChangeLogs = (propertyIds: string[]) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to real-time updates for changelog changes
+  useEffect(() => {
+    if (!propertyIds || propertyIds.length === 0) return;
+
+    let subscription: any;
+
+    const setupSubscription = async () => {
+      try {
+        const { supabase } = await import('@config/supabaseClient');
+
+        // Verify Supabase authentication before subscribing
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('[changelog-changes] No authenticated user found. RLS will block events.');
+          return;
+        }
+        console.log('[changelog-changes] Authenticated as user:', user.id);
+
+        // Subscribe to ChangeLog table changes
+        subscription = supabase
+          .channel('changelog-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to INSERT, UPDATE, DELETE
+              schema: 'public',
+              table: 'ChangeLog',
+            },
+            (payload) => {
+              console.log('[changelog-changes] ChangeLog updated:', payload);
+              // Invalidate changelogs cache to trigger refetch
+              queryClient.invalidateQueries({ queryKey: queryKeys.changeLogs });
+            }
+          )
+          .subscribe((status) => {
+            console.log('[changelog-changes] Subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('[changelog-changes] ✓ Successfully subscribed to ChangeLog changes');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[changelog-changes] ✗ Subscription failed with CHANNEL_ERROR');
+            } else if (status === 'TIMED_OUT') {
+              console.error('[changelog-changes] ✗ Subscription timed out');
+            } else if (status === 'CLOSED') {
+              console.warn('[changelog-changes] Subscription closed');
+            }
+          });
+      } catch (error) {
+        console.error('[changelog-changes] Error setting up subscription:', error);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (subscription) {
+        console.log('[changelog-changes] Unsubscribing...');
+        subscription.unsubscribe();
+      }
+    };
+  }, [propertyIds, queryClient]);
+
   return useQuery<ChangeLogWithUser[]>({
     queryKey: queryKeys.changeLogs,
     queryFn: async (): Promise<ChangeLogWithUser[]> => {
@@ -298,6 +517,14 @@ export const useApproveEdit = () => {
     mutationFn: async (changelogId: string) => {
       const { supabase } = await import('@config/supabaseClient');
 
+      // Debug: Verify Supabase session exists
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("useApproveEdit - Current Supabase user:", user?.id);
+
+      if (!user) {
+        throw new Error("No authenticated Supabase session found. Please log in again.");
+      }
+
       // First, get the changelog to retrieve asset_id and specifications
       const { data: changelog, error: fetchError } = await supabase
         .from("ChangeLog")
@@ -367,7 +594,7 @@ export const useApproveTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.approveTransfer(transferId, ownerId );
+      return await apiClient.approveTransfer(transferId, {ownerId} );
     },
     onSuccess: (_, variables) => {
       // Invalidate transfers to refetch updated data
@@ -386,10 +613,13 @@ export const useRejectTransfer = () => {
 
   return useMutation({
     mutationFn: async ({ transferId, ownerId }: { transferId: string; ownerId: string }) => {
-      return await apiClient.rejectTransfer(transferId, ownerId );
+      return await apiClient.rejectTransfer(transferId, {ownerId} );
     },
     onSuccess: () => {
+      // Invalidate transfers to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      // Also invalidate properties for consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties });
     },
   });
 };
@@ -430,6 +660,237 @@ export const useSaveJob = () => {
     onSuccess: () => {
       // Invalidate all job queries
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+};
+
+// ==================== PROPERTY MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for updating property details
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateProperty = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, updates }: { propertyId: string; updates: any }) => {
+      const { updateProperty } = await import('@backend/PropertyEditService');
+      return await updateProperty(propertyId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to trigger refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== SPACE MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for creating a new space
+ * Automatically invalidates property cache on success
+ */
+export const useCreateSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, spaceName, spaceType, assets }: {
+      propertyId: string;
+      spaceName: string;
+      spaceType: string;
+      assets?: Array<{ assetTypeId: number; description: string; specifications: Record<string, any> }>
+    }) => {
+      const { createSpace } = await import('@backend/PropertyEditService');
+      return await createSpace(propertyId, spaceName, spaceType, assets || []);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show new space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating a space
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId, updates }: { spaceId: string; propertyId: string; updates: any }) => {
+      const { updateSpace } = await import('@backend/PropertyEditService');
+      return await updateSpace(spaceId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show updated space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting a space
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteSpace = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId }: { spaceId: string; propertyId: string }) => {
+      const { deleteSpace } = await import('@backend/PropertyEditService');
+      return await deleteSpace(spaceId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted space
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== ASSET MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for creating a new asset
+ * Automatically invalidates property cache on success
+ */
+export const useCreateAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ spaceId, propertyId, assetTypeId, description, specifications }: {
+      spaceId: string;
+      propertyId: string;
+      assetTypeId: number;
+      description: string;
+      specifications: Record<string, any>
+    }) => {
+      const { createAsset } = await import('@backend/PropertyEditService');
+      return await createAsset(spaceId, assetTypeId, description, specifications);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show new asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating an asset
+ * Automatically invalidates property cache on success
+ */
+export const useUpdateAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId, updates }: { assetId: string; propertyId: string; updates: any }) => {
+      const { updateAsset } = await import('@backend/PropertyEditService');
+      return await updateAsset(assetId, updates);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to show updated asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting an asset
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteAsset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId }: { assetId: string; propertyId: string }) => {
+      const { deleteAsset } = await import('@backend/PropertyEditService');
+      return await deleteAsset(assetId);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted asset
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting a feature from an asset
+ * Automatically invalidates property cache on success
+ */
+export const useDeleteFeature = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assetId, propertyId, featureName }: { assetId: string; propertyId: string; featureName: string }) => {
+      const { deleteFeature } = await import('@backend/PropertyEditService');
+      return await deleteFeature(assetId, featureName);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property cache to remove deleted feature
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+    },
+  });
+};
+
+// ==================== IMAGE MUTATION HOOKS ====================
+
+/**
+ * Mutation hook for uploading property images
+ * Automatically invalidates property images cache on success
+ */
+export const useUploadPropertyImages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, files }: { propertyId: string; files: File[] }) => {
+      const results = [];
+      for (const file of files) {
+        const result = await apiClient.uploadPropertyImage(propertyId, file);
+        results.push(result);
+      }
+      return results;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property images cache to show new images
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for deleting property images
+ * Automatically invalidates property images cache on success
+ */
+export const useDeletePropertyImages = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, imageNames }: { propertyId: string; imageNames: string[] }) => {
+      return await apiClient.deletePropertyImages(imageNames);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate property images cache to remove deleted images
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating property splash image
+ * Automatically invalidates property and images cache on success
+ */
+export const useUpdatePropertySplashImage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, imageName }: { propertyId: string; imageName: string }) => {
+      return await apiClient.updatePropertySplashImage(imageName);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate both property and images cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.property(variables.propertyId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.propertyImages(variables.propertyId) });
     },
   });
 };
